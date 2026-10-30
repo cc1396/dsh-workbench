@@ -1,0 +1,52 @@
+{
+  "name": "cc1396-dsh-workbench",
+  "version": "1.0.0",
+  "description": "Workbench panel: account balance and used share, today's usage, task totals, and running / recently finished tasks",
+  "type": "module",
+  "license": "MIT",
+  "author": "cc1396",
+  "homepage": "https://github.com/cc1396/dsh-workbench",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cc1396/dsh-workbench.git"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "workbench",
+    "dashboard",
+    "balance",
+    "usage",
+    "tasks"
+  ],
+  "engines": {
+    "dsh": "^0.2.1-rc.5"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "README.md",
+    "locale/*.json",
+    "icon.svg"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-layout"
+      ]
+    }
+  }
+}

@@ -59,13 +59,19 @@ not Platform billing records; the balance itself comes from the DeepSeek account
 
 ## Publishing
 
-This package is installed locally as a `link:` bundle. To distribute it, build a publishable
-copy under a name you own, push it to npm (or a Git tag), and list it in a market index:
+The bundle ships through a **Git market source** — no npm account is involved:
 
 ```bash
-node publish/prepare.mjs --name cc1396-dsh-workbench --version 1.0.0
-cd publish/dist && npm publish
+node publish/prepare.mjs --name cc1396-dsh-workbench --version 1.0.0 --out dist
 ```
 
-Then host a format-1 index next to an `icon.svg` and add its URL under **Plugins → Discover**.
-The full walkthrough, index schema, and caveats live in [publish/README.md](publish/README.md).
+1. commit `dist/` (the ready-to-install package, ~18 KB);
+2. point the market index at that commit — `source: { type: "git", url, commit, path: "dist" }`;
+3. push: GitHub Pages serves the index at
+   `https://cc1396.github.io/dsh-workbench/index.json`.
+
+Consumers add that URL under **Plugins → Discover**; the install fetches
+`git+https://github.com/cc1396/dsh-workbench.git#<commit>&path:/dist`.
+
+Every release repeats the loop with a new commit. The full walkthrough, the index schema,
+and the optional npm path live in [publish/README.md](publish/README.md).

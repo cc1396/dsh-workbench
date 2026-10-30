@@ -60,9 +60,12 @@
       "versions": [
         {
           "version": "1.0.0",
-          "publishTimestamp": 1793355271,
+          "publishTimestamp": 1793359468,
           "source": {
-            "type": "npm"
+            "type": "git",
+            "url": "https://github.com/cc1396/dsh-workbench",
+            "commit": "8516a042df64ad1a8f9ad87945389b95f7a24fa6",
+            "path": "dist"
           },
           "engines": {
             "dsh": "^0.2.1-rc.5"

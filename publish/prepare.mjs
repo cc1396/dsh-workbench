@@ -69,9 +69,9 @@ for (const file of ['index.js', 'client.js']) {
 console.log(`prepared ${name}@${version} in ${out}`)
 console.log('')
 console.log('next:')
-console.log(`  1. npm publish --access public   (run inside ${out})`)
-console.log('  2. copy publish/index.example.json, then set name / version / publishTimestamp')
-console.log('  3. host the index and its icon.svg over HTTPS, add the URL under Plugins → Discover')
+console.log(`  1. commit ${out}, then read the release commit: git rev-parse HEAD`)
+console.log('  2. set versions[0].source = { type: "git", url, commit, path } in docs/index.json')
+console.log('  3. push; GitHub Pages serves the index, users add its URL under Plugins → Discover')
 
 function overwrite(file, from, to) {
   const path = join(out, file)

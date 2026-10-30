@@ -1,0 +1,28 @@
+- insert:
+    - id: dsh-workbench
+      name: '@local/dsh-workbench'
+      config:
+        # Rows rendered per task list.
+        maxRunningTasks: 8
+        maxRecentTasks: 8
+        # Session-log scan bounds: usage folds are cached per Session and the
+        # next poll continues where the time budget stopped.
+        maxScanSessions: 60
+        scanBudgetMs: 4000
+        # The Platform wallet is queried at most once a minute.
+        balanceTtlMs: 60000
+        # CNY per 1,000,000 tokens, used for the local amount estimate.
+        prices:
+          default:
+            input: 2
+            output: 8
+            cacheRead: 0.5
+          models:
+            deepseek-chat:
+              input: 2
+              output: 8
+              cacheRead: 0.5
+            deepseek-reasoner:
+              input: 4
+              output: 16
+              cacheRead: 1

@@ -1,0 +1,74 @@
+{
+  "format": 1,
+  "title": {
+    "en": "cc1396 DSH plugins",
+    "zh": "cc1396 插件"
+  },
+  "description": {
+    "en": "Market index served from GitHub Pages.",
+    "zh": "由 GitHub Pages 托管的插件市场索引。"
+  },
+  "metadata": {
+    "categories": {
+      "dashboard": {
+        "title": {
+          "en": "Dashboard",
+          "zh": "工作台"
+        }
+      }
+    },
+    "labels": {
+      "new": {
+        "title": {
+          "en": "New",
+          "zh": "新上架"
+        }
+      }
+    }
+  },
+  "plugins": [
+    {
+      "name": "cc1396-dsh-workbench",
+      "title": {
+        "en": "Workbench",
+        "zh": "工作台"
+      },
+      "description": {
+        "en": "Account balance and used share, today's usage, task totals, and the running and recently finished tasks in one panel.",
+        "zh": "在同一面板查看账户余额与已用占比、今日用量、任务总数，以及正在执行和最近完成的任务。"
+      },
+      "icon": "icon.svg",
+      "author": "cc1396",
+      "homepage": "https://github.com/cc1396/dsh-workbench",
+      "repository": {
+        "url": "https://github.com/cc1396/dsh-workbench"
+      },
+      "metadata": {
+        "category": "dashboard",
+        "keywords": [
+          "dsh",
+          "dsh-plugin",
+          "workbench",
+          "balance",
+          "usage",
+          "tasks"
+        ],
+        "labels": [
+          "new"
+        ]
+      },
+      "versions": [
+        {
+          "version": "1.0.0",
+          "publishTimestamp": 1793355271,
+          "source": {
+            "type": "npm"
+          },
+          "engines": {
+            "dsh": "^0.2.1-rc.5"
+          }
+        }
+      ]
+    }
+  ]
+}

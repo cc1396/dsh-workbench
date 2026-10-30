@@ -64,7 +64,7 @@ copy under a name you own, push it to npm (or a Git tag), and list it in a marke
 
 ```bash
 node publish/prepare.mjs --name cc1396-dsh-workbench --version 1.0.0
-cd publish/dist && npm publish --access public
+cd publish/dist && npm publish
 ```
 
 Then host a format-1 index next to an `icon.svg` and add its URL under **Plugins → Discover**.

@@ -31,7 +31,7 @@ node publish/prepare.mjs --name cc1396-dsh-workbench --version 1.0.0 --out publi
 ```bash
 cd publish/dist
 npm login            # 首次
-npm publish --access public
+npm publish            # 名字未加 scope，默认就是 public
 ```
 
 包本身没有运行时依赖，体积约 18 KB。发布前建议 `npm pack --dry-run` 确认 `files` 清单
@@ -81,6 +81,7 @@ npm publish --access public
 
 ## 四、托管索引并让用户添加
 
+- 本仓库已带 `docs/index.json` + `docs/icon.svg`：在仓库 Settings → Pages 里选择 **Deploy from a branch → main / “/docs”**，索引地址即 `https://cc1396.github.io/dsh-workbench/index.json`。
 - 索引地址用 **HTTPS** 最稳妥（本地自测可用 `http://127.0.0.1:8000/index.json`；HTTPS 页面加载 http 索引会被混合内容拦截）；**不能有重定向**，不能带凭据或 `#fragment`（query 允许，但没必要）。
 - 常见托管：GitHub Pages、`raw.githubusercontent.com`、任意静态站点/CDN。
 - 用户端：**插件 → 发现 → 添加索引源**，粘贴索引 URL；随后条目出现，点**安装**。

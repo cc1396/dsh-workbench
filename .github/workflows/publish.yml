@@ -22,6 +22,6 @@ jobs:
       - name: Build the publishable copy
         run: node publish/prepare.mjs --name cc1396-dsh-workbench --version "${GITHUB_REF_NAME#v}" --out publish/dist
       - name: Publish to npm
-        run: npm publish publish/dist --access public --provenance
+        run: npm publish publish/dist --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

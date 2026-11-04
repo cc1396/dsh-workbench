@@ -3,10 +3,9 @@
 A global Workbench panel for the DSH Web UI. It adds a **工作台 / Workbench** entry to the
 left sidebar that opens a page with:
 
-- **继续上次与今日状态** — the panel opens on the task to return to (a running task
-  first, then the most recent one), showing its workspace and today's first work item;
-  the greeting is followed by one sentence about today: what is still running, how many
-  work items exist, or that nothing is recorded yet.
+- **问候与今日状态** — a time-of-day greeting (with the signed-in account name when
+  available) followed by one sentence about today: what is still running, how many work
+  items exist, or that nothing is recorded yet.
 - **账户余额与已用占比** — a compact wallet strip: the current DeepSeek wallet balance,
   the recharge/bonus split, a slim used-share bar (`spend ÷ (balance + spend)`), and a
   dense facts row with the estimated cumulative spend, combined base, token count,

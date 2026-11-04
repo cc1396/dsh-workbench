@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Workbench",
-    "description": "Account balance, today's usage, task counts, and the running and recently finished tasks in one panel."
+    "description": "Account balance, today's spend vs the 6-day average, a model throughput table, an AI-summarized daily work log with a copyable report, task totals, and running tasks in one panel."
   }
 }

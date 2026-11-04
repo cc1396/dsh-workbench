@@ -34,8 +34,8 @@
         "zh": "工作台"
       },
       "description": {
-        "en": "Account balance and used share, today's usage, task totals, and the running and recently finished tasks in one panel.",
-        "zh": "在同一面板查看账户余额与已用占比、今日用量、任务总数，以及正在执行和最近完成的任务。"
+        "en": "Account balance and used share, today's spend vs the 6-day average, a model throughput table, an AI-summarized daily work log with a copyable report, task totals, and running tasks in one panel.",
+        "zh": "在同一面板查看账户余额与已用占比、今日消耗与前 6 天日均对比、模型吞吐表、按工作区归纳的 AI 日报、任务总数，以及正在执行和最近完成的任务。"
       },
       "icon": "icon.svg",
       "author": "cc1396",

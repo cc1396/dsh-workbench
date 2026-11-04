@@ -1,7 +1,7 @@
 {
   "name": "cc1396-dsh-workbench",
   "version": "1.0.0",
-  "description": "Workbench panel: account balance and used share, today's usage, task totals, and running / recently finished tasks",
+  "description": "Workbench panel: account balance and used share, today's spend vs the 6-day average, a model throughput table, an AI-summarized daily work log, and task totals",
   "type": "module",
   "license": "MIT",
   "author": "cc1396",

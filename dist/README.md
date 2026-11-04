@@ -1,82 +1,74 @@
-# DSH Workbench
+# DSH Workbench · 工作台
 
-A global Workbench panel for the DSH Web UI. It adds a **工作台 / Workbench** entry to the
-left sidebar that opens a page with:
+一块常驻 DSH Web UI 的工作台面板：在左侧栏加入 **工作台 / Workbench** 入口，打开后
+可以看到今天的钱花在哪、模型跑多快、每个项目今天干了什么活。
 
-- **问候与今日状态** — a time-of-day greeting (with the signed-in account name when
-  available) followed by one sentence about today: what is still running, how many work
-  items exist, or that nothing is recorded yet.
-- **账户余额与已用占比** — a compact wallet strip: the current DeepSeek wallet balance,
-  the recharge/bonus split, a slim used-share bar (`spend ÷ (balance + spend)`), and a
-  dense facts row with the estimated cumulative spend, combined base, token count,
-  cache-hit rate, runway estimated from the previous 6-day average, and effective price
-  per million tokens. Signed-out and unavailable states replace the balance with a muted
-  placeholder while the spend figures stay visible.
-- **今日消耗 / 今日 Token / 任务总数** — metric cards; the spend card compares today
-  with the previous 6-day average, and the task card carries a running / completed
-  legend. Tokens are folded from every Session log and the amounts estimated from a
-  configurable price table.
-- **码数** — a current readout for the latest completed request, plus a throughput table over the last 7 days: median, aggregate and P90 decode speed
-  (from `step/start → assistant/message` timing), output tokens and request counts, a
-  per-model breakdown, and the latest requests with duration and tok/s. Samples below
-  1 tok/s are dropped so retries and idle timeouts do not drag the numbers down.
-- **工作记录** — a month calendar over the last 31 days with month arrows; each day
-  shows its workspace projects and the first generated item, and the selected day
-  opens below the grid. The panel shows only project names and generated
-  work items; intents, commands, files and counts are never rendered. **Generate
-  today's report** sends the day's per-project material (goals, actions, outcomes) to
-  the configured model once per project and renders 2-4 concrete work items per
-  project. Today's report is generated automatically when the panel opens; a stored
-  summary answers instantly without a model call. Results persist in
-  `$DSH_HOME/workbench/summaries.json` (40 days, atomic writes) and can be copied as a
-  Markdown report. **Regenerate** bypasses both the memory and the disk cache. The
-  report follows the DSH interface language: a Chinese interface asks for Chinese
-  items, an English interface for English items. Nothing is summarized during polling.
-- **仪表视觉** — the panel uses a deliberately instrument-like language: monospace
-  readouts, micro-labels (`WALLET`, `THROUGHPUT`, `RUNNING`), numbered metric cards, a
-  gradient accent and flat task rows with a status rail, rather than a generic card grid.
-- **进行中的任务 / 最近完成的任务** — two side-by-side card panels. Each Session is a
-  task card with its folder, status, relative time, estimated cost, token count and tool
-  calls; a running card also shows its latest tool action ("Reading `client.js` · 1 min
-  ago") and a spinner. When today's report exists, each card also carries the first
-  generated work item for its own workspace. Every card opens its Session; a panel
-  without rows shows an illustrated empty state.
+## 面板包含什么
 
-## How it is built
+- **问候与今日状态** —— 按时段问候（登录后带上账户名），下面一句话说明今天的状态：
+  还有任务在跑、已经归纳出几件事，或者今天还没有记录。
+- **账户余额与已用占比** —— 一条紧凑的钱包带：DeepSeek 账户余额、充值/赠送拆分、一条
+  `消耗 ÷ (余额 + 消耗)` 的已用占比条，以及六项事实：累计消耗、余额+消耗、累计 Token、
+  缓存命中率、按前 6 天日均估算的可用天数、每百万 Token 的实际单价。未登录或环境不支持时
+  用占位态替换余额，消耗数字仍然可见。
+- **今日消耗 / 今日 Token / 任务总数** —— 三张指标卡；消耗卡与「前 6 天日均」比较，
+  任务卡带进行中 / 已完成图例。Token 从每个 Session 日志折算，金额按可配置价格表估算。
+- **码表** —— 右上角是最新一次完成的生成的当前速度；下面一行是中位、合计、P90、输出
+  与请求数。左栏是按模型拆分的 **模型 / 速率** 表，右栏是最近请求（时间、会话名、
+  Token、耗时、tok/s）。低于 1 tok/s 的样本视为超时剔除，避免重试把数字拉低。
+- **工作记录** —— 近 31 天的月历，可用 `‹` `›` 切换月份。每个日期格显示当天的项目名和
+  第一条已生成的工作项；未归纳的日子显示「待归纳」。点日期在下方展开当天详情。
+  面板只显示项目名与归纳出的工作项，**不显示**意图原文、命令、文件数或生成次数。
+  今天的日报在打开面板时自动生成；已生成过的直接读缓存，不调用模型。摘要按天保存到
+  `$DSH_HOME/workbench/summaries.json`（保留 40 天，原子写入），重启后依然有效。
+  「重新生成」会同时绕过内存与磁盘缓存。右上角「复制日报」把当天内容复制成 Markdown。
+- **进行中的任务 / 最近完成的任务** —— 左右两块任务面板。每张任务卡显示工作区目录、
+  状态、相对时间、估算成本、Token 与工具调用次数；运行中的卡还显示最近一次工具动作。
+  当今天的日报已生成时，任务卡额外显示它所属项目今天的第一条工作项，点击任意卡片打开
+  对应 Session。
 
-| Half | File | Responsibility |
+## AI 归纳是怎么做的
+
+工作项不是把会话记录直接罗列出来，而是让模型归纳当天每个项目实际完成的事：
+
+- Host 侧整理当天每个项目的材料：会话标题、用户诉求、执行过的操作、改动文件、
+  每轮最终回复，按字段截断后发给模型。
+- **每个项目单独调用一次模型**，只要求 2~4 条、每条不超过 40 个汉字，直接输出 JSON。
+  单次输出小，一个项目失败不会拖垮整天。
+- 结果按「日期 + 材料哈希」缓存，材料没变就不再调用模型。
+- 强制中文：提示词明确要求简体中文；若模型仍返回英文，Host 自动重试一次，仍失败则
+  报错而不是把英文写进日报。界面语言是英文时才请求英文条目。
+- 模型路由取当天 Session 日志里记录的实际 provider / model，走的是 DSH 已配置好的
+  凭据，不需要插件另配 Key。
+
+## 实现方式
+
+| 部分 | 文件 | 职责 |
 | --- | --- | --- |
-| Host | `index.js` | `GET /api/workbench/status` on the shared `/api` Fetch channel folds Session-log usage (totals, 7 daily buckets, per-step throughput, per-task tools and latest action, per-day project records) and reads the optional DeepSeek wallet. An on-demand `POST /api/workbench/summarize` calls `ctx.llm.stream` once per project for one day's work items, cached by day + material hash. |
-| Client | `client.js` | Registers the `workbench` main panel and its `sidebar.panellist` entry, registers the `dsh.workbench` dictionaries, and renders the snapshot. |
+| Host | `index.js` | 在共享 `/api` Fetch 通道上提供 `GET /api/workbench/status`，折算 Session 日志用量（总量、7 天日桶、逐步吞吐、每任务工具与最近动作、按项目的工作记录），读取可选的 DeepSeek 钱包；另提供 `POST /api/workbench/summarize`，按项目调用 `ctx.llm.stream` 生成当天工作项。 |
+| Client | `client.js` | 注册 `workbench` 主面板与侧栏入口、`dsh.workbench` 字典，并渲染快照。 |
 
-The Client polls every 15 s (4 s after a failure) and re-reads when the page becomes
-visible. The Host caches each Session fold by `SessionSummary.updatedAt`, caches the wallet
-for a minute, and bounds the log scan (`maxScanSessions`, `scanBudgetMs`) so a large corpus
-never stalls a request; unfinished work is reported as pending and continued by the next
-poll. Forked Sessions skip their inherited event prefix so shared history is counted once.
-Generating one report makes one `ctx.llm.stream` call per project with the configured model;
-the 15 s poll never calls the model. Results are cached in Host memory by day + material
-hash. Only the latest tool call of a Session is parsed into an action label, so a long
-log costs the same as a short one. Throughput pairs each assistant message with its step start and
-keeps only the last 7 days of samples; merging drops samples outside the current window,
-so nothing is double-counted. A finished Session is folded once; across midnight its
-cached day buckets are shifted into the new 7-day window instead of being folded again.
+客户端每 15 秒轮询一次（失败后 4 秒），页面重新可见时立即重读。Host 按
+`SessionSummary.updatedAt` 缓存每个 Session 的折算结果，钱包一分钟缓存一次，并限制单次
+扫描的会话数与耗时（`maxScanSessions`、`scanBudgetMs`），未扫完的部分标记为待处理，交给
+下一次轮询继续。Fork 出来的会话会跳过继承的事件前缀，共享历史只计一次。生成日报时每个
+项目调用一次模型，轮询过程从不调用。吞吐量把每条回复与它的 step 起点配对，只保留近 7 天
+样本；跨天时缓存里的日桶直接平移进新的 7 天窗口，不重复折算。
 
-## Configuration
+## 配置
 
-The bundle patch (`cordis.patch.yml`) is the user-owned layer; edit it in the profile to
-tune the panel. Values are optional and defensive defaults apply.
+`cordis.patch.yml` 是用户自己的配置层，在 profile 里改即可；所有字段可选，缺省有防御性默认值。
 
 ```yaml
 - insert:
     - id: dsh-workbench
       name: '@local/dsh-workbench'
       config:
-        maxRunningTasks: 8      # rows in the running list
-        maxRecentTasks: 8       # rows in the recent list
-        maxScanSessions: 60     # Session logs folded per request
-        scanBudgetMs: 4000      # time budget for one request
-        balanceTtlMs: 60000     # Platform wallet cache
+        maxRunningTasks: 8      # 进行中任务行数
+        maxRecentTasks: 8       # 最近任务行数
+        maxScanSessions: 60     # 单次请求最多折算的 Session 数
+        scanBudgetMs: 4000      # 单次请求的时间预算
+        balanceTtlMs: 60000     # 钱包缓存时间
         prices:
           default: { input: 2, output: 8, cacheRead: 0.5 }
           models:
@@ -84,28 +76,29 @@ tune the panel. Values are optional and defensive defaults apply.
             deepseek-reasoner: { input: 4, output: 16, cacheRead: 1 }
 ```
 
-Prices are CNY per 1,000,000 tokens. Session logs keep cache-miss input, cache-hit input
-and output apart, so the estimate prices them as `input`, `cacheRead` and `output`; the
-token count shown is their sum. Amounts are local estimates derived from the Session logs,
-not Platform billing records; the balance itself comes from the DeepSeek account. The
-7-day comparison uses the same estimate on both sides, so its ratio stays meaningful even
-when the price table is only approximate.
+价格单位是「元 / 每 100 万 Token」。Session 日志把未命中输入、命中缓存输入与输出分开
+记录，估算时分别按 `input`、`cacheRead`、`output` 计价，展示的 Token 数是三者之和。
+金额是基于本地日志的估算，不是平台账单；余额本身来自 DeepSeek 账户。7 天对比两边用同一
+套估算，所以即使价格表粗略，比例仍然有意义。
 
-## Publishing
-
-The bundle ships through a **Git market source** — no npm account is involved:
+## 开发与测试
 
 ```bash
-node publish/prepare.mjs --name cc1396-dsh-workbench --version 1.0.0 --out dist
+npm test        # node:test：Host 路由、摘要、持久化、语言回退、跨天、字典一致性
 ```
 
-1. commit `dist/` (the ready-to-install package, ~18 KB);
-2. point the market index at that commit — `source: { type: "git", url, commit, path: "dist" }`;
-3. push: GitHub Pages serves the index at
-   `https://cc1396.github.io/dsh-workbench/index.json`.
+## 发布
 
-Consumers add that URL under **Plugins → Discover**; the install fetches
-`git+https://github.com/cc1396/dsh-workbench.git#<commit>&path:/dist`.
+以 **Git 市场源** 分发，不需要 npm 账号：
 
-Every release repeats the loop with a new commit. The full walkthrough, the index schema,
-and the optional npm path live in [publish/README.md](publish/README.md).
+```bash
+node publish/prepare.mjs --name cc1396-dsh-workbench --version 1.2.1 --out dist
+```
+
+1. 提交 `dist/`（可直接安装的包）；
+2. 让市场索引指向该提交 —— `source: { type: "git", url, commit, path: "dist" }`；
+3. 推送后由 GitHub Pages 提供索引：
+   `https://cc1396.github.io/dsh-workbench/index.json`。
+
+使用方在 **插件 → 发现** 里填这个地址即可安装。完整流程与索引格式见
+[publish/README.md](publish/README.md)。

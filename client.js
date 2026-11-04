@@ -35,7 +35,12 @@ window.__ModuleLoader__.load({
       'greet.evening': '晚上好',
       'greet.late': '夜深了',
       'greet.named': '{greeting}，{name}',
-      'summary.line': '有 {running} 个任务正在进行中，{recent} 个任务已完成',
+      'now.running': '{project} 上还有 {count} 个任务在跑',
+      'now.work': '今天在 {projects} 上做了 {count} 件事',
+      'now.idle': '今天有 {count} 个会话，还没有归纳出工作',
+      'now.empty': '今天还没有记录',
+      'continue.label': '继续上次',
+      'continue.hint': '打开这个会话',
       'legend.running': '进行中',
       'legend.done': '已完成',
       'hero.label': '账户余额',
@@ -154,7 +159,12 @@ window.__ModuleLoader__.load({
       'greet.evening': 'Good evening',
       'greet.late': 'Working late',
       'greet.named': '{greeting}, {name}',
-      'summary.line': '{running} tasks in progress · {recent} completed',
+      'now.running': '{count} still running on {project}',
+      'now.work': '{count} things done on {projects} today',
+      'now.idle': '{count} sessions today, nothing summarized yet',
+      'now.empty': 'Nothing recorded today',
+      'continue.label': 'Resume',
+      'continue.hint': 'Open this session',
       'legend.running': 'Running',
       'legend.done': 'Done',
       'hero.label': 'Account balance',
@@ -637,32 +647,43 @@ window.__ModuleLoader__.load({
       return t(key)
     }
 
-    /** Fill one sentence's `{running}` / `{recent}` slots with emphasised counts. */
-    function summaryParts(template, values) {
-      const parts = []
-      const pattern = /\{(running|recent)\}/g
-      let cursor = 0
-      let match
-      while ((match = pattern.exec(template)) !== null) {
-        if (match.index > cursor) parts.push(template.slice(cursor, match.index))
-        const kind = match[1]
-        parts.push(
-          h(
-            'b',
-            { key: `${kind}-${match.index}`, className: `dswb-summary-count dswb-summary-count-${kind}` },
-            values[kind],
-          ),
-        )
-        cursor = match.index + match[0].length
-      }
-      parts.push(template.slice(cursor))
-      return parts
+    /**
+     * The "now" entry: the task to return to, with its project's first work
+     * item for today when the report already exists.
+     */
+    function ContinueCard({ task, workItem, t, now, openSession }) {
+      if (task === null || typeof task !== 'object') return null
+      const title = typeof task.title === 'string' && task.title !== '' ? task.title : t('row.untitled')
+      const project = basename(task.cwd)
+      const running = task.running === true
+      const action = running && task.lastAction !== null && typeof task.lastAction === 'object' ? task.lastAction : undefined
+      const detail = running && action !== undefined ? actionText(t, action) : relativeTime(t, task.updatedAt, now)
+      const meta = [project !== '' ? project : undefined, detail]
+        .filter((part) => typeof part === 'string' && part !== '')
+        .join(' · ')
+      return h(
+        'button',
+        {
+          type: 'button',
+          className: 'dswb-continue',
+          'aria-label': t('row.open', { title }),
+          title: t('continue.hint'),
+          onClick: () => openSession(task.sessionId),
+        },
+        h('span', { className: 'dswb-continue-eyebrow' }, t('continue.label')),
+        h(
+          'span',
+          { className: 'dswb-continue-body' },
+          h('span', { className: 'dswb-continue-title' }, title),
+          meta === '' ? null : h('span', { className: 'dswb-continue-meta' }, meta),
+          typeof workItem === 'string' && workItem !== ''
+            ? h('span', { className: 'dswb-continue-work' }, workItem)
+            : null,
+        ),
+        h('span', { className: 'dswb-continue-go', 'aria-hidden': 'true' }, '›'),
+      )
     }
 
-    /**
-     * Wallet strip: balance on the left, a compact used-share bar and a dense
-     * facts row on the right. No donut — the card earns its space with numbers.
-     */
     function BalanceHero({ account, usage, t }) {
       const facts = balanceFacts(account)
       const primary = facts.currencies.has('CNY') ? 'CNY' : [...facts.currencies][0]
@@ -1085,10 +1106,9 @@ window.__ModuleLoader__.load({
         if (summary?.status !== 'ready') return
         const map = {}
         for (const project of summary.projects) {
-          const first = Array.isArray(project.items) ? project.items[0] : undefined
-          if (typeof first === 'string' && first !== '' && typeof project.project === 'string') {
-            map[project.project] = first
-          }
+          if (typeof project.project !== 'string' || !Array.isArray(project.items)) continue
+          const items = project.items.filter((item) => typeof item === 'string' && item !== '')
+          if (items.length > 0) map[project.project] = items
         }
         onWorkItems(map)
       }, [summaries, today?.start])
@@ -1622,7 +1642,7 @@ window.__ModuleLoader__.load({
                     t,
                     now,
                     openSession,
-                    workItem: workItems?.[basename(item.cwd)],
+                    workItem: workItems?.[basename(item.cwd)]?.[0],
                   }),
                 ),
               ),
@@ -1666,6 +1686,26 @@ window.__ModuleLoader__.load({
       const now = useNow(NOW_MS)
       const data = state.data
       const loading = state.status === 'loading'
+      const runningTasks = Array.isArray(data?.running) ? data.running : []
+      const recentTasks = Array.isArray(data?.recent) ? data.recent : []
+      const lastTask = runningTasks[0] ?? recentTasks[0]
+      const lastProject = lastTask === undefined ? '' : basename(lastTask.cwd)
+      const workProjects = Object.keys(todayWorkItems)
+      const workCount = workProjects.reduce((sum, name) => sum + todayWorkItems[name].length, 0)
+      const runningCount = Number(data?.tasks?.running) || 0
+      let statusLine
+      if (data !== undefined) {
+        if (runningCount > 0 && lastProject !== '') {
+          statusLine = t('now.running', { project: lastProject, count: String(runningCount) })
+        } else if (workCount > 0) {
+          const separator = localeTag().toLowerCase().startsWith('zh') ? '、' : ', '
+          statusLine = t('now.work', { projects: workProjects.slice(0, 2).join(separator), count: String(workCount) })
+        } else if ((Number(data.tasks?.total) || 0) > 0) {
+          statusLine = t('now.idle', { count: String(data.tasks.total) })
+        } else {
+          statusLine = t('now.empty')
+        }
+      }
 
       const greeting = greetingText(t, now)
       const accountName = data?.account?.profile?.name
@@ -1691,16 +1731,7 @@ window.__ModuleLoader__.load({
               'WORKBENCH',
             ),
             h('h1', null, pageTitle),
-            data === undefined
-              ? null
-              : h(
-                  'p',
-                  { className: 'dswb-summary' },
-                  ...summaryParts(t('summary.line'), {
-                    running: formatTokens(data.tasks?.running),
-                    recent: formatTokens(data.tasks?.recent),
-                  }),
-                ),
+            statusLine === undefined ? null : h('p', { className: 'dswb-summary' }, statusLine),
           ),
         ),
         h(
@@ -1768,6 +1799,13 @@ window.__ModuleLoader__.load({
         body = h(
           React.Fragment,
           null,
+          h(ContinueCard, {
+            task: lastTask,
+            workItem: lastProject === '' ? undefined : todayWorkItems[lastProject]?.[0],
+            t,
+            now,
+            openSession,
+          }),
           h(BalanceHero, { account: data.account, usage, t }),
           h(
             'div',
@@ -1944,6 +1982,15 @@ window.__ModuleLoader__.load({
       '.dswb-card,.dswb-hero,.dswb-panel,.dswb-speed,.dswb-log{background:linear-gradient(180deg,color-mix(in srgb,var(--dsw-alias-label-primary) 4%,transparent),transparent 55%),var(--dsw-alias-bg-layer-1);border:.5px solid color-mix(in srgb,var(--dsw-alias-label-primary) 10%,transparent);box-shadow:0 26px 60px -48px color-mix(in srgb,#0b1020 60%,transparent),inset 0 1px 0 color-mix(in srgb,var(--dsw-alias-label-primary) 7%,transparent)}',
 
       // --- wallet hero ------------------------------------------------------
+      '.dswb-continue{display:flex;align-items:center;gap:12px;width:100%;margin-bottom:14px;padding:12px 16px;border:.5px solid var(--dsw-alias-border-l1);border-radius:16px;background:color-mix(in srgb,var(--dsw-alias-label-primary) 3%,transparent);color:inherit;font:inherit;text-align:left;cursor:pointer;transition:border-color .15s,background .15s}',
+      '.dswb-continue:hover{border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 40%,transparent);background:color-mix(in srgb,var(--dsw-alias-brand-primary) 6%,transparent)}',
+      '.dswb-continue:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
+      '.dswb-continue-eyebrow{flex:none;color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase}',
+      '.dswb-continue-body{display:flex;min-width:0;flex:1;flex-direction:column;gap:2px}',
+      '.dswb-continue-title{overflow:hidden;color:var(--dsw-alias-label-primary);font-size:13.5px;font-weight:500;line-height:20px;text-overflow:ellipsis;white-space:nowrap}',
+      '.dswb-continue-meta{overflow:hidden;color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10px;line-height:15px;text-overflow:ellipsis;white-space:nowrap}',
+      '.dswb-continue-work{overflow:hidden;color:var(--dsw-alias-label-secondary);font-size:11.5px;line-height:17px;text-overflow:ellipsis;white-space:nowrap}',
+      '.dswb-continue-go{flex:none;color:var(--dsw-alias-label-tertiary);font-size:18px;line-height:1}',
       '.dswb-hero{display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px 32px;margin-bottom:16px;padding:16px 20px;border-radius:20px;position:relative;overflow:hidden;animation:dswb-rise .5s ease .04s both}',
       '.dswb-hero:before{content:"";position:absolute;top:0;left:22px;right:22px;height:1px;background:linear-gradient(90deg,transparent,rgba(142,167,255,.55),rgba(94,234,212,.35),transparent)}',
       '.dswb-hero:after{content:"";position:absolute;right:26px;top:50%;width:320px;height:170px;transform:translateY(-50%);border-radius:50%;background:radial-gradient(ellipse,rgba(124,156,255,.10),transparent 70%);pointer-events:none}',

@@ -1135,13 +1135,13 @@ window.__ModuleLoader__.load({
               'div',
               { className: 'dswb-log-day-title' },
               h('span', { className: 'dswb-log-day-label' }, label),
-              projects.length === 0
-                ? null
-                : h(
+              projects.length > 1
+                ? h(
                     'span',
                     { className: 'dswb-log-day-projects' },
                     projects.map((project) => project.project).join(' · '),
-                  ),
+                  )
+                : null,
             ),
             h(
               'div',

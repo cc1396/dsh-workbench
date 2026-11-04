@@ -2,16 +2,17 @@
     - id: dsh-workbench
       name: 'cc1396-dsh-workbench'
       config:
-        # Rows rendered per task list.
+        # 每个任务列表渲染的行数。
         maxRunningTasks: 8
         maxRecentTasks: 8
-        # Session-log scan bounds: usage folds are cached per Session and the
-        # next poll continues where the time budget stopped.
+        # Session 日志扫描上限：折算结果按 Session 缓存，超出预算的部分
+        # 由下一次轮询接着处理。
         maxScanSessions: 60
         scanBudgetMs: 4000
-        # The Platform wallet is queried at most once a minute.
+        # 钱包查询频率上限（毫秒）。
         balanceTtlMs: 60000
-        # CNY per 1,000,000 tokens, used for the local amount estimate.
+        # 本地金额估算用的单价：元 / 每 100 万 Token。
+        # 默认值只是示例，请按你实际使用的模型定价修改。
         prices:
           default:
             input: 2

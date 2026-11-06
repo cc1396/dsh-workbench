@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="__THEME__">
+<head>
+<meta charset="utf-8" />
+<title>Workbench QA</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
+  #root { height: 100%; }
+  :root[data-theme="light"] { color-scheme: light;
+    --dsw-alias-bg-base: #F7F7F9; --dsw-alias-bg-l1: #FFFFFF; --dsw-alias-bg-l2: #FFFFFF; --dsw-alias-bg-l3: #F1F1F5;
+    --dsw-alias-bg-overlay: #FFFFFF; --dsw-alias-label-primary: #191921; --dsw-alias-label-secondary: #5F6070;
+    --dsw-alias-label-tertiary: #87889A; --dsw-alias-label-quaternary: #B0B1BE; --dsw-alias-border-l1: #E4E4E9;
+    --dsw-alias-border-l2: #D4D4DC; --dsw-alias-brand-primary: #6241BF; --dsw-alias-brand-text: #6241BF;
+    --dsw-alias-brand-primary-invert: #FFFFFF; --dsw-alias-bg-brand: #EFEAFE; --dsw-alias-state-success-primary: #08724C;
+    --dsw-alias-state-warning-primary: #92500A; --dsw-alias-state-error-primary: #AC2B40; --dsw-alias-state-error-secondary: #FDEBEE;
+    --dsw-alias-state-success-secondary: #E4F5EE; --dsw-alias-state-warning-secondary: #FBF1E4;
+    --dsw-alias-bg-brand-secondary: #F6F2FF; --dsw-alias-bg-fill: #F1F1F5; --dsw-alias-bg-mask: rgba(15, 15, 20, 0.32);
+    --dsw-alias-bg-layer-1: #FFFFFF; --dsw-alias-bg-layer-2: #F7F7F9; --dsw-alias-bg-layer-3: #F1F1F5;
+    --dsw-alias-border-l2: #D4D4DC; --dsw-alias-border-l3: #C9C9D2;
+    --dsw-alias-state-business-primary: #6241BF; --dsw-alias-state-idle-primary: #87889A;
+    --dsw-focus-ring-color: #6241BF;
+  }
+  :root[data-theme="dark"] { color-scheme: dark;
+    --dsw-alias-bg-base: #09090B; --dsw-alias-bg-l1: #18181B; --dsw-alias-bg-l2: #1C1C20; --dsw-alias-bg-l3: #222226;
+    --dsw-alias-bg-overlay: #1C1C20; --dsw-alias-label-primary: #FAFAFA; --dsw-alias-label-secondary: #A1A1AA;
+    --dsw-alias-label-tertiary: #71717A; --dsw-alias-label-quaternary: #52525B; --dsw-alias-border-l1: #27272A;
+    --dsw-alias-border-l2: #35353A; --dsw-alias-brand-primary: #C4B0FF; --dsw-alias-brand-text: #C4B0FF;
+    --dsw-alias-brand-primary-invert: #16101F; --dsw-alias-bg-brand: #302448; --dsw-alias-state-success-primary: #5DD9A3;
+    --dsw-alias-state-warning-primary: #F0B66B; --dsw-alias-state-error-primary: #FF8FA0; --dsw-alias-state-error-secondary: #3A1C24;
+    --dsw-alias-state-success-secondary: #16302A; --dsw-alias-state-warning-secondary: #362A1A;
+    --dsw-alias-bg-brand-secondary: #1F1A29; --dsw-alias-bg-fill: #222226; --dsw-alias-bg-mask: rgba(0, 0, 0, 0.55);
+    --dsw-alias-bg-layer-1: #18181B; --dsw-alias-bg-layer-2: #1C1C20; --dsw-alias-bg-layer-3: #222226;
+    --dsw-alias-border-l2: #35353A; --dsw-alias-border-l3: #3F3F45;
+    --dsw-alias-state-business-primary: #C4B0FF; --dsw-alias-state-idle-primary: #71717A;
+    --dsw-focus-ring-color: #C4B0FF;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  window.__DSWB_SNAPSHOT__ = __SNAPSHOT__;
+  window.__dswbHome = location.hash.length > 1 ? JSON.parse(decodeURIComponent(location.hash.slice(1))) : undefined;
+  window.fetch = async (input) => {
+    const url = String(input && input.url ? input.url : input);
+    const snap = window.__DSWB_SNAPSHOT__;
+    let body = { ok: true };
+    if (url.startsWith('/api/workbench/status')) body = snap;
+    else if (url.startsWith('/api/workbench/search')) body = window.__dswbSearch(new URL(url, location.href));
+    else if (url.startsWith('/api/workbench/requests')) body = window.__dswbRequests(new URL(url, location.href));
+    else if (url.startsWith('/api/workbench/report')) body = snap.__report;
+    else if (url.startsWith('/api/workbench/tasks') && String(input.method || 'GET') === 'GET') body = { tasks: [] };
+    else if (url.startsWith('/api/workbench/summarize')) body = { projects: [], model: 'demo' };
+    return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  window.__dswbDictionary = {};
+  window.__slots = [];
+  window.__ctx = {
+    effect(fn) { fn() },
+    get(name) { return name === 'uiWorkspace' ? { openSession(id) { window.__opened = id; console.log('open ' + id) } } : undefined },
+    locale: {
+      getSnapshot: () => ({ active: 'zh', preferred: 'zh' }),
+      subscribe: () => () => {},
+      register(namespace, dictionaries) { Object.assign(window.__dswbDictionary, dictionaries.zh) },
+      bind: () => (key, vars) => {
+        let text = window.__dswbDictionary[key] ?? key
+        if (vars) for (const [name, value] of Object.entries(vars)) text = text.split('{' + name + '}').join(String(value))
+        return text
+      },
+    },
+    slots: { inject: (_name, fn) => fn(), register: (definition, component) => window.__slots.push({ ...definition, component }) },
+  };
+</script>
+<script>
+  window.__dswbSearch = (url) => {
+    const snap = window.__DSWB_SNAPSHOT__;
+    const q = (url.searchParams.get('q') || '').trim().toLowerCase();
+    const rows = (snap.search && snap.search.rows) || [];
+    const items = rows
+      .filter((row) => !q || String(row.title || '').toLowerCase().includes(q) || String(row.projectName || '').toLowerCase().includes(q) || String(row.model || '').toLowerCase().includes(q) || String(row.sessionId || '').toLowerCase().includes(q))
+      .map((row, index) => ({ sessionId: row.sessionId, title: row.title, projectId: row.projectId, projectName: row.projectName, model: row.model, provider: row.provider, state: row.state, at: row.endedAt || row.lastAt, running: row.running, rank: q ? 1 : 4, order: index }));
+    return { generatedAt: Date.now(), query: q, total: items.length, items, hasMore: false, index: { kind: 'local-metadata', rows: rows.length, fullText: false }, capabilities: { events: 'id-only', fullText: 'off' } };
+  };
+  window.__dswbRequests = (url) => {
+    const snap = window.__DSWB_SNAPSHOT__;
+    const id = url.searchParams.get('sessionId');
+    const detail = (snap.__requests || {})[id] || { rows: [], prices: [], pricesOf: {} };
+    return Object.assign({ generatedAt: Date.now(), sessionId: id, projectId: snap.running.find((r) => r.sessionId === id)?.projectId || '/work/api-gateway', projectName: 'api-gateway', day: Number(url.searchParams.get('day')) || 0, dayLabel: '2026-11-06', title: snap.running.find((r) => r.sessionId === id)?.title || '', total: 1.84, totalQuality: 'partial', amount: 1.84, coverage: 0.75, currency: 'USD', priceRef: 'demo-usd-1106' }, detail);
+  };
+</script>
+<script>window.__ModuleLoader__ = { load(registration) { window.__dswbRegistration = registration } }</script>
+<script src="../client.js" id="client"></script>
+<script>
+  /* Mount the real panel once the module-loader shim has registered it. */
+  const registration = window.__dswbRegistration
+  const client = registration.factory((name) => (name === 'react' ? window.React : undefined))
+  client.apply(window.__ctx)
+  const page = window.__slots.find((slot) => slot.name === 'main').component
+  window.ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(page, { t: window.__ctx.locale.bind('dsh.workbench'), openSession() {} }))
+</script>
+</body>
+</html>

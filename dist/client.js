@@ -17,12 +17,108 @@ window.__ModuleLoader__.load({
     /** Main panel key; the sidebar entry reuses it as its list id. */
     const PANEL_ID = 'workbench'
     const ROUTE = '/api/workbench/status'
+    const ALERT_ROUTE = '/api/workbench/alerts'
     const SUMMARY_ROUTE = '/api/workbench/summarize'
+    const SEARCH_ROUTE = '/api/workbench/search'
+    const REQUEST_ROUTE = '/api/workbench/requests'
+    const REPORT_ROUTE = '/api/workbench/report'
+    const TASKS_ROUTE = '/api/workbench/tasks'
+    const DAY_MS = 86_400_000
+    const SEARCH_PAGE_SIZE = 20
     const POLL_MS = 15000
     const RETRY_MS = 4000
     const NOW_MS = 30000
 
     const zh = {
+      'overview.title': '今日概览',
+      'overview.subtitle': '{date} · {zone} · 已于 {time} 同步',
+      'fresh.live': '实时同步',
+      'fresh.stale': '离线快照',
+      'kpi.region': '今日指标',
+      'kpi.cost': '今日估算费用',
+      'kpi.coverage': '计价覆盖 {percent}%',
+      'kpi.noSample': '暂无样本',
+      'kpi.unpriced': ' · 含未计价',
+      'kpi.running': '运行中',
+      'kpi.runningDetail': '{waiting} 项等待',
+      'kpi.attention': '待处理',
+      'kpi.attentionDetail': '{failed} 失败 · {waiting} 等待',
+      'kpi.speed': '生成速度 P50',
+      'kpi.speedValue': '{rate} tok/s',
+      'kpi.speedDetail': '模型样本 {count}',
+      'attention.title': '需要关注',
+      'attention.all': '全部提醒',
+      'attention.empty': '没有需要处理的事项。',
+      'attention.more': '还有 {count} 条',
+      'attention.foot': '依据宿主待办与轮次结束事件',
+      'alert.failure': '执行异常',
+      'alert.waiting': '等待确认',
+      'alert.stuck': '可能卡住',
+      'alert.toolFailure': '工具连续失败',
+      'alert.stuckReason': '已 {minutes} 分钟没有新的活动证据',
+      'alert.toolFailureReason': '{tool} 连续失败',
+      'alert.ack': '确认',
+      'alert.snooze': '暂缓 30 分钟',
+      'alert.evidence': '查看证据',
+      'alert.open': '打开原 Session',
+      'alert.acknowledged': '已确认',
+      'alert.snoozed': '已暂缓',
+      'evidence.itemState': '提醒状态',
+      'evidence.open': '未确认',
+      'evidence.solved': '已解决',
+      'alert.gone': '这条提醒已经不再有效。',
+      'running.title': '运行中的 Session',
+      'running.hint': '点击任意任务打开原 Session',
+      'running.empty': '没有正在运行的 Session。',
+      'recent.title': '最近结束',
+      'recent.hint': '近 7 天 · 按结束时间',
+      'recent.empty': '近 7 天没有结束的 Session。',
+      'thead.session': 'Session',
+      'thead.state': '状态',
+      'thead.action': '最后动作',
+      'thead.duration': '本轮耗时',
+      'thead.cost': '今日估算',
+      'thead.open': '打开',
+      'state.waiting': '等待用户',
+      'state.running': '执行中',
+      'state.stuck': '可能卡住',
+      'state.failed': '执行异常',
+      'state.ended': '已结束',
+      'state.cancelled': '已取消',
+      'state.unknown': '状态未知',
+      'wait.approval': '等待审批',
+      'wait.question': '等待回答',
+      'reason.done': '正常结束',
+      'reason.cancelled': '用户取消',
+      'reason.error': '执行失败',
+      'reason.maxTokens': '达到输出上限',
+      'row.waitReason': '正在{kind}{detail}',
+      'row.failureReason': '轮次已终止：{message}',
+      'row.unknownReason': '缺少运行证据，保留最近已知状态',
+      'row.endedReason': '{reason} · {time}',
+      'run.turn': '本轮',
+      'run.children': ' · {count} 个子任务',
+      'cost.unknown': '不可估算',
+      'value.none': '—',
+      'tabs.label': '工作台分区',
+      'tabs.overview': '概览',
+      'tabs.sessions': '会话',
+      'tabs.attention': '提醒',
+      'tabs.records': '记录',
+      'detail.back': '返回概览',
+      'evidence.session': 'Session ID',
+      'evidence.project': '项目',
+      'evidence.state': '当前状态',
+      'evidence.triggered': '触发时间',
+      'evidence.updated': '最后更新',
+      'evidence.none': '没有更多证据',
+      'evidence.note': '确认或暂缓只影响本站提醒，处理流程仍在原 Session 内完成。',
+      'offline.title': '实时连接已中断',
+      'offline.badge': '离线',
+      'offline.body': '正在显示 {time} 的本地快照。重连后会先补齐遗漏事件。',
+      'offline.reconnect': '重新连接',
+      'foot.note': '本地数据 · 费用依据已结算请求估算',
+      'foot.synced': '最后同步',
       panel: '工作台',
       'panel.count': '（{count}）',
       'panel.more': '另有 {count} 个',
@@ -121,6 +217,16 @@ window.__ModuleLoader__.load({
       'task.action.job': '正在查看后台任务',
       'task.action.other': '正在调用 {tool}',
       'task.action.otherTarget': '正在调用 {tool}：{target}',
+      'task.action.read.bare': '正在读取文件',
+      'task.action.edit.bare': '正在写入文件',
+      'task.action.run.bare': '正在运行命令',
+      'task.action.search.bare': '正在搜索代码',
+      'task.action.find.bare': '正在查找文件',
+      'task.action.web.bare': '正在搜索网页',
+      'task.action.fetch.bare': '正在抓取网页',
+      'task.action.delegate.bare': '正在委派子任务',
+      'task.action.calling': '正在调用 {tool}',
+      'task.action.editing': '正在写入',
       'section.running': '进行中的任务',
       'section.recent': '最近完成的任务',
       'empty.running': '暂无进行中的任务',
@@ -140,11 +246,256 @@ window.__ModuleLoader__.load({
       stale: '刷新失败，当前显示上次读取的数据。',
       'usage.pending': '仍有 {count} 个任务的用量待统计',
       footnote: 'Token 与金额按本机会话日志和价格配置估算，仅供参考；余额来自 DeepSeek 账户。',
+      'page.dateHint': '按本地日期查看',
+      'projects.tests': '测试',
+      'projects.state': '状态',
+      'projects.gitEnable': '启用 Git 证据',
+      'projects.gitDisable': '停用 Git 证据',
+      'search.filters': '筛选',
+      'nav.cost': '消耗归因',
+      'nav.projects': '项目',
+      'nav.report': '开发日报',
+      'nav.search': '搜索 Session',
+      'nav.settings': '设置',
+      'nav.overview': '今日概览',
+      'crumb.home': '工作台',
+      'crumb.cost': '消耗归因',
+      'crumb.projects': '项目工作进展',
+      'crumb.report': '开发日报',
+      'page.today': '今天',
+      'page.all': '所有项目',
+      'page.prevDay': '前一天',
+      'page.nextDay': '后一天',
+      'page.back': '返回',
+      'page.open': '打开',
+      'page.copy': '复制',
+      'page.copied': '已复制',
+      'page.refresh': '刷新',
+      'page.unavailable': '不可获取',
+      'page.noSample': '暂无样本',
+      'page.loading': '正在读取…',
+      'page.error': '读取失败',
+      'page.retry': '重试',
+      'page.local': '本地数据 · 费用依据已结算请求估算',
+      'search.title': '搜索 Session',
+      'search.placeholder': '搜索标题、项目、模型或 ID',
+      'search.found': '找到 {count} 个 Session',
+      'search.recent': '最近 10 条',
+      'search.empty': '没有匹配的 Session。',
+      'search.clear': '清除筛选',
+      'search.more': '载入更多',
+      'search.project': '项目',
+      'search.date': '日期',
+      'search.model': '模型',
+      'search.state': '状态',
+      'search.all': '全部',
+      'search.last7': '近 7 天',
+      'search.allTime': '全部时间',
+      'search.localIndex': '本地元数据索引 · {count} 条',
+      'search.rebuild': '重建索引',
+      'search.rebuilding': '正在重建…',
+      'search.hint': '↑/↓ 选择 · Enter 打开 · Esc 返回',
+      'search.composing': '正在输入…',
+      'search.open': '打开 Session',
+      'search.noIndex': '索引不可用，请重建',
+      'search.moreCount': '还有 {count} 条',
+      'cost.title': '消耗归因',
+      'cost.subtitle': '{date} · {currency} · {zone}',
+      'cost.today': '今日估算费用',
+      'cost.known': '已知估算 · {currency}',
+      'cost.coverage': '计价覆盖 {percent}%',
+      'cost.projects': '按项目汇总',
+      'cost.projectSessions': '{count} 个 Session',
+      'cost.viewDetail': '查看明细',
+      'cost.sessionTitle': 'Session 费用明细',
+      'cost.requests': '模型请求',
+      'cost.requestDetail': '请求详情',
+      'cost.open': '打开 Session',
+      'cost.priced': '已计价',
+      'cost.unpriced': '不可估算',
+      'cost.pricedRow': '{priced} 条已计价 · {unpriced} 条不可估算',
+      'cost.success': '成功',
+      'cost.failed': '失败',
+      'cost.aggregate': '会话补差',
+      'cost.source': '来源',
+      'cost.model': '模型',
+      'cost.uncached': '未缓存输入',
+      'cost.cacheRead': '缓存命中输入',
+      'cost.output': '输出',
+      'cost.priceRef': '价目版本',
+      'cost.attribution': '归属来源',
+      'cost.attribution.workspace': '工作区映射 · {project}',
+      'cost.attribution.session': '会话汇总',
+      'cost.priceNote': '每百万 Token 单价 · 未缓存 {input} · 缓存 {cache} · 输出 {output}',
+      'cost.settledAt': '结算时间',
+      'cost.empty': '这一天没有可计价请求。',
+      'cost.missingUsage': '缺少可信用量，计价覆盖率已反映该请求',
+      'cost.estimateNote': '估算明细与平台账务分别显示',
+      'cost.sessionId': 'Session ID',
+      'cost.back': '返回消耗归因',
+      'cost.sessions': 'Session',
+      'cost.amount': '今日估算',
+      'cost.day': '日期',
+      'cost.currency': '币种',
+      'cost.terminal': '{count} 条终态',
+      'cost.provider': '提供方',
+      'cost.none': '不可获取',
+      'projects.title': '项目工作进展',
+      'projects.subtitle': '{date} · {count} 个项目有活动',
+      'projects.sessions': '{count} 个 Session 有活动',
+      'projects.evidence': '{count} 条证据',
+      'projects.lastAction': '最近动作',
+      'projects.timeline': '今日时间线',
+      'projects.filter.all': '全部',
+      'projects.filter.session': '会话',
+      'projects.filter.file': '文件',
+      'projects.filter.commit': '提交',
+      'projects.filter.test': '测试',
+      'projects.empty': '今天没有项目活动。',
+      'projects.emptyTimeline': '这个项目今天没有证据。',
+      'projects.done': '已完成',
+      'projects.active': '进行中',
+      'projects.blocked': '阻塞',
+      'projects.confirm': '待确认',
+      'projects.count': '{count} 项{state}',
+      'projects.direct': '直接关联',
+      'projects.activity': '项目活动',
+      'projects.source': '来源',
+      'projects.time': '时间',
+      'projects.verified': '可核验',
+      'projects.unverified': '未验证',
+      'projects.openSession': '打开会话',
+      'projects.gitOff': 'Git 证据未启用',
+      'projects.gitReady': '只读 Git 证据',
+      'projects.testVerified': '{passed} 项通过 · 退出码 {code}',
+      'projects.testUnverified': '命令无结构化证据',
+      'projects.commitFiles': '{count} 个文件',
+      'report.title': '开发日报',
+      'report.subtitle': '{date} · {projects} · {zone}',
+      'report.copy': '复制 Markdown',
+      'report.copied': '已复制',
+      'report.draft': '日报草稿',
+      'report.editable': '可编辑',
+      'report.evidence': '证据详情',
+      'report.empty': '这天没有可写的证据。',
+      'report.done': '已完成',
+      'report.doing': '进行中',
+      'report.blocked': '阻塞',
+      'report.confirm': '待确认',
+      'report.edit': '编辑',
+      'report.save': '保存',
+      'report.cancel': '取消',
+      'report.confirmTask': '确认完成',
+      'report.addItem': '新增记录',
+      'report.editMark': '人工编辑',
+      'report.activityMark': '项目活动',
+      'report.sha': '提交',
+      'report.tests': '测试',
+      'report.verification': '来源',
+      'report.confirmBy': '任务确认',
+      'report.localUser': '本地用户 · {time}',
+      'report.openCommit': '打开提交',
+      'report.openTest': '查看测试证据',
+      'report.note': '完成状态来自人工确认，提交和测试作为证据',
+      'report.reset': '恢复生成稿',
+      'report.manual': '人工新增',
+      'report.preview': '预览',
+      'report.status': '状态',
+      'report.reference': '引用',
     }
 
     /** English dictionary, key-identical to the Chinese source of truth. */
 
     const en = {
+      'overview.title': "Today's overview",
+      'overview.subtitle': '{date} · {zone} · synced at {time}',
+      'fresh.live': 'Live sync',
+      'fresh.stale': 'Offline snapshot',
+      'kpi.region': "Today's metrics",
+      'kpi.cost': 'Estimated cost today',
+      'kpi.coverage': 'Priced {percent}%',
+      'kpi.noSample': 'No sample',
+      'kpi.unpriced': ' · includes unpriced',
+      'kpi.running': 'Running',
+      'kpi.runningDetail': '{waiting} waiting',
+      'kpi.attention': 'To handle',
+      'kpi.attentionDetail': '{failed} failed · {waiting} waiting',
+      'kpi.speed': 'Speed P50',
+      'kpi.speedValue': '{rate} tok/s',
+      'kpi.speedDetail': 'model samples {count}',
+      'attention.title': 'Needs attention',
+      'attention.all': 'All alerts',
+      'attention.empty': 'Nothing needs your attention.',
+      'attention.more': '{count} more',
+      'attention.foot': 'Based on host waits and turn-end events',
+      'alert.failure': 'Failed',
+      'alert.waiting': 'Waiting on you',
+      'alert.stuck': 'Possibly stuck',
+      'alert.toolFailure': 'Repeated tool failures',
+      'alert.stuckReason': 'No new activity for {minutes} minutes',
+      'alert.toolFailureReason': '{tool} failed repeatedly',
+      'alert.ack': 'Acknowledge',
+      'alert.snooze': 'Snooze 30 min',
+      'alert.evidence': 'Evidence',
+      'alert.open': 'Open session',
+      'alert.acknowledged': 'acknowledged',
+      'alert.snoozed': 'snoozed',
+      'evidence.itemState': 'Item state',
+      'evidence.open': 'Open',
+      'evidence.solved': 'Solved',
+      'alert.gone': 'This item is no longer valid.',
+      'running.title': 'Running sessions',
+      'running.hint': 'Click any task to open its session',
+      'running.empty': 'No session is running.',
+      'recent.title': 'Recently ended',
+      'recent.hint': 'Last 7 days · by end time',
+      'recent.empty': 'No session ended in the last 7 days.',
+      'thead.session': 'Session',
+      'thead.state': 'State',
+      'thead.action': 'Last action',
+      'thead.duration': 'Turn time',
+      'thead.cost': 'Today est.',
+      'thead.open': 'Open',
+      'state.waiting': 'Waiting',
+      'state.running': 'Running',
+      'state.stuck': 'Possibly stuck',
+      'state.failed': 'Failed',
+      'state.ended': 'Ended',
+      'state.cancelled': 'Cancelled',
+      'state.unknown': 'Unknown',
+      'wait.approval': 'approval',
+      'wait.question': 'your answer',
+      'reason.done': 'Completed',
+      'reason.cancelled': 'Cancelled',
+      'reason.error': 'Failed',
+      'reason.maxTokens': 'Output cap reached',
+      'row.waitReason': 'Waiting for {kind}{detail}',
+      'row.failureReason': 'Turn ended: {message}',
+      'row.unknownReason': 'No live evidence; the last known state is kept',
+      'row.endedReason': '{reason} · {time}',
+      'run.turn': 'Turn',
+      'run.children': ' · {count} children',
+      'cost.unknown': 'Not estimable',
+      'value.none': '—',
+      'tabs.label': 'Workbench sections',
+      'tabs.overview': 'Overview',
+      'tabs.sessions': 'Sessions',
+      'tabs.attention': 'Alerts',
+      'tabs.records': 'Records',
+      'detail.back': 'Back to overview',
+      'evidence.session': 'Session ID',
+      'evidence.project': 'Project',
+      'evidence.state': 'Current state',
+      'evidence.triggered': 'Triggered',
+      'evidence.updated': 'Last update',
+      'evidence.none': 'No further evidence',
+      'evidence.note': 'Acknowledge or snooze only marks this local item; the wait itself is handled in the session.',
+      'offline.title': 'Live connection lost',
+      'offline.badge': 'Offline',
+      'offline.body': 'Showing the local snapshot from {time}. Reconnecting replays the missed events first.',
+      'offline.reconnect': 'Reconnect',
+      'foot.note': 'Local data · cost estimated from settled requests',
+      'foot.synced': 'Last synced',
       panel: 'Workbench',
       'panel.count': '({count})',
       'panel.more': '{count} more',
@@ -243,6 +594,16 @@ window.__ModuleLoader__.load({
       'task.action.job': 'Checking a background job',
       'task.action.other': 'Calling {tool}',
       'task.action.otherTarget': 'Calling {tool}: {target}',
+      'task.action.read.bare': 'Reading a file',
+      'task.action.edit.bare': 'Writing a file',
+      'task.action.run.bare': 'Running a command',
+      'task.action.search.bare': 'Searching the code',
+      'task.action.find.bare': 'Finding files',
+      'task.action.web.bare': 'Searching the web',
+      'task.action.fetch.bare': 'Fetching a page',
+      'task.action.delegate.bare': 'Delegating a subtask',
+      'task.action.calling': 'Calling {tool}',
+      'task.action.editing': 'Writing',
       'section.running': 'In progress',
       'section.recent': 'Recently completed',
       'empty.running': 'No task in progress',
@@ -262,6 +623,162 @@ window.__ModuleLoader__.load({
       stale: 'Refresh failed; showing the last snapshot.',
       'usage.pending': '{count} more tasks still being counted',
       footnote: 'Tokens and amounts are estimated from local Session logs and the configured prices; the balance comes from the DeepSeek account.',
+      'page.dateHint': 'Browse by local date',
+      'projects.tests': 'Tests',
+      'projects.state': 'State',
+      'projects.gitEnable': 'Enable Git evidence',
+      'projects.gitDisable': 'Disable Git evidence',
+      'search.filters': 'Filters',
+      'nav.cost': 'Cost attribution',
+      'nav.projects': 'Projects',
+      'nav.report': 'Daily report',
+      'nav.search': 'Search sessions',
+      'nav.settings': 'Settings',
+      'nav.overview': 'Today\'s overview',
+      'crumb.home': 'Workbench',
+      'crumb.cost': 'Cost attribution',
+      'crumb.projects': 'Project progress',
+      'crumb.report': 'Daily report',
+      'page.today': 'Today',
+      'page.all': 'All projects',
+      'page.prevDay': 'Previous day',
+      'page.nextDay': 'Next day',
+      'page.back': 'Back',
+      'page.open': 'Open',
+      'page.copy': 'Copy',
+      'page.copied': 'Copied',
+      'page.refresh': 'Refresh',
+      'page.unavailable': 'Unavailable',
+      'page.noSample': 'No sample',
+      'page.loading': 'Loading…',
+      'page.error': 'Could not load',
+      'page.retry': 'Retry',
+      'page.local': 'Local data · cost estimated from settled requests',
+      'search.title': 'Search sessions',
+      'search.placeholder': 'Search titles, projects, models or IDs',
+      'search.found': '{count} sessions found',
+      'search.recent': '10 most recent',
+      'search.empty': 'No session matches.',
+      'search.clear': 'Clear filters',
+      'search.more': 'Load more',
+      'search.project': 'Project',
+      'search.date': 'Date',
+      'search.model': 'Model',
+      'search.state': 'State',
+      'search.all': 'All',
+      'search.last7': 'Last 7 days',
+      'search.allTime': 'All time',
+      'search.localIndex': 'Local metadata index · {count} rows',
+      'search.rebuild': 'Rebuild index',
+      'search.rebuilding': 'Rebuilding…',
+      'search.hint': '↑/↓ select · Enter open · Esc back',
+      'search.composing': 'Composing…',
+      'search.open': 'Open session',
+      'search.noIndex': 'Index unavailable; rebuild it',
+      'search.moreCount': '{count} more',
+      'cost.title': 'Cost attribution',
+      'cost.subtitle': '{date} · {currency} · {zone}',
+      'cost.today': 'Today\'s estimated cost',
+      'cost.known': 'Known estimate · {currency}',
+      'cost.coverage': 'Priced {percent}%',
+      'cost.projects': 'By project',
+      'cost.projectSessions': '{count} sessions',
+      'cost.viewDetail': 'View detail',
+      'cost.sessionTitle': 'Session cost detail',
+      'cost.requests': 'Model requests',
+      'cost.requestDetail': 'Request detail',
+      'cost.open': 'Open session',
+      'cost.priced': 'Priced',
+      'cost.unpriced': 'Not estimable',
+      'cost.pricedRow': '{priced} priced · {unpriced} not estimable',
+      'cost.success': 'Succeeded',
+      'cost.failed': 'Failed',
+      'cost.aggregate': 'Session remainder',
+      'cost.source': 'Source',
+      'cost.model': 'Model',
+      'cost.uncached': 'Uncached input',
+      'cost.cacheRead': 'Cache-hit input',
+      'cost.output': 'Output',
+      'cost.priceRef': 'Price version',
+      'cost.attribution': 'Attribution',
+      'cost.attribution.workspace': 'Workspace mapping · {project}',
+      'cost.attribution.session': 'Session aggregate',
+      'cost.priceNote': 'Per million tokens · uncached {input} · cache {cache} · output {output}',
+      'cost.settledAt': 'Settled at',
+      'cost.empty': 'No priced request on this day.',
+      'cost.missingUsage': 'Missing trustworthy usage; coverage reflects this request',
+      'cost.estimateNote': 'Estimates and platform billing are shown separately',
+      'cost.sessionId': 'Session ID',
+      'cost.back': 'Back to cost',
+      'cost.sessions': 'Session',
+      'cost.amount': 'Today\'s est.',
+      'cost.day': 'Date',
+      'cost.currency': 'Currency',
+      'cost.terminal': '{count} final',
+      'cost.provider': 'Provider',
+      'cost.none': 'Unavailable',
+      'projects.title': 'Project progress',
+      'projects.subtitle': '{date} · {count} projects active',
+      'projects.sessions': '{count} sessions active',
+      'projects.evidence': '{count} evidence items',
+      'projects.lastAction': 'Last action',
+      'projects.timeline': 'Today\'s timeline',
+      'projects.filter.all': 'All',
+      'projects.filter.session': 'Sessions',
+      'projects.filter.file': 'Files',
+      'projects.filter.commit': 'Commits',
+      'projects.filter.test': 'Tests',
+      'projects.empty': 'No project activity today.',
+      'projects.emptyTimeline': 'No evidence for this project today.',
+      'projects.done': 'Done',
+      'projects.active': 'In progress',
+      'projects.blocked': 'Blocked',
+      'projects.confirm': 'To confirm',
+      'projects.count': '{count} {state}',
+      'projects.direct': 'Direct link',
+      'projects.activity': 'Project activity',
+      'projects.source': 'Source',
+      'projects.time': 'Time',
+      'projects.verified': 'Verifiable',
+      'projects.unverified': 'Unverified',
+      'projects.openSession': 'Open session',
+      'projects.gitOff': 'Git evidence off',
+      'projects.gitReady': 'Read-only Git evidence',
+      'projects.testVerified': '{passed} passed · exit {code}',
+      'projects.testUnverified': 'No structured result',
+      'projects.commitFiles': '{count} files',
+      'report.title': 'Daily report',
+      'report.subtitle': '{date} · {projects} · {zone}',
+      'report.copy': 'Copy Markdown',
+      'report.copied': 'Copied',
+      'report.draft': 'Report draft',
+      'report.editable': 'Editable',
+      'report.evidence': 'Evidence detail',
+      'report.empty': 'Nothing to report for this day.',
+      'report.done': 'Done',
+      'report.doing': 'In progress',
+      'report.blocked': 'Blocked',
+      'report.confirm': 'To confirm',
+      'report.edit': 'Edit',
+      'report.save': 'Save',
+      'report.cancel': 'Cancel',
+      'report.confirmTask': 'Confirm done',
+      'report.addItem': 'Add a line',
+      'report.editMark': 'Edited by hand',
+      'report.activityMark': 'Project activity',
+      'report.sha': 'Commit',
+      'report.tests': 'Tests',
+      'report.verification': 'Source',
+      'report.confirmBy': 'Task confirmed',
+      'report.localUser': 'Local user · {time}',
+      'report.openCommit': 'Open commit',
+      'report.openTest': 'View test evidence',
+      'report.note': 'Completion comes from a person; commits and tests are evidence',
+      'report.reset': 'Restore generated draft',
+      'report.manual': 'Added by hand',
+      'report.preview': 'Preview',
+      'report.status': 'Status',
+      'report.reference': 'Reference',
     }
 
     // --- data -----------------------------------------------------------------
@@ -412,16 +929,6 @@ window.__ModuleLoader__.load({
       }
     }
 
-    /** Per-task amounts are small: keep four decimals below one yuan. */
-    function formatCost(amount) {
-      const value = Number(amount)
-      if (!Number.isFinite(value) || value <= 0) return ''
-      if (value < 0.0001) return '<¥0.0001'
-      if (value >= 1) return `¥${value.toFixed(2)}`
-      const text = value.toFixed(4).replace(/0+$/, '').replace(/\.$/, '')
-      return `¥${text}`
-    }
-
     function formatCompactTokens(value) {
       const number = Number(value)
       if (!Number.isFinite(number) || number <= 0) return '0'
@@ -444,6 +951,45 @@ window.__ModuleLoader__.load({
       const minutes = Math.floor(seconds / 60)
       const rest = Math.round(seconds % 60)
       return `${minutes}m${String(rest).padStart(2, '0')}s`
+    }
+
+    /** Money as the ledger reports it; the zero renders as a plain zero. */
+    function moneyOf(amount, currency) {
+      const value = Number(amount)
+      if (!Number.isFinite(value)) return '—'
+      return formatMoney(value, currency ?? 'CNY')
+    }
+
+    function formatCost(amount, usage) {
+      const value = Number(amount)
+      if (!Number.isFinite(value) || value < 0) return ''
+      if (usage !== undefined && usage !== null && usage.quality === 'unpriced') return ''
+      if (value < 0.0001) return `<${currencySymbol('CNY')}0.0001`
+      if (value >= 1) return `${currencySymbol('CNY')}${value.toFixed(2)}`
+      return `${currencySymbol('CNY')}${value.toFixed(4).replace(/0+$/, '').replace(/\.$/, '')}`
+    }
+
+    /** `YYYY.MM.DD` plus a clock line for the header. */
+    function headerDateOf(time) {
+      const value = Number(time)
+      if (!Number.isFinite(value)) return ''
+      return `${dayKeyOf(value).replace(/-/g, '.')} ${clockOf(value)}`
+    }
+
+    function utcOffsetLabel() {
+      const minutes = -new Date().getTimezoneOffset()
+      const sign = minutes >= 0 ? '+' : '-'
+      const absolute = Math.abs(minutes)
+      return `UTC${sign}${pad2(Math.floor(absolute / 60))}:${pad2(absolute % 60)}`
+    }
+
+    function todayLabel() {
+      const now = Date.now()
+      return dateLabel(now, { month: 'numeric', day: 'numeric' })
+    }
+
+    function pickFocusIds(ids, previous) {
+      return { ids, previous }
     }
 
     /** Map a tool name onto the verb used by the running-task action line. */
@@ -473,7 +1019,9 @@ window.__ModuleLoader__.load({
           ? t('task.action.other', { tool: shortToolName(name) })
           : t('task.action.otherTarget', { tool: shortToolName(name), target })
       }
-      return target === '' ? t('task.action.other', { tool: shortToolName(name) }) : t(`task.action.${kind}`, { target })
+      // A bare action carries no target: use the verb without a dangling placeholder.
+      if (target === '') return t(`task.action.${kind}.bare`, { tool: shortToolName(name) })
+      return t(`task.action.${kind}`, { target })
     }
 
     /** MCP names arrive namespaced; the last segment is the readable part. */
@@ -481,6 +1029,10 @@ window.__ModuleLoader__.load({
       const text = typeof name === 'string' && name !== '' ? name : 'tool'
       const parts = text.split(/__|[./]/).filter((part) => part !== '')
       return parts.length === 0 ? text : parts[parts.length - 1]
+    }
+
+    function dateParts() {
+      return { month: 'numeric', day: 'numeric' }
     }
 
     function dateLabel(time, options) {
@@ -1383,6 +1935,544 @@ window.__ModuleLoader__.load({
       )
     }
 
+    // --- overview home (PRD F01 / F02 / F03 / F07) -------------------------------
+
+    const STATE_KEYS = {
+      waiting: 'state.waiting',
+      running: 'state.running',
+      stuck: 'state.stuck',
+      failed: 'state.failed',
+      ended: 'state.ended',
+      cancelled: 'state.cancelled',
+      unknown: 'state.unknown',
+    }
+
+    /** The display state of one row: a cancelled end reads as its own state. */
+    function stateNameOf(row) {
+      const name = String(row?.state ?? 'unknown')
+      if (name === 'ended' && row?.lastEnd?.cancelled === true) return 'cancelled'
+      return STATE_KEYS[name] === undefined ? 'unknown' : name
+    }
+
+    function stateLabel(t, name) {
+      return t(STATE_KEYS[name] ?? STATE_KEYS.unknown)
+    }
+
+    /** Wheel of state tones: attention first, then life, then closure. */
+    function stateTone(name) {
+      if (name === 'failed') return 'error'
+      if (name === 'waiting' || name === 'stuck') return 'warn'
+      if (name === 'running') return 'ok'
+      if (name === 'cancelled') return 'muted'
+      if (name === 'unknown') return 'unknown'
+      return 'idle'
+    }
+
+    /** A per-row review of waiting and last action, shared by cards and details. */
+    function rowDetail(t, row, now) {
+      const lastAction = row?.lastAction
+      const actionTextOf = (action) =>
+        h('span', { className: 'dswb-row-action' }, actionText(t, action), relativeTime(t, action.at, now))
+      const waiting = Array.isArray(row?.waiting) ? row.waiting[0] : undefined
+      if (stateNameOf(row) === 'waiting' && waiting !== undefined) {
+        return t('row.waitReason', {
+          kind: wordingOf(t, waiting.kind),
+          detail: waiting.detail === undefined || waiting.detail === '' ? '' : ` · ${waiting.detail}`,
+        })
+      }
+      if (stateNameOf(row) === 'failed' && row?.lastEnd?.message !== undefined && row.lastEnd.message !== '') {
+        return t('row.failureReason', { message: truncateText(row.lastEnd.message, 48) })
+      }
+      if (stateNameOf(row) === 'unknown') return t('row.unknownReason')
+      if (stateNameOf(row) === 'ended' || stateNameOf(row) === 'cancelled') {
+        return t('row.endedReason', {
+          reason: reasonTextOf(t, row?.lastEnd?.reason, stateNameOf(row)),
+          time: relativeTime(t, row?.endedAt || row?.lastAt, now),
+        })
+      }
+      if (lastAction !== null && typeof lastAction === 'object' && lastAction.name !== undefined) {
+        // The stored action keeps only the tool name: name it, never guess a target.
+        const text = t('task.action.calling', { tool: shortToolName(lastAction.name) })
+        return `${text} · ${relativeTime(t, lastAction.at, now)}`
+      }
+      return relativeTime(t, row?.lastAt, now)
+    }
+
+    /** Wording of one wait kind; unknown kinds keep their raw name. */
+    function wordingOf(t, kind) {
+      if (kind === 'approval' || kind === 'plan-review') return t('wait.approval')
+      if (kind === 'question') return t('wait.question')
+      return String(kind ?? '')
+    }
+
+    /** End reason as readable words; protocol values fall back to the raw name. */
+    function reasonTextOf(t, reason, state) {
+      const name = String(reason ?? '')
+      if (name === 'done' || name === 'stop' || name === 'completed' || name === 'finish') return t('reason.done')
+      if (name === 'cancelled' || name === 'aborted' || name === 'stopped' || name === 'interrupted') return t('reason.cancelled')
+      if (name === 'error' || name === 'failed' || name === 'failure') return t('reason.error')
+      if (name === 'max-tokens' || name === 'maxTokens') return t('reason.maxTokens')
+      if (name === '') return state === 'cancelled' ? t('reason.cancelled') : t('reason.done')
+      return name
+    }
+
+    /** Turn duration start → end or now; a missing start reads `—`. */
+    function turnLength(t, row, now) {
+      const start = Number(row?.turnStartedAt)
+      if (!Number.isFinite(start) || start <= 0) return t('value.none')
+      const open = row?.running === true || row?.state === 'waiting' || row?.state === 'running' || row?.state === 'stuck'
+      const end = open ? now : Number(row?.endedAt) || now
+      if (!(end > start)) return t('value.none')
+      return formatDuration(end - start)
+    }
+
+    function todayEstimate(t, row) {
+      const usage = row?.usage
+      if (usage === null || typeof usage !== 'object') return t('cost.unknown')
+      if (usage.quality === 'unpriced') return t('cost.unknown')
+      const amount = formatCost(usage.amount, usage)
+      return Number(usage.amount) > 0 && amount !== '' ? amount : formatMoney(0, 'CNY')
+    }
+
+    function StateBadge({ name, t }) {
+      return h(
+        'span',
+        { className: 'dswb-state', 'data-tone': stateTone(name) },
+        h(StateGlyph, { name }),
+        h('span', null, stateLabel(t, name)),
+      )
+    }
+
+    /** One glyph per state: the badge's icon carries the same meaning as its text. */
+    function StateGlyph({ name }) {
+      const common = { viewBox: '0 0 16 16', width: 12, height: 12, 'aria-hidden': 'true', focusable: 'false' }
+      if (name === 'running') {
+        return h('svg', { ...common }, h('circle', { cx: 8, cy: 8, r: 3.2, fill: 'currentColor' }))
+      }
+      if (name === 'waiting' || name === 'stuck') {
+        return h(
+          'svg',
+          { ...common },
+          h('circle', { cx: 8, cy: 8, r: 5.4, fill: 'none', stroke: 'currentColor', strokeWidth: 1.4 }),
+          h('path', { d: 'M8 5v3.4l2.1 1.3', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round' }),
+        )
+      }
+      if (name === 'failed') {
+        return h(
+          'svg',
+          { ...common },
+          h('path', { d: 'M4.6 4.6l6.8 6.8M11.4 4.6l-6.8 6.8', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' }),
+        )
+      }
+      if (name === 'ended') {
+        return h(
+          'svg',
+          { ...common },
+          h('path', { d: 'M3.8 8.4l2.7 2.7 5.7-5.9', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+        )
+      }
+      if (name === 'cancelled') {
+        return h('svg', { ...common }, h('path', { d: 'M4.6 8h6.8', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' }))
+      }
+      return h(
+        'svg',
+        { ...common },
+        h('circle', { cx: 8, cy: 8, r: 5.4, fill: 'none', stroke: 'currentColor', strokeWidth: 1.3, strokeDasharray: '2 2' }),
+      )
+    }
+
+    function externalLinkOf(t, label, onClick) {
+      return h(
+        'button',
+        { type: 'button', className: 'dswb-open', 'aria-label': label, onClick },
+        h(
+          'svg',
+          { viewBox: '0 0 16 16', width: 13, height: 13, 'aria-hidden': 'true', focusable: 'false' },
+          h('path', { d: 'M6.2 3.4h6.4v6.4M12.6 3.4 4.2 11.8', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+        ),
+      )
+    }
+
+    function HomeHeader({ data, state, refresh, t, locale, onSearch }) {
+      const generatedAt = Number(data?.generatedAt) || Date.now()
+      const stale = state.status === 'stale'
+      return h(
+        'header',
+        { className: 'dswb-home-head' },
+        h(
+          'div',
+          { className: 'dswb-home-title' },
+          h('span', { className: 'dswb-eyebrow' }, 'LOCAL / ', dayKeyOf(generatedAt).replace(/-/g, '.')),
+          h('h1', null, t('overview.title')),
+          h(
+            'p',
+            { className: 'dswb-home-sub' },
+            t('overview.subtitle', { date: dateLabel(generatedAt, dateParts()), zone: utcOffsetLabel(), time: clockOf(generatedAt) }),
+          ),
+        ),
+        h(
+          'div',
+          { className: 'dswb-home-side' },
+          h(
+            'button',
+            { type: 'button', className: 'dswb-search-open', onClick: onSearch, 'aria-label': t('nav.search'), 'aria-keyshortcuts': 'Meta+K Control+K' },
+            h(Glyph, { name: 'search', size: 14 }),
+            h('span', { className: 'dswb-search-open-text' }, t('nav.search')),
+            h('kbd', { className: 'dswb-search-kbd' }, '⌘K'),
+          ),
+          h(
+            'span',
+            { className: 'dswb-fresh', 'data-state': stale ? 'stale' : 'live' },
+            h('i', { className: 'dswb-fresh-dot', 'aria-hidden': 'true' }),
+            stale ? t('fresh.stale') : t('fresh.live'),
+          ),
+          h(
+            'button',
+            { type: 'button', className: 'dswb-icon-btn dswb-refresh', onClick: refresh, disabled: state.status === 'loading', 'aria-label': t('refresh') },
+            h(RefreshIcon),
+          ),
+        ),
+      )
+    }
+
+    function KpiRow({ overview, onSelect, canSwitch, t }) {
+      const amount = Number(overview.amount) || 0
+      const coverage = overview.coverage === undefined ? undefined : Number(overview.coverage)
+      const waiting = overview.runningByState === undefined ? 0 : Number(overview.runningByState) || 0
+      const byState = overview.attentionByType !== null && typeof overview.attentionByType === 'object' ? overview.attentionByType : {}
+      const failed = Number(byState.failure) || 0
+      const waitItems = (Number(byState.waiting) || 0) + (Number(byState.question) || 0)
+      const coverageText =
+        coverage === undefined ? t('kpi.noSample') : t('kpi.coverage', { percent: String(Math.round(coverage * 100)) })
+      return h(
+        'section',
+        { className: 'dswb-kpis', 'aria-label': t('kpi.region') },
+        h(
+          'button',
+          { type: 'button', className: 'dswb-kpi', onClick: () => onSelect('cost'), 'aria-label': t('kpi.cost') },
+          h('span', { className: 'dswb-kpi-label' }, t('kpi.cost')),
+          h('span', { className: 'dswb-kpi-value', 'data-tone': amount > 0 ? 'default' : 'muted' }, formatMoney(amount, overview.currency ?? 'CNY')),
+          h(
+            'span',
+            { className: 'dswb-kpi-detail' },
+            coverageText,
+            overview.unpricedTokens > 0 ? h('em', null, t('kpi.unpriced')) : null,
+          ),
+        ),
+        h(
+          'button',
+          { type: 'button', className: 'dswb-kpi', onClick: () => onSelect('running'), 'aria-label': t('kpi.running') },
+          h('span', { className: 'dswb-kpi-label' }, t('kpi.running')),
+          h('span', { className: 'dswb-kpi-value' }, formatTokens(overview.running)),
+          h('span', { className: 'dswb-kpi-detail' }, t('kpi.runningDetail', { waiting })),
+        ),
+        h(
+          'button',
+          { type: 'button', className: 'dswb-kpi', onClick: () => onSelect('attention'), 'aria-label': t('kpi.attention') },
+          h('span', { className: 'dswb-kpi-label' }, t('kpi.attention')),
+          h('span', { className: 'dswb-kpi-value', 'data-tone': Number(overview.attention) > 0 ? 'alert' : 'default' }, formatTokens(overview.attention)),
+          h('span', { className: 'dswb-kpi-detail' }, t('kpi.attentionDetail', { failed, waiting: waitItems })),
+        ),
+        h(
+          'article',
+          { className: 'dswb-kpi', 'data-static': canSwitch ? undefined : 'true' },
+          h('span', { className: 'dswb-kpi-label' }, t('kpi.speed')),
+          h('span', { className: 'dswb-kpi-value', 'data-tone': overview.speedP50 > 0 ? 'default' : 'muted' }, overview.speedP50 > 0 ? t('kpi.speedValue', { rate: formatRate(overview.speedP50) }) : t('kpi.noSample')),
+          h('span', { className: 'dswb-kpi-detail' }, t('kpi.speedDetail', { count: String(overview.speedSamples ?? 0) })),
+        ),
+      )
+    }
+
+    const ALERT_PRIORITY = { failure: 0, waiting: 1, question: 2, stuck: 3, toolFailure: 4 }
+    const ALERT_ITEM_STATE = { open: 'evidence.open', acknowledged: 'alert.acknowledged', snoozed: 'alert.snoozed', solved: 'evidence.solved' }
+
+    function alertOrder(left, right) {
+      return (
+        (ALERT_PRIORITY[left.type] ?? 9) - (ALERT_PRIORITY[right.type] ?? 9) ||
+        (Number(right.triggeredAt) || 0) - (Number(left.triggeredAt) || 0) ||
+        String(left.key).localeCompare(String(right.key))
+      )
+    }
+
+    function activeAlerts(alerts) {
+      return (Array.isArray(alerts) ? alerts : []).filter((alert) => alert.state === 'open' || alert.state === 'acknowledged').sort(alertOrder)
+    }
+
+    function AlertRow({ alert, t, now, openSession, onAction, compact }) {
+      const type = String(alert.type)
+      const title = alert.title === undefined || alert.title === '' ? t('row.untitled') : alert.title
+      const name =
+        type === 'failure' ? t('alert.failure') : type === 'waiting' || type === 'question' ? t('alert.waiting') : type === 'stuck' ? t('alert.stuck') : t('alert.toolFailure')
+      const reason =
+        type === 'failure'
+          ? t('row.failureReason', { message: truncateText(String(alert.reason ?? ''), 48) })
+          : type === 'waiting' || type === 'question'
+            ? t('row.waitReason', { kind: wordingOf(t, type === 'waiting' ? 'approval' : 'question'), detail: alert.reason === undefined ? '' : ` · ${alert.reason}` })
+            : type === 'stuck'
+              ? t('alert.stuckReason', { minutes: String(Math.round((Number(alert.thresholdMs) || 600000) / 60000)) })
+              : t('alert.toolFailureReason', { tool: String(alert.reason ?? '') })
+      return h(
+        'li',
+        { className: 'dswb-alert', 'data-tone': type === 'failure' ? 'error' : 'warn', 'data-ack': alert.state === 'acknowledged' ? 'true' : undefined },
+        h(StateGlyph, { name: type === 'failure' ? 'failed' : 'waiting' }),
+        h(
+          'div',
+          { className: 'dswb-alert-main' },
+          h('span', { className: 'dswb-alert-title' }, `${name} · ${title}`),
+          h('span', { className: 'dswb-alert-reason' }, reason),
+          h('span', { className: 'dswb-alert-meta' }, `${projectNameOf(alert.projectId, alert.projectName)} · ${alert.state === 'acknowledged' ? t('alert.acknowledged') : relativeTime(t, alert.triggeredAt, now)}`),
+          compact
+            ? null
+            : h(
+                'div',
+                { className: 'dswb-alert-actions' },
+                h('button', { type: 'button', className: 'dswb-mini', onClick: () => onAction(alert, 'ack') }, t('alert.ack')),
+                h('button', { type: 'button', className: 'dswb-mini', onClick: () => onAction(alert, 'snooze') }, t('alert.snooze')),
+                h('button', { type: 'button', className: 'dswb-mini', onClick: () => onAction(alert, 'evidence') }, t('alert.evidence')),
+                h('button', { type: 'button', className: 'dswb-mini dswb-mini-primary', onClick: () => openSession(alert.sessionId) }, t('alert.open')),
+              ),
+        ),
+        externalLinkOf(t, t('row.open', { title }), () => openSession(alert.sessionId)),
+      )
+    }
+
+    /** The project label: the Host's basename, else the path's last segment, else a dash. */
+    function projectNameOf(projectId, name) {
+      if (typeof name === 'string' && name !== '') return name
+      if (typeof projectId === 'string' && projectId !== '') return basename(projectId)
+      return '—'
+    }
+
+    function rowProjectLabel(row) {
+      return projectNameOf(row?.projectId, row?.projectName)
+    }
+
+    function AttentionPanel({ alerts, t, now, openSession, onAction, onShowAll, limit }) {
+      const items = activeAlerts(alerts)
+      const shown = items.slice(0, limit)
+      return h(
+        'section',
+        { className: 'dswb-big dswb-attention', 'aria-labelledby': 'dswb-attention-title' },
+        h(
+          'header',
+          { className: 'dswb-big-head' },
+          h('h2', { id: 'dswb-attention-title', className: 'dswb-big-title' }, t('attention.title')),
+          h('span', { className: 'dswb-pill', 'data-tone': items.length > 0 ? 'warn' : undefined }, formatTokens(items.length)),
+          h('span', { className: 'dswb-spacer' }),
+          h('button', { type: 'button', className: 'dswb-link', onClick: onShowAll }, t('attention.all')),
+        ),
+        items.length === 0
+          ? h('p', { className: 'dswb-quiet' }, t('attention.empty'))
+          : h(
+              'ul',
+              { className: 'dswb-alerts' },
+              ...shown.map((alert) => h(AlertRow, { key: alert.key, alert, t, now, openSession, onAction })),
+              items.length > shown.length ? h('li', { className: 'dswb-quiet' }, t('attention.more', { count: String(items.length - shown.length) })) : null,
+            ),
+        h('p', { className: 'dswb-big-foot' }, t('attention.foot')),
+      )
+    }
+
+    /** The running list: cards on a narrow table, one row per Session on a wide one. */
+    function RunningPanel({ rows, title, count, stack, focusId, t, now, openSession, emptyKey, onToggle, showCost }) {
+      const shown = Array.isArray(rows) ? rows : []
+      const wide = showCost === true
+      return h(
+        'section',
+        { className: 'dswb-big dswb-running', 'aria-label': title },
+        h(
+          'header',
+          { className: 'dswb-big-head' },
+          h('h2', { className: 'dswb-big-title' }, title),
+          h('span', { className: 'dswb-pill' }, formatTokens(count)),
+          h('span', { className: 'dswb-spacer' }),
+          h('span', { className: 'dswb-big-hint' }, t('running.hint')),
+        ),
+        shown.length === 0
+          ? h('p', { className: 'dswb-quiet' }, t(emptyKey))
+          : h(
+              wide ? 'table' : 'ul',
+              { className: wide ? 'dswb-runs-table' : 'dswb-runs' },
+              wide
+                ? h(
+                    React.Fragment,
+                    null,
+                    h(
+                      'thead',
+                      null,
+                      h(
+                        'tr',
+                        null,
+                        h('th', { scope: 'col' }, t('thead.session')),
+                        h('th', { scope: 'col', className: 'dswb-col-state' }, t('thead.state')),
+                        h('th', { scope: 'col' }, t('thead.action')),
+                        h('th', { scope: 'col', className: 'dswb-col-num' }, t('thead.duration')),
+                        h('th', { scope: 'col', className: 'dswb-col-num' }, t('thead.cost')),
+                        h('th', { scope: 'col', className: 'dswb-col-open' }, t('thead.open')),
+                      ),
+                    ),
+                    h('tbody', null, ...shown.map((row, index) => runRowWide(h, row, index, t, now, openSession, focusId))),
+                  )
+                : shown.map((row, index) => runCard(h, row, index, t, now, openSession, focusId, stack)),
+            ),
+      )
+    }
+
+    function runCard(h, row, index, t, now, openSession, focusId, stack) {
+      const name = stateNameOf(row)
+      const title = typeof row.title === 'string' && row.title !== '' ? row.title : t('row.untitled')
+      const open = () => openSession(row.sessionId)
+      return h(
+        'li',
+        { className: 'dswb-run', key: row.sessionId, 'data-tone': stateTone(name), 'data-stack': stack === true ? 'true' : undefined },
+        h(
+          'button',
+          { type: 'button', className: 'dswb-run-main', onClick: open, 'aria-label': t('row.open', { title }), 'data-focus': focusId === row.sessionId ? 'true' : undefined },
+          h(
+            'span',
+            { className: 'dswb-run-topline' },
+            h(StateBadge, { name, t }),
+            h('span', { className: 'dswb-run-index', 'aria-hidden': 'true' }, String(index + 1).padStart(2, '0')),
+          ),
+          h('span', { className: 'dswb-run-title' }, title),
+          h('span', { className: 'dswb-run-project' }, rowProjectLabel(row), row.children > 0 ? t('run.children', { count: String(row.children) }) : null),
+          h('span', { className: 'dswb-run-detail' }, rowDetail(t, row, now)),
+        ),
+        h(
+          'div',
+          { className: 'dswb-run-metric' },
+          h(
+            'span',
+            { className: 'dswb-run-elapsed' },
+            h('span', { className: 'dswb-run-elapsed-label' }, t('run.turn')),
+            h('span', { className: 'dswb-run-elapsed-value' }, turnLength(t, row, now)),
+            h('span', { className: 'dswb-run-elapsed-split' }, ' · ', todayEstimate(t, row)),
+          ),
+        ),
+        externalLinkOf(t, t('row.open', { title }), open),
+      )
+    }
+
+    function runRowWide(h, row, index, t, now, openSession, focusId) {
+      const name = stateNameOf(row)
+      const title = typeof row.title === 'string' && row.title !== '' ? row.title : t('row.untitled')
+      const open = () => openSession(row.sessionId)
+      return h(
+        'tr',
+        { key: row.sessionId, className: 'dswb-run-row', 'data-tone': stateTone(name) },
+        h(
+          'td',
+          null,
+          h(
+            'button',
+            { type: 'button', className: 'dswb-run-link', onClick: open, 'data-focus': focusId === row.sessionId ? 'true' : undefined },
+            h('span', { className: 'dswb-run-link-title' }, title),
+            h('span', { className: 'dswb-run-link-project' }, rowProjectLabel(row)),
+          ),
+        ),
+        h('td', { className: 'dswb-col-state' }, h(StateBadge, { name, t })),
+        h('td', null, h('span', { className: 'dswb-run-detail' }, rowDetail(t, row, now))),
+        h('td', { className: 'dswb-col-num dswb-run-elapsed-value' }, turnLength(t, row, now)),
+        h('td', { className: 'dswb-col-num dswb-run-elapsed-value' }, todayEstimate(t, row)),
+        h('td', { className: 'dswb-col-open' }, externalLinkOf(t, t('row.open', { title }), open)),
+      )
+    }
+
+    function RecentPanel({ rows, t, now, openSession, focusId }) {
+      const shown = Array.isArray(rows) ? rows : []
+      return h(
+        'section',
+        { className: 'dswb-big dswb-recent', 'aria-label': t('recent.title') },
+        h(
+          'header',
+          { className: 'dswb-big-head' },
+          h('h2', { className: 'dswb-big-title' }, t('recent.title')),
+          h('span', { className: 'dswb-spacer' }),
+          h('span', { className: 'dswb-big-hint' }, t('recent.hint')),
+        ),
+        shown.length === 0
+          ? h('p', { className: 'dswb-quiet' }, t('recent.empty'))
+          : h(
+              'ul',
+              { className: 'dswb-recents' },
+              ...shown.map((row) => {
+                const name = stateNameOf(row)
+                const title = typeof row.title === 'string' && row.title !== '' ? row.title : t('row.untitled')
+                return h(
+                  'li',
+                  { className: 'dswb-recent-row', key: row.sessionId },
+                  h(
+                    'button',
+                    { type: 'button', className: 'dswb-recent-main', onClick: () => openSession(row.sessionId), 'data-focus': focusId === row.sessionId ? 'true' : undefined, 'aria-label': t('row.open', { title }) },
+                    h('span', { className: 'dswb-recent-title' }, title),
+                    h('span', { className: 'dswb-recent-meta' }, `${rowProjectLabel(row)} · ${clockOf(row.endedAt || row.lastAt)}`),
+                  ),
+                  h(StateBadge, { name, t }),
+                  externalLinkOf(t, t('row.open', { title }), () => openSession(row.sessionId)),
+                )
+              }),
+            ),
+      )
+    }
+
+    /** Offline snapshot view (UI-08): keep what was known, never pretend it is live. */
+    function OfflineBanner({ data, t, refresh, retrying }) {
+      const at = Number(data?.freshness?.at) || Number(data?.generatedAt)
+      return h(
+        'div',
+        { className: 'dswb-offline', role: 'alert' },
+        h(
+          'div',
+          { className: 'dswb-offline-head' },
+          h('span', { className: 'dswb-offline-title' }, t('offline.title')),
+          h('span', { className: 'dswb-pill', 'data-tone': 'warn' }, t('offline.badge')),
+        ),
+        h('p', { className: 'dswb-offline-body' }, t('offline.body', { time: clockOf(at) })),
+        h(
+          'button',
+          { type: 'button', className: 'dswb-offline-btn', onClick: refresh, disabled: retrying },
+          h(RefreshIcon),
+          h('span', null, t('offline.reconnect')),
+        ),
+      )
+    }
+
+    /** Narrow-window navigation: one overview tab and stacked sections behind it. */
+    function HomeTabs({ tab, setTab, counts, t }) {
+      const items = [
+        { id: 'overview', key: 'tabs.overview' },
+        { id: 'sessions', key: 'tabs.sessions', badge: counts.sessions },
+        { id: 'attention', key: 'tabs.attention', badge: counts.attention },
+        { id: 'records', key: 'tabs.records' },
+      ]
+      return h(
+        'nav',
+        { className: 'dswb-tabs', 'aria-label': t('tabs.label') },
+        ...items.map((item) =>
+          h(
+            'button',
+            {
+              type: 'button',
+              key: item.id,
+              className: 'dswb-tab',
+              'aria-current': tab === item.id ? 'page' : undefined,
+              onClick: () => setTab(item.id),
+              onKeyDown: (event) => {
+                // Arrow keys move between tabs; Enter/Space activate.
+                if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+                event.preventDefault()
+                const index = items.findIndex((entry) => entry.id === tab)
+                const next = items[(index + (event.key === 'ArrowRight' ? 1 : items.length - 1)) % items.length]
+                setTab(next.id)
+              },
+            },
+            h('span', null, t(item.key)),
+            item.badge > 0 ? h('i', { className: 'dswb-tab-badge', 'aria-hidden': 'true' }, String(item.badge)) : null,
+          ),
+        ),
+      )
+    }
+
     function CopyIcon() {
       return h(
         'svg',
@@ -1638,81 +2728,143 @@ window.__ModuleLoader__.load({
       )
     }
 
+    /** Local-state hook for the home view: the selected detail, the narrow tab, marks. */
+    function useHomeState() {
+      // A host page may pin the first view (`__dswbHome`), e.g. for screenshots.
+      const initial = typeof window !== 'undefined' && window.__dswbHome !== null && typeof window.__dswbHome === 'object' ? window.__dswbHome : {}
+      const [detail, setDetail] = React.useState(initial.detail ?? { kind: 'overview' })
+      const [tab, setTab] = React.useState(initial.tab ?? 'overview')
+      const [narrow, setNarrow] = React.useState(() => typeof window !== 'undefined' && Number(window.innerWidth) < 720)
+      const [alertMarks, setAlertMarks] = React.useState({})
+
+      React.useEffect(() => {
+        if (typeof window === 'undefined') return undefined
+        const query = typeof window.matchMedia === 'function' ? window.matchMedia('(width<=719px)') : undefined
+        if (query !== undefined && typeof query.addEventListener === 'function') {
+          const onChange = () => setNarrow(query.matches)
+          setNarrow(query.matches)
+          query.addEventListener('change', onChange)
+          return () => query.removeEventListener('change', onChange)
+        }
+        const onResize = () => setNarrow(Number(window.innerWidth) < 720)
+        window.addEventListener('resize', onResize)
+        return () => window.removeEventListener('resize', onResize)
+      }, [])
+
+      const mark = React.useCallback((key, patch) => setAlertMarks((previous) => ({ ...previous, [key]: { ...(previous[key] ?? {}), ...patch } })), [])
+      return { detail, setDetail, tab, setTab, narrow, alertMarks, mark }
+    }
+
+    /** One focus rule for the whole view: keep whatever row/card was focused. */
+    function useRowFocus(rows) {
+      const ref = React.useRef(new Set())
+      for (const row of Array.isArray(rows) ? rows : []) if (row?.sessionId !== undefined) ref.current.add(row.sessionId)
+      return ref.current
+    }
+
+    /** Open-item counts per type for the third metric. */
+    function countAlertTypes(alerts) {
+      const counts = {}
+      for (const alert of Array.isArray(alerts) ? alerts : []) {
+        if (alert.state !== 'open') continue
+        const type = String(alert.type)
+        const bucket = type === 'question' ? 'waiting' : type
+        counts[bucket] = (counts[bucket] ?? 0) + 1
+      }
+      return counts
+    }
+
+    /**
+     * The home: header, four metrics, attention, running Sessions, recently ended.
+     *
+     * @param props - slot props plus the injected `openSession`, `summarize`, `sessions`.
+     */
     function WorkbenchPage(props) {
       const { t, openSession } = props
       const [state, refresh] = useSnapshot()
       const [todayWorkItems, setTodayWorkItems] = React.useState({})
       const now = useNow(NOW_MS)
+      const home = useHomeState()
       const data = state.data
       const loading = state.status === 'loading'
-      const runningTasks = Array.isArray(data?.running) ? data.running : []
-      const recentTasks = Array.isArray(data?.recent) ? data.recent : []
-      const lastTask = runningTasks[0] ?? recentTasks[0]
-      const lastProject = lastTask === undefined ? '' : basename(lastTask.cwd)
-      const workProjects = Object.keys(todayWorkItems)
-      const workCount = workProjects.reduce((sum, name) => sum + todayWorkItems[name].length, 0)
-      const runningCount = Number(data?.tasks?.running) || 0
-      let statusLine
-      if (data !== undefined) {
-        if (runningCount > 0 && lastProject !== '') {
-          statusLine = t('now.running', { project: lastProject, count: String(runningCount) })
-        } else if (workCount > 0) {
-          const separator = localeTag().toLowerCase().startsWith('zh') ? '、' : ', '
-          statusLine = t('now.work', { projects: workProjects.slice(0, 2).join(separator), count: String(workCount) })
-        } else if ((Number(data.tasks?.total) || 0) > 0) {
-          statusLine = t('now.idle', { count: String(data.tasks.total) })
-        } else {
-          statusLine = t('now.empty')
+      const narrow = home.narrow
+      const [searchOpen, setSearchOpen] = React.useState(
+        () => typeof window !== 'undefined' && window.__dswbHome?.search === true,
+      )
+      const fallbackDay = Math.floor((now + tzOffsetSeconds() * 1000) / DAY_MS) * DAY_MS - tzOffsetSeconds() * 1000
+      const todayStart = Number(data?.overview?.todayStart) || fallbackDay
+      const [day, setDay] = React.useState(undefined)
+      const currentDay = day === undefined ? todayStart : day
+
+      React.useEffect(() => {
+        const onKey = (event) => {
+          if ((event.metaKey || event.ctrlKey) && String(event.key).toLowerCase() === 'k') {
+            event.preventDefault()
+            setSearchOpen((value) => !value)
+          }
         }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+      }, [])
+
+      const runningRows = Array.isArray(data?.running) ? data.running : []
+      const recentRows = Array.isArray(data?.recent) ? data.recent : []
+      const focusIds = useRowFocus([...runningRows, ...recentRows])
+      const [focusKey, setFocusKey] = React.useState(undefined)
+      const captureFocus = (id) => setFocusKey(id)
+
+      const overview = data?.overview ?? { amount: 0, running: 0, attention: 0 }
+      // Local marks from this view layer on the Host's state until the next snapshot confirms.
+      const alerts = (Array.isArray(data?.alerts) ? data.alerts : []).map((alert) => {
+        const mark = home.alertMarks[alert.key]
+        return mark === undefined ? alert : { ...alert, state: mark.state }
+      })
+      const pendingCount = alerts.filter((alert) => alert.state === 'open').length
+      const overviewView = { ...overview, attention: pendingCount, attentionByType: countAlertTypes(alerts) }
+      const stale = state.status === 'stale'
+
+      const openFrom = (sessionId) => {
+        captureFocus(sessionId)
+        openSession(sessionId)
       }
 
-      const greeting = greetingText(t, now)
-      const accountName = data?.account?.profile?.name
-      const pageTitle =
-        typeof accountName === 'string' && accountName !== ''
-          ? t('greet.named', { greeting, name: accountName })
-          : greeting
-      const monogram = typeof accountName === 'string' && accountName.trim() !== '' ? accountName.trim().slice(0, 1) : 'W'
-      const heading = h(
-        'div',
-        { className: 'dswb-head' },
-        h(
-          'div',
-          { className: 'dswb-head-main' },
-          h('span', { className: 'dswb-monogram', 'aria-hidden': 'true' }, monogram),
-          h(
-            'div',
-            { className: 'dswb-id-text' },
-            h(
-              'span',
-              { className: 'dswb-eyebrow dswb-eyebrow-live' },
-              h('i', { className: 'dswb-eyebrow-dot', 'aria-hidden': 'true' }),
-              'WORKBENCH',
-            ),
-            h('h1', null, pageTitle),
-            statusLine === undefined ? null : h('p', { className: 'dswb-summary' }, statusLine),
-          ),
-        ),
-        h(
-          'div',
-          { className: 'dswb-head-side' },
-          data === undefined
-            ? null
-            : h('span', { className: 'dswb-updated' }, t('updatedAt', { time: clockOf(data.generatedAt) })),
-          h(
-            'button',
-            {
-              type: 'button',
-              className: 'dswb-refresh',
-              onClick: refresh,
-              disabled: loading,
-              'aria-label': t('refresh'),
-            },
-            h(RefreshIcon),
-            h('span', null, t('refresh')),
-          ),
-        ),
-      )
+      const alertAction = async (alert, action) => {
+        if (action === 'evidence') {
+          home.setDetail({ kind: 'alert', key: alert.key })
+          return
+        }
+        home.mark(alert.key, action === 'ack' ? { state: 'acknowledged' } : { state: 'snoozed' })
+        try {
+          await fetch(ALERT_ROUTE, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              key: alert.key,
+              action,
+              triggeredAt: alert.triggeredAt,
+              state: alert.currentState,
+              minutes: 30,
+            }),
+          })
+        } catch {
+          // Offline: the local mark stands, the next snapshot reconciles it.
+        }
+        refresh()
+      }
+
+      // Metric cards jump to their own section: overview first, then the full page.
+      const choose = (target) => {
+        if (target === 'attention') home.setDetail({ kind: 'attention' })
+        else if (target === 'cost') home.setDetail({ kind: 'cost' })
+        else if (narrow) home.setTab('sessions')
+        else home.setDetail({ kind: 'overview' })
+      }
+
+      const crumbHome = { label: t('crumb.home'), onClick: () => home.setDetail({ kind: 'overview' }) }
+      const crumbCost = { label: t('crumb.cost'), onClick: () => home.setDetail({ kind: 'cost' }) }
+      const crumbProjects = { label: t('crumb.projects'), onClick: () => home.setDetail({ kind: 'projects' }) }
+      const dayLabel = dateLabel(Number(currentDay) + 12 * 3600_000, dateParts())
 
       let body
       if (data === undefined) {
@@ -1723,116 +2875,1396 @@ window.__ModuleLoader__.load({
                 { className: 'dswb-notice dswb-notice-error', role: 'alert' },
                 h('p', { className: 'dswb-notice-title' }, t('error.title')),
                 h('p', null, t('error.body')),
-                h(
-                  'button',
-                  { type: 'button', className: 'dswb-refresh', onClick: refresh },
-                  h(RefreshIcon),
-                  h('span', null, t('error.retry')),
-                ),
+                h('button', { type: 'button', className: 'dswb-refresh', onClick: refresh }, h(RefreshIcon), h('span', null, t('error.retry'))),
               )
-            : h(
-                'div',
-                { className: 'dswb-loading', role: 'status' },
-                h('span', { className: 'dswb-dot', 'data-running': 'true', 'aria-hidden': 'true' }),
-                t('loading'),
-              )
-      } else {
-        const usage = data.usage ?? {}
-        const today = usage.today ?? {}
-        const tasks = data.tasks ?? { total: 0, running: 0, recent: 0 }
-        const pending = Number(usage.pendingSessions)
-        const baseline = Number(usage.previousAverageCny) || 0
-        const todayCost = Number(today.costCny) || 0
-        let todayDetail = t('card.todayDetail')
-        let todayDetailTitle
-        if (todayCost > 0 && baseline > 0) {
-          const delta = ((todayCost - baseline) / baseline) * 100
-          const percent = String(Math.round(Math.abs(delta)))
-          todayDetail =
-            Math.abs(delta) < 10
-              ? t('card.todaySame')
-              : t(delta > 0 ? 'card.todayHigher' : 'card.todayLower', { percent })
-          todayDetailTitle = t('card.baselineTitle', { amount: formatMoney(baseline, 'CNY') })
-        }
-
+            : h('div', { className: 'dswb-loading', role: 'status' }, h('span', { className: 'dswb-dot', 'data-running': 'true', 'aria-hidden': 'true' }), t('loading'))
+      } else if (home.detail.kind === 'overview') {
         body = h(
           React.Fragment,
           null,
-          h(BalanceHero, { account: data.account, usage, t }),
-          h(
+          h(KpiRow, { overview: overviewView, canSwitch: false, onSelect: choose, t }),
+          narrow ? null : h(
             'div',
-            { className: 'dswb-cards' },
-            h(Card, {
-              index: '01',
-              label: t('card.todayAmount'),
-              value: formatMoney(today.costCny, 'CNY'),
-              detail: todayDetail,
-              detailTitle: todayDetailTitle,
-            }),
-            h(Card, {
-              index: '02',
-              label: t('card.todayTokens'),
-              value: formatTokens(tokenTotal(today)),
-              detail: t('card.todayTokensDetail', {
-                input: formatTokens(today.inputTokens),
-                cache: formatTokens(today.cacheReadTokens),
-                output: formatTokens(today.outputTokens),
+            { className: 'dswb-home-grid' },
+            h(
+              'div',
+              { className: 'dswb-home-main' },
+              h(RunningPanel, {
+                rows: runningRows,
+                title: t('running.title'),
+                count: overview.running,
+                stack: narrow,
+                focusId: focusKey,
+                t,
+                now,
+                openSession: openFrom,
+                emptyKey: 'running.empty',
+                showCost: narrow !== true,
               }),
-            }),
-            h(TaskTotalCard, { tasks, t }),
+              h(RecentPanel, { rows: recentRows, t, now, openSession: openFrom, focusId: focusKey }),
+            ),
+            h(
+              'aside',
+              { className: 'dswb-home-aside' },
+              h(AttentionPanel, { alerts, t, now, openSession: openFrom, onAction: alertAction, onShowAll: () => home.setDetail({ kind: 'attention' }), limit: 3 }),
+              h(SpeedCard, { speed: data.speed, t, now, openSession: openFrom }),
+            ),
           ),
-          h(SpeedCard, { speed: data.speed, t, now, openSession }),
+        )
+        if (narrow) {
+          const tab = home.tab
+          const attentionCount = activeAlerts(alerts).length
+          body = h(
+            React.Fragment,
+            null,
+            h(KpiRow, { overview: overviewView, canSwitch: false, onSelect: choose, t }),
+            h(
+              'div',
+              { className: 'dswb-narrow' },
+              tab === 'overview'
+                ? h(
+                    React.Fragment,
+                    null,
+                    attentionCount > 0 ? h(AttentionPanel, { alerts, t, now, openSession: openFrom, onAction: alertAction, onShowAll: () => home.setTab('attention'), limit: 1 }) : null,
+                    h(RunningPanel, { rows: runningRows, title: t('running.title'), count: overview.running, stack: true, focusId: focusKey, t, now, openSession: openFrom, emptyKey: 'running.empty' }),
+                    h(RecentPanel, { rows: recentRows, t, now, openSession: openFrom, focusId: focusKey }),
+                  )
+                : tab === 'sessions'
+                  ? h(RunningPanel, { rows: runningRows, title: t('running.title'), count: overview.running, stack: true, focusId: focusKey, t, now, openSession: openFrom, emptyKey: 'running.empty' })
+                  : tab === 'attention'
+                    ? h(AttentionPanel, { alerts, t, now, openSession: openFrom, onAction: alertAction, onShowAll: () => home.setTab('overview'), limit: 50 })
+                    : h(
+                        React.Fragment,
+                        null,
+                        h(
+                          'div',
+                          { className: 'dswb-p1-narrow-menu' },
+                          h('button', { type: 'button', className: 'dswb-p1-narrow-link', onClick: () => home.setDetail({ kind: 'report' }) }, t('nav.report'), h(Glyph, { name: 'chevron', size: 13 })),
+                          h('button', { type: 'button', className: 'dswb-p1-narrow-link', onClick: () => home.setDetail({ kind: 'cost' }) }, t('nav.cost'), h(Glyph, { name: 'chevron', size: 13 })),
+                          h('button', { type: 'button', className: 'dswb-p1-narrow-link', onClick: () => home.setDetail({ kind: 'projects' }) }, t('nav.projects'), h(Glyph, { name: 'chevron', size: 13 })),
+                        ),
+                        h(WorkLogCard, { worklog: data.worklog, t, onWorkItems: setTodayWorkItems }),
+                      ),
+            ),
+          )
+        }
+      } else if (home.detail.kind === 'attention') {
+        body = h(
+          React.Fragment,
+          null,
+          h(DetailBar, { title: t('attention.title'), onBack: () => home.setDetail({ kind: 'overview' }), backLabel: t('detail.back'), t }),
+          h(AttentionPanel, { alerts, t, now, openSession: openFrom, onAction: alertAction, onShowAll: () => home.setDetail({ kind: 'overview' }), limit: 50 }),
+        )
+      } else if (home.detail.kind === 'alert') {
+        const alert = alerts.find((entry) => entry.key === home.detail.key)
+        body = alert === undefined ? h('p', { className: 'dswb-quiet' }, t('alert.gone')) : h(AlertEvidence, { alert, t, now, openSession: openFrom, onBack: () => home.setDetail({ kind: 'attention' }) })
+      } else if (home.detail.kind === 'cost') {
+        body = h(CostLanding, { data, t, onSelect: home.setDetail, crumbs: [crumbHome, { label: t('crumb.cost') }], dayLabel })
+      } else if (home.detail.kind === 'costProject') {
+        body = h(CostProjectPage, {
+          detail: home.detail,
+          data,
+          t,
+          day: currentDay,
+          onSelect: (selected) => home.setDetail({ ...selected, day: currentDay }),
+          crumbs: [crumbHome, crumbCost, { label: home.detail.name || t('cost.sessions') }],
+        })
+      } else if (home.detail.kind === 'costSession') {
+        body = h(CostSessionPage, {
+          detail: { ...home.detail, day: home.detail.day ?? currentDay },
+          t,
+          crumbs: [crumbHome, crumbCost, { label: home.detail.name || t('cost.projects'), onClick: () => home.setDetail({ kind: 'costProject', projectId: home.detail.projectId, name: home.detail.name }) }, { label: home.detail.title || home.detail.sessionId }],
+          openSession: openFrom,
+          now,
+        })
+      } else if (home.detail.kind === 'projects') {
+        body = h(ProjectsPage, { t, day: currentDay, setDay, todayStart, onSelect: home.setDetail, crumbs: [crumbHome, { label: t('crumb.projects') }], now })
+      } else if (home.detail.kind === 'projectTimeline') {
+        body = h(ProjectTimelinePage, {
+          detail: home.detail,
+          t,
+          day: currentDay,
+          setDay,
+          todayStart,
+          onBack: () => home.setDetail({ kind: 'projects' }),
+          crumbs: [crumbHome, crumbProjects, { label: home.detail.name || t('projects.timeline') }],
+          openSession: openFrom,
+        })
+      } else if (home.detail.kind === 'report') {
+        body = h(ReportPage, { t, day: currentDay, setDay, todayStart, crumbs: [crumbHome, { label: t('nav.report') }], openSession: openFrom, narrow })
+      } else {
+        body = h(
+          React.Fragment,
+          null,
+          h(BalanceHero, { account: data.account, usage: data.usage, t }),
+          h(SpeedCard, { speed: data.speed, t, now, openSession: openFrom }),
           h(WorkLogCard, { worklog: data.worklog, t, onWorkItems: setTodayWorkItems }),
-          Number.isFinite(pending) && pending > 0
-            ? h(
-                'p',
-                { className: 'dswb-hint', role: 'status' },
-                t('usage.pending', { count: pending }),
-              )
-            : null,
-          state.status === 'stale'
-            ? h('p', { className: 'dswb-hint', role: 'status' }, t('stale'))
-            : null,
-          h(
-            'div',
-            { className: 'dswb-panels' },
-            h(TaskPanel, {
-              title: t('section.running'),
-              count: tasks.running,
-              items: data.running,
-              running: true,
-              emptyKey: 'empty.running',
-              t,
-              now,
-              openSession,
-              workItems: todayWorkItems,
-            }),
-            h(TaskPanel, {
-              title: t('section.recent'),
-              count: tasks.recent,
-              items: data.recent,
-              running: false,
-              emptyKey: 'empty.recent',
-              t,
-              now,
-              openSession,
-              workItems: todayWorkItems,
-            }),
-          ),
-          h('p', { className: 'dswb-footnote' }, t('footnote')),
         )
       }
 
       return h(
         'section',
-        { className: 'dswb-page', 'aria-label': t('title') },
+        { className: 'dswb-page dswb-home', 'aria-label': t('title') },
         h('style', { key: 'styles' }, CSS),
         h('div', { className: 'dswb-mascot', 'aria-hidden': 'true' }),
-        h('div', { className: 'dswb-scroll' }, h('div', { className: 'dswb-content' }, heading, body)),
+        h(
+          'div',
+          { className: 'dswb-scroll' },
+          h(
+            'div',
+            { className: 'dswb-content' },
+            h(HomeHeader, { data: data ?? { generatedAt: Date.now() }, state, refresh, t, locale: localeTag(), onSearch: () => setSearchOpen(true) }),
+            stale ? h(OfflineBanner, { data, t, refresh, retrying: loading }) : null,
+            data === undefined || narrow ? null : h(PageNav, { t, detail: home.detail, setDetail: home.setDetail, counts: { attention: pendingCount } }),
+            h('main', { className: 'dswb-home-body' }, body),
+            h(
+              'footer',
+              { className: 'dswb-home-foot' },
+              h('span', null, t('foot.note')),
+              data === undefined ? null : h('span', { className: 'dswb-home-foot-time' }, `${t('foot.synced')} ${clockOf(data.generatedAt)}`),
+            ),
+          ),
+        ),
+        narrow ? h(HomeTabs, { tab: home.tab, setTab: (id) => { home.setTab(id); home.setDetail({ kind: 'overview' }) }, counts: { sessions: runningRows.length, attention: activeAlerts(alerts).length }, t }) : null,
+        searchOpen && data !== undefined ? h(SearchPalette, { t, snapshot: data, openSession: openFrom, onClose: () => setSearchOpen(false), narrow }) : null,
+      )
+    }
+
+    /** A detail page's breadcrumb row with its back button. */
+    function DetailBar({ title, onBack, backLabel, t }) {
+      return h(
+        'div',
+        { className: 'dswb-detailbar' },
+        h('button', { type: 'button', className: 'dswb-back', onClick: onBack }, '←', h('span', null, backLabel)),
+        h('h2', { className: 'dswb-detailbar-title' }, title),
+      )
+    }
+
+    /** Evidence for one attention item: what triggered it, when, and the way in. */
+    function AlertEvidence({ alert, t, now, openSession, onBack }) {
+      const type = String(alert.type)
+      const rows = [
+        { key: 'session', label: t('evidence.session'), value: alert.sessionId },
+        { key: 'project', label: t('evidence.project'), value: projectNameOf(alert.projectId, alert.projectName) },
+        { key: 'state', label: t('evidence.state'), value: stateLabel(t, String(alert.currentState ?? 'unknown')) },
+        { key: 'triggered', label: t('evidence.triggered'), value: clockOf(alert.triggeredAt) },
+        { key: 'updated', label: t('evidence.updated'), value: clockOf(alert.updatedAt || alert.lastEvidence) },
+        { key: 'item', label: t('evidence.itemState'), value: t(ALERT_ITEM_STATE[alert.state] ?? 'evidence.none') },
+      ]
+      return h(
+        React.Fragment,
+        null,
+        h(DetailBar, { title: `${type === 'failure' ? t('alert.failure') : t('alert.waiting')} · ${alert.title ?? ''}`, onBack, backLabel: t('detail.back'), t }),
+        h(
+          'section',
+          { className: 'dswb-big' },
+          h(
+            'div',
+            { className: 'dswb-evidence-head' },
+            h('span', { className: 'dswb-alert-reason' }, truncateText(String(alert.reason ?? t('evidence.none')), 240)),
+            h('code', { className: 'dswb-evidence-key' }, alert.key),
+          ),
+          h(
+            'dl',
+            { className: 'dswb-facts' },
+            ...rows.map((row) => h('div', { key: row.key, className: 'dswb-fact' }, h('dt', null, row.label), h('dd', null, String(row.value ?? '—')))),
+          ),
+          h('button', { type: 'button', className: 'dswb-primary', onClick: () => openSession(alert.sessionId) }, t('alert.open')),
+          h('p', { className: 'dswb-big-foot' }, t('evidence.note')),
+        ),
       )
     }
 
     /** Circular indeterminate spinner: one round-capped arc on a faint track. */
+    // --- P1: search, cost attribution, projects and evidence report (PRD V1.1) ---
+
+    /** One Host route read. A page change aborts the previous read. */
+    async function readRoute(url, signal) {
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { accept: 'application/json' },
+        signal,
+      })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const body = await response.json()
+      if (body === null || typeof body !== 'object') throw new Error('invalid response')
+      return body
+    }
+
+    /** POST one JSON body to a Host route (task creation and confirmations). */
+    async function postRoute(url, body) {
+      const response = await fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify(body),
+      })
+      return response.ok ? response.json().catch(() => ({})) : Promise.reject(new Error(`HTTP ${response.status}`))
+    }
+
+    /** Fetch one route whenever its URL changes; returns `[state, refresh]`. */
+    function useRoute(url) {
+      const [state, setState] = React.useState({ status: 'loading', data: undefined, error: undefined })
+      const [attempt, setAttempt] = React.useState(0)
+      const refresh = React.useCallback(() => setAttempt((value) => value + 1), [])
+      React.useEffect(() => {
+        if (!url) return undefined
+        const controller = new AbortController()
+        let alive = true
+        setState((previous) => ({ ...previous, status: 'loading', error: undefined }))
+        readRoute(url, controller.signal).then(
+          (data) => {
+            if (alive) setState({ status: 'ready', data, error: undefined })
+          },
+          (error) => {
+            if (alive && !controller.signal.aborted) setState((previous) => ({ status: 'error', data: previous.data, error }))
+          },
+        )
+        return () => {
+          alive = false
+          controller.abort()
+        }
+      }, [url, attempt])
+      return [state, refresh]
+    }
+
+    /** Copy text to the clipboard with the same fallback the work log uses. */
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text)
+        return true
+      } catch {
+        try {
+          const area = document.createElement('textarea')
+          area.value = text
+          area.setAttribute('readonly', '')
+          area.style.position = 'fixed'
+          area.style.opacity = '0'
+          document.body.appendChild(area)
+          area.select()
+          const ok = document.execCommand('copy')
+          area.remove()
+          return ok
+        } catch {
+          return false
+        }
+      }
+    }
+
+    const GLYPH_PATHS = {
+      search: 'M7.2 2.6a4.6 4.6 0 1 0 2.9 8.2l3.4 3.4M10.4 10.4 13.6 13.6',
+      calendar: 'M3.2 5.2h9.6v8.4H3.2zM5.6 3.2v3.2M10.4 3.2v3.2M3.2 7.6h9.6',
+      chevron: 'M6.2 3.8 10.6 8l-4.4 4.2',
+      back: 'M9.8 3.8 5.4 8l4.4 4.2',
+      copy: 'M5.2 5.2h8.4v8.4H5.2zM10.8 3.2H4.4A1.2 1.2 0 0 0 3.2 4.4v6.4',
+      check: 'M3.8 8.4l2.7 2.7 5.7-5.9',
+      folder: 'M2.6 4.4h4l1.4 1.6h5.4v7.2H2.6z',
+      git: 'M5 3.4v9.2M5 12.6a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6zM11 3.4a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6zM11 5.2v2.6a2 2 0 0 1-2 2H7',
+      test: 'M4 2.8h8v10.4H4zM6.2 5.6h3.6M6.2 8h3.6M6.2 10.4h2',
+      session: 'M2.8 4.2h10.4v7.6H2.8zM5.4 6.6l2 1.6-2 1.6',
+      file: 'M4 2.6h5l3 3v7.8H4zM9 2.6v3h3',
+      alert: 'M8 2.4 14 13H2zM8 6.2v3.2M8 11.2v.2',
+      clock: 'M8 2.6a5.4 5.4 0 1 0 0 10.8A5.4 5.4 0 0 0 8 2.6zM8 5v3.4l2.1 1.3',
+    }
+
+    /** A tiny inline SVG glyph; every state also carries text, never colour alone. */
+    function Glyph({ name, size }) {
+      return h(
+        'svg',
+        { viewBox: '0 0 16 16', width: size ?? 14, height: size ?? 14, 'aria-hidden': 'true', focusable: 'false' },
+        h('path', {
+          d: GLYPH_PATHS[name] ?? GLYPH_PATHS.session,
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 1.4,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+        }),
+      )
+    }
+
+    /** A pill with a glyph, a colour tone and a text label (PRD: three signals). */
+    function StatusPill({ tone, label, glyph, title }) {
+      return h(
+        'span',
+        { className: 'dswb-p1-pill', 'data-tone': tone ?? 'idle', title: title ?? label },
+        glyph === undefined ? null : h(Glyph, { name: glyph, size: 12 }),
+        h('span', null, label),
+      )
+    }
+
+    /** A label/value fact row for the evidence and request detail panels. */
+    function Fact({ label, value, mono }) {
+      return h(
+        'div',
+        { className: 'dswb-p1-fact' },
+        h('dt', null, label),
+        h('dd', { className: mono === true ? 'dswb-p1-mono' : undefined }, String(value ?? '—')),
+      )
+    }
+
+    /** Shared chrome for every page below the overview. */
+    function PageHeader({ t, crumbs, title, subtitle, actions }) {
+      return h(
+        'header',
+        { className: 'dswb-p1-head' },
+        h(
+          'nav',
+          { className: 'dswb-p1-crumbs', 'aria-label': t('tabs.label') },
+          ...crumbs.map((crumb, index) =>
+            h(
+              'span',
+              { key: index },
+              index > 0 ? h('span', { className: 'dswb-p1-crumb-sep', 'aria-hidden': 'true' }, '›') : null,
+              typeof crumb.onClick === 'function'
+                ? h('button', { type: 'button', className: 'dswb-p1-crumb', onClick: crumb.onClick }, crumb.label)
+                : h('span', { className: 'dswb-p1-crumb', 'aria-current': index === crumbs.length - 1 ? 'page' : undefined }, crumb.label),
+            ),
+          ),
+        ),
+        h(
+          'div',
+          { className: 'dswb-p1-title-row' },
+          h(
+            'div',
+            { className: 'dswb-p1-titles' },
+            h('h1', { className: 'dswb-p1-title' }, title),
+            h('p', { className: 'dswb-p1-sub' }, subtitle),
+          ),
+          actions === undefined ? null : h('div', { className: 'dswb-p1-actions' }, actions),
+        ),
+      )
+    }
+
+    /** A local-day picker: previous / today / next, kept inside the selected day. */
+    function DayPicker({ day, setDay, todayStart, t }) {
+      const isToday = Number(day) === Number(todayStart)
+      const label = dateLabel(Number(day) + 12 * 3600_000, { month: 'numeric', day: 'numeric' })
+      return h(
+        'div',
+        { className: 'dswb-p1-day', role: 'group', 'aria-label': t('page.dateHint') },
+        h('button', { type: 'button', className: 'dswb-p1-day-btn', 'aria-label': t('page.prevDay'), onClick: () => setDay(Number(day) - DAY_MS) }, '‹'),
+        h('button', { type: 'button', className: 'dswb-p1-day-label', onClick: () => setDay(Number(todayStart)), 'aria-label': t('page.today') }, h(Glyph, { name: 'calendar', size: 13 }), h('span', null, `${label} · ${isToday ? t('page.today') : dateLabel(Number(day) + 12 * 3600_000, { year: 'numeric' })}`)),
+        h('button', { type: 'button', className: 'dswb-p1-day-btn', 'aria-label': t('page.nextDay'), disabled: isToday, onClick: () => setDay(Number(day) + DAY_MS) }, '›'),
+      )
+    }
+
+    /** The section switcher: one status model, the same destinations on both widths. */
+    function PageNav({ t, detail, setDetail, counts }) {
+      const items = [
+        { id: 'overview', label: t('nav.overview'), glyph: 'session' },
+        { id: 'cost', label: t('nav.cost'), glyph: 'copy' },
+        { id: 'projects', label: t('nav.projects'), glyph: 'folder' },
+        { id: 'report', label: t('nav.report'), glyph: 'file' },
+        { id: 'attention', label: t('attention.title'), glyph: 'alert', badge: counts?.attention },
+      ]
+      const current = (kind) => {
+        if (kind === 'overview') return 'overview'
+        if (kind === 'cost' || kind === 'costProject' || kind === 'costSession') return 'cost'
+        if (kind === 'projects' || kind === 'projectTimeline') return 'projects'
+        if (kind === 'report') return 'report'
+        if (kind === 'attention' || kind === 'alert') return 'attention'
+        return ''
+      }
+      const active = current(detail.kind)
+      return h(
+        'nav',
+        { className: 'dswb-p1-nav', 'aria-label': t('tabs.label') },
+        ...items.map((item) =>
+          h(
+            'button',
+            {
+              type: 'button',
+              key: item.id,
+              className: 'dswb-p1-nav-item',
+              'aria-current': active === item.id ? 'page' : undefined,
+              onClick: () => setDetail({ kind: item.id }),
+            },
+            h(Glyph, { name: item.glyph, size: 13 }),
+            h('span', null, item.label),
+            item.badge > 0 ? h('i', { className: 'dswb-p1-nav-badge', 'aria-hidden': 'true' }, String(item.badge)) : null,
+          ),
+        ),
+      )
+    }
+
+    function EmptyState({ text, t, onRetry }) {
+      return h(
+        'div',
+        { className: 'dswb-p1-empty' },
+        h('p', null, text),
+        onRetry === undefined ? null : h('button', { type: 'button', className: 'dswb-mini', onClick: onRetry }, t('page.retry')),
+      )
+    }
+
+    function LoadingState({ t }) {
+      return h('p', { className: 'dswb-p1-loading', role: 'status' }, h('span', { className: 'dswb-dot', 'data-running': 'true', 'aria-hidden': 'true' }), t('page.loading'))
+    }
+
+    // --- F07: global metadata search (UI-05) ----------------------------------
+
+    function searchUrlOf(params, offset, rebuild) {
+      const query = new URLSearchParams()
+      if (params.text !== '') query.set('q', params.text)
+      for (const value of params.projects) query.append('project', value)
+      for (const value of params.models) query.append('model', value)
+      for (const value of params.states) query.append('state', value)
+      query.set('limit', params.text === '' ? '10' : String(SEARCH_PAGE_SIZE))
+      query.set('offset', String(offset))
+      query.set('tzOffset', String(tzOffsetSeconds()))
+      query.set('locale', localeTag())
+      if (params.days === 7) query.set('from', String(Date.now() - 7 * DAY_MS))
+      if (rebuild) query.set('rebuild', '1')
+      return `${SEARCH_ROUTE}?${query.toString()}`
+    }
+
+    /** A filter group: several values inside one dimension widen the result (union). */
+    function FilterGroup({ label, options, selected, onToggle, t, allKey }) {
+      if (options.length === 0) return null
+      return h(
+        'div',
+        { className: 'dswb-search-group' },
+        h('span', { className: 'dswb-search-group-label' }, label),
+        h(
+          'div',
+          { className: 'dswb-search-chips' },
+          h(
+            'button',
+            { type: 'button', className: 'dswb-search-chip', 'aria-pressed': selected.length === 0, onClick: () => onToggle(null) },
+            t(allKey ?? 'search.all'),
+          ),
+          ...options.map((option) =>
+            h(
+              'button',
+              {
+                type: 'button',
+                key: option.value,
+                className: 'dswb-search-chip',
+                'aria-pressed': selected.includes(option.value),
+                onClick: () => onToggle(option.value),
+              },
+              option.label,
+            ),
+          ),
+        ),
+      )
+    }
+
+    /**
+     * The command palette. Its index is metadata only: titles, project aliases,
+     * model routes, states, dates and IDs. It never reads message text.
+     */
+    function SearchPalette({ t, snapshot, openSession, onClose, narrow }) {
+      const rows = Array.isArray(snapshot?.search?.rows) ? snapshot.search.rows : []
+      const projectOptions = [...new Set(rows.map((row) => row.projectName).filter(Boolean))].sort().map((value) => ({ value, label: value }))
+      const modelOptions = [...new Set(rows.map((row) => row.model).filter(Boolean))].sort().map((value) => ({ value, label: value }))
+      const states = ['waiting', 'running', 'stuck', 'failed', 'ended', 'cancelled', 'unknown']
+      const stateOptions = states.map((value) => ({ value, label: stateLabel(t, value) }))
+      const [draft, setDraft] = React.useState('')
+      const [composing, setComposing] = React.useState(false)
+      const [filters, setFilters] = React.useState({ projects: [], models: [], states: [], days: 0 })
+      const [filtersOpen, setFiltersOpen] = React.useState(false)
+      const [nonce, setNonce] = React.useState(0)
+      const [result, setResult] = React.useState({ status: 'loading', items: [], total: 0, hasMore: false, index: undefined })
+      const [selected, setSelected] = React.useState(0)
+      const [rebuilding, setRebuilding] = React.useState(false)
+      const inputRef = React.useRef(null)
+      const restoreRef = React.useRef(undefined)
+      const params = { text: draft.trim(), ...filters }
+
+      React.useEffect(() => {
+        restoreRef.current = document.activeElement
+        const focus = () => inputRef.current?.focus()
+        focus()
+        return () => {
+          const previous = restoreRef.current
+          if (previous !== null && previous !== undefined && typeof previous.focus === 'function') previous.focus()
+        }
+      }, [])
+
+      const filterKey = JSON.stringify([params.text, params.projects, params.models, params.states, params.days, nonce, composing])
+      React.useEffect(() => {
+        const controller = new AbortController()
+        let alive = true
+        let timer
+        const run = async () => {
+          try {
+            const body = await readRoute(searchUrlOf(params, 0, rebuilding), controller.signal)
+            if (!alive) return
+            setResult({ status: 'ready', items: Array.isArray(body.items) ? body.items : [], total: Number(body.total) || 0, hasMore: body.hasMore === true, index: body.index })
+            setSelected(0)
+            setRebuilding(false)
+          } catch (error) {
+            if (!alive || controller.signal.aborted) return
+            setResult((previous) => ({ ...previous, status: 'error' }))
+            setRebuilding(false)
+          }
+        }
+        setResult((previous) => ({ ...previous, status: 'loading' }))
+        // Wait for the IME composition to end before submitting the query.
+        timer = setTimeout(run, composing ? 260 : 90)
+        return () => {
+          alive = false
+          clearTimeout(timer)
+          controller.abort()
+        }
+      }, [filterKey])
+
+      const loadMore = async () => {
+        try {
+          const body = await readRoute(searchUrlOf(params, result.items.length, false))
+          setResult((previous) => ({
+            ...previous,
+            items: [...previous.items, ...(Array.isArray(body.items) ? body.items : [])],
+            total: Number(body.total) || previous.total,
+            hasMore: body.hasMore === true,
+          }))
+        } catch {
+          // The next poll reconciles it.
+        }
+      }
+
+      const toggle = (dimension, value) => {
+        setFilters((previous) => {
+          const next = { ...previous, [dimension]: value === null ? [] : previous[dimension].includes(value) ? previous[dimension].filter((entry) => entry !== value) : [...previous[dimension], value] }
+          return next
+        })
+      }
+      const hasFilters = filters.projects.length > 0 || filters.models.length > 0 || filters.states.length > 0 || filters.days > 0
+      const clear = () => setFilters({ projects: [], models: [], states: [], days: 0 })
+
+      const onKeyDown = (event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          onClose()
+        } else if (event.key === 'ArrowDown') {
+          event.preventDefault()
+          setSelected((value) => Math.min(result.items.length - 1, value + 1))
+        } else if (event.key === 'ArrowUp') {
+          event.preventDefault()
+          setSelected((value) => Math.max(0, value - 1))
+        } else if (event.key === 'Enter') {
+          const row = result.items[selected]
+          if (row !== undefined) {
+            event.preventDefault()
+            openSession(row.sessionId)
+            onClose()
+          }
+        }
+      }
+
+      const items = result.items
+      return h(
+        'div',
+        { className: 'dswb-search-overlay', onMouseDown: (event) => { if (event.target === event.currentTarget) onClose() }, role: 'presentation' },
+        h(
+          'div',
+          { className: 'dswb-search-dialog', 'data-narrow': narrow === true ? 'true' : undefined, role: 'dialog', 'aria-modal': 'true', 'aria-label': t('search.title'), onMouseDown: (event) => event.stopPropagation(), onKeyDown },
+          h(
+            'div',
+            { className: 'dswb-search-input-row' },
+            h(Glyph, { name: 'search', size: 16 }),
+            h('input', {
+              ref: inputRef,
+              className: 'dswb-search-input',
+              type: 'text',
+              value: draft,
+              placeholder: t('search.placeholder'),
+              'aria-label': t('search.title'),
+              autoComplete: 'off',
+              spellCheck: false,
+              onChange: (event) => {
+                const text = event.target.value
+                setDraft(text)
+              },
+              onCompositionStart: () => setComposing(true),
+              onCompositionEnd: (event) => {
+                setComposing(false)
+                setDraft(event.target.value)
+              },
+            }),
+            composing ? h('span', { className: 'dswb-search-ime' }, t('search.composing')) : null,
+            h('button', { type: 'button', className: 'dswb-search-esc', onClick: onClose, 'aria-label': t('detail.back') }, 'Esc'),
+          ),
+          h(
+            'div',
+            { className: 'dswb-search-tools' },
+            h(
+              'button',
+              { type: 'button', className: 'dswb-search-toggle', 'aria-expanded': filtersOpen, onClick: () => setFiltersOpen((value) => !value) },
+              t('search.filters'),
+              hasFilters ? h('i', { className: 'dswb-search-active' }) : null,
+            ),
+            h('span', { className: 'dswb-spacer' }),
+            h(
+              'button',
+              { type: 'button', className: 'dswb-search-rebuild', disabled: rebuilding, onClick: () => { setRebuilding(true); setNonce((value) => value + 1) } },
+              rebuilding ? t('search.rebuilding') : t('search.rebuild'),
+            ),
+          ),
+          filtersOpen
+            ? h(
+                'div',
+                { className: 'dswb-search-filters' },
+                h(FilterGroup, { label: t('search.project'), options: projectOptions, selected: filters.projects, onToggle: (value) => toggle('projects', value), t }),
+                h(FilterGroup, { label: t('search.model'), options: modelOptions, selected: filters.models, onToggle: (value) => toggle('models', value), t }),
+                h(FilterGroup, { label: t('search.state'), options: stateOptions, selected: filters.states, onToggle: (value) => toggle('states', value), t }),
+                h(
+                  'div',
+                  { className: 'dswb-search-group' },
+                  h('span', { className: 'dswb-search-group-label' }, t('search.date')),
+                  h(
+                    'div',
+                    { className: 'dswb-search-chips' },
+                    h('button', { type: 'button', className: 'dswb-search-chip', 'aria-pressed': filters.days === 0, onClick: () => setFilters((previous) => ({ ...previous, days: 0 })) }, t('search.allTime')),
+                    h('button', { type: 'button', className: 'dswb-search-chip', 'aria-pressed': filters.days === 7, onClick: () => setFilters((previous) => ({ ...previous, days: 7 })) }, t('search.last7')),
+                  ),
+                ),
+                hasFilters ? h('button', { type: 'button', className: 'dswb-mini', onClick: clear }, t('search.clear')) : null,
+              )
+            : null,
+          h(
+            'div',
+            { className: 'dswb-search-summary' },
+            result.status === 'error'
+              ? h('span', { role: 'alert' }, t('page.error'))
+              : t('search.found', { count: String(result.total) }),
+            h('span', { className: 'dswb-spacer' }),
+            h('span', { className: 'dswb-search-index' }, t('search.localIndex', { count: String(result.index?.rows ?? rows.length) })),
+          ),
+          h(
+            'ul',
+            { className: 'dswb-search-results', role: 'listbox', 'aria-label': t('search.title') },
+            items.length === 0 && result.status === 'ready'
+              ? h('li', { className: 'dswb-search-none' }, t('search.empty'), hasFilters ? h('button', { type: 'button', className: 'dswb-mini', onClick: clear }, t('search.clear')) : null)
+              : items.map((row, index) =>
+                  h(
+                    'li',
+                    { key: `${row.sessionId}-${index}`, role: 'option', 'aria-selected': selected === index },
+                    h(
+                      'button',
+                      {
+                        type: 'button',
+                        className: 'dswb-search-result',
+                        'data-selected': selected === index ? 'true' : undefined,
+                        onMouseEnter: () => setSelected(index),
+                        onClick: () => { openSession(row.sessionId); onClose() },
+                      },
+                      h('span', { className: 'dswb-search-result-glyph' }, h(Glyph, { name: 'session', size: 14 })),
+                      h(
+                        'span',
+                        { className: 'dswb-search-result-main' },
+                        h('span', { className: 'dswb-search-result-title' }, row.title || t('row.untitled')),
+                        h('span', { className: 'dswb-search-result-meta' }, `${row.projectName || '—'} · ${row.model || t('speed.unknownModel')}`),
+                      ),
+                      h('span', { className: 'dswb-search-result-time' }, dateLabel(Number(row.at), { month: 'numeric', day: 'numeric' })),
+                      h(StateBadge, { name: String(row.state ?? 'unknown'), t }),
+                      h('span', { className: 'dswb-search-result-open', 'aria-hidden': 'true' }, h(Glyph, { name: 'chevron', size: 13 })),
+                    ),
+                  ),
+                ),
+          ),
+          result.hasMore
+            ? h('div', { className: 'dswb-search-more' }, h('button', { type: 'button', className: 'dswb-mini', onClick: loadMore }, t('search.more')))
+            : null,
+          h('div', { className: 'dswb-search-foot' }, t('search.hint')),
+        ),
+      )
+    }
+
+    // --- F05: project → Session → request (UI-06) -----------------------------
+
+    function CostLanding({ data, t, onSelect, crumbs, dayLabel }) {
+      const ledger = data?.ledger ?? {}
+      const projects = Array.isArray(ledger.projects) ? ledger.projects : []
+      const max = Math.max(1, ...projects.map((row) => Number(row.amount) || 0))
+      const currency = ledger.currency ?? data?.overview?.currency ?? 'CNY'
+      return h(
+        React.Fragment,
+        null,
+        h(PageHeader, {
+          t,
+          crumbs,
+          title: t('cost.title'),
+          subtitle: t('cost.subtitle', { date: dayLabel, currency, zone: utcOffsetLabel() }),
+          actions: h(StatusPill, { tone: 'ok', glyph: 'check', label: t('cost.coverage', { percent: String(Math.round((Number(ledger.coverage) || 0) * 100)) }) }),
+        }),
+        h(
+          'div',
+          { className: 'dswb-p1-grid' },
+          h(
+            'section',
+            { className: 'dswb-big' },
+            h('div', { className: 'dswb-big-head' }, h('h2', { className: 'dswb-big-title' }, t('cost.today')), h('span', { className: 'dswb-spacer' }), h('span', { className: 'dswb-big-hint' }, currency)),
+            h(
+              'div',
+              { className: 'dswb-p1-cost-total' },
+              h('span', { className: 'dswb-p1-cost-value' }, moneyOf(data?.overview?.amount, currency)),
+              h('span', { className: 'dswb-p1-cost-note' }, t('cost.known', { currency })),
+            ),
+            projects.length === 0
+              ? h(EmptyState, { text: t('cost.empty'), t })
+              : h(
+                  'ul',
+                  { className: 'dswb-p1-projects' },
+                  ...projects.map((project) =>
+                    h(
+                      'li',
+                      { key: project.projectId },
+                      h(
+                        'button',
+                        { type: 'button', className: 'dswb-p1-project', onClick: () => onSelect({ kind: 'costProject', projectId: project.projectId, name: project.name }) },
+                        h('span', { className: 'dswb-p1-project-top' }, h('span', { className: 'dswb-p1-project-name' }, h(Glyph, { name: 'folder', size: 14 }), project.name || basename(project.projectId)), h('span', { className: 'dswb-p1-project-amount' }, moneyOf(project.amount, currency))),
+                        h('span', { className: 'dswb-p1-bar' }, h('span', { style: { width: `${Math.max(4, ((Number(project.amount) || 0) / max) * 100)}%` } })),
+                        h('span', { className: 'dswb-p1-project-meta' }, t('cost.projectSessions', { count: String(project.sessions ?? 0) }), h('span', { className: 'dswb-spacer' }), t('cost.coverage', { percent: String(Math.round((Number(project.coverage) || 0) * 100)) })),
+                      ),
+                    ),
+                  ),
+                ),
+          ),
+          h(
+            'aside',
+            { className: 'dswb-big dswb-p1-notes' },
+            h('h2', { className: 'dswb-big-title' }, t('cost.requests')),
+            h('p', { className: 'dswb-quiet' }, t('cost.estimateNote')),
+            h('p', { className: 'dswb-quiet' }, t('foot.note')),
+          ),
+        ),
+      )
+    }
+
+    function CostProjectPage({ detail, data, t, onSelect, crumbs, day }) {
+      const ledger = data?.ledger ?? {}
+      const currency = ledger.currency ?? data?.overview?.currency ?? 'CNY'
+      const byId = new Map()
+      for (const row of Array.isArray(ledger.sessions) ? ledger.sessions : []) {
+        if (row.projectId !== detail.projectId) continue
+        byId.set(row.sessionId, { sessionId: row.sessionId, title: row.title, model: row.model, amount: row.amount, quality: row.quality })
+      }
+      for (const row of [...(Array.isArray(data?.running) ? data.running : []), ...(Array.isArray(data?.recent) ? data.recent : [])]) {
+        if (row.projectId !== detail.projectId) continue
+        if (byId.has(row.sessionId)) continue
+        byId.set(row.sessionId, { sessionId: row.sessionId, title: row.title, model: row.model, amount: row.usage?.amount, quality: row.usage?.quality, state: row.state })
+      }
+      const rows = [...byId.values()].sort((left, right) => (Number(right.amount) || 0) - (Number(left.amount) || 0))
+      return h(
+        React.Fragment,
+        null,
+        h(PageHeader, { t, crumbs, title: detail.name || t('cost.title'), subtitle: `${t('cost.projectSessions', { count: String(rows.length) })} · ${currency} · ${dateLabel(Number(day) + 12 * 3600_000, dateParts())}` }),
+        h(
+          'section',
+          { className: 'dswb-big' },
+          h('div', { className: 'dswb-big-head' }, h('h2', { className: 'dswb-big-title' }, t('cost.sessions')), h('span', { className: 'dswb-pill' }, String(rows.length))),
+          rows.length === 0
+            ? h(EmptyState, { text: t('cost.empty'), t })
+            : h(
+                'ul',
+                { className: 'dswb-p1-sessions' },
+                ...rows.map((row) =>
+                  h(
+                    'li',
+                    { key: row.sessionId },
+                    h(
+                      'button',
+                      { type: 'button', className: 'dswb-p1-session', onClick: () => onSelect({ kind: 'costSession', sessionId: row.sessionId, projectId: detail.projectId, name: detail.name, day }) },
+                      h('span', { className: 'dswb-p1-session-glyph' }, h(Glyph, { name: 'session', size: 14 })),
+                      h('span', { className: 'dswb-p1-session-main' }, h('span', { className: 'dswb-p1-session-title' }, row.title || t('row.untitled')), h('span', { className: 'dswb-p1-session-meta' }, row.model || '—')),
+                      row.state === undefined ? null : h(StateBadge, { name: String(row.state), t }),
+                      h('span', { className: 'dswb-p1-session-amount' }, row.quality === 'unpriced' || row.amount === undefined ? t('cost.unpriced') : moneyOf(row.amount, currency)),
+                      h('span', { className: 'dswb-search-result-open', 'aria-hidden': 'true' }, h(Glyph, { name: 'chevron', size: 13 })),
+                    ),
+                  ),
+                ),
+              ),
+        ),
+      )
+    }
+
+    function RequestDetail({ row, result, t, onOpen }) {
+      const tokens = row?.tokens ?? {}
+      const prices = Array.isArray(result?.prices) ? result.prices.find((entry) => entry.model === row?.model) ?? result.prices[0] : undefined
+      const priced = row?.amount !== undefined && row?.amount !== null
+      const currency = result?.currency ?? 'CNY'
+      const attribution = row?.attribution === 'session' ? t('cost.attribution.session') : t('cost.attribution.workspace', { project: result?.projectName || '—' })
+      return h(
+        'aside',
+        { className: 'dswb-big dswb-p1-detail' },
+        h(
+          'div',
+          { className: 'dswb-big-head' },
+          h('h2', { className: 'dswb-big-title' }, t('cost.requestDetail')),
+          h('span', { className: 'dswb-spacer' }),
+          h(StatusPill, { tone: priced ? 'ok' : 'warn', glyph: priced ? 'check' : 'alert', label: priced ? t('cost.priced') : t('cost.unpriced') }),
+        ),
+        row === undefined
+          ? h(EmptyState, { text: t('cost.empty'), t })
+          : h(
+              React.Fragment,
+              null,
+              h(
+                'div',
+                { className: 'dswb-p1-detail-value' },
+                h('span', { className: 'dswb-p1-detail-amount' }, priced ? moneyOf(row.amount, currency) : t('cost.unpriced')),
+                h('span', { className: 'dswb-p1-detail-meta' }, `${row.requestId} · ${row.at === undefined ? t('cost.aggregate') : clockOf(row.at)}`),
+              ),
+              h(
+                'dl',
+                { className: 'dswb-p1-facts' },
+                h(Fact, { label: t('cost.source'), value: row.provider || '—' }),
+                h(Fact, { label: t('cost.model'), value: row.model || '—' }),
+                h(Fact, { label: t('cost.uncached'), value: formatTokens(tokens.uncachedInput), mono: true }),
+                h(Fact, { label: t('cost.cacheRead'), value: formatTokens(tokens.cacheReadInput), mono: true }),
+                h(Fact, { label: t('cost.output'), value: formatTokens(tokens.output), mono: true }),
+                h(Fact, { label: t('cost.priceRef'), value: row.priceRef || result?.priceRef || '—', mono: true }),
+                h(Fact, { label: t('cost.attribution'), value: attribution }),
+              ),
+              prices === undefined
+                ? null
+                : h('p', { className: 'dswb-p1-price-note' }, h(Glyph, { name: 'copy', size: 12 }), t('cost.priceNote', { input: String(prices.input ?? '—'), cache: String(prices.cacheRead ?? '—'), output: String(prices.output ?? '—') })),
+              row.quality === 'unpriced' || row.quality === 'missing-usage' || row.quality === 'duplicate'
+                ? h('p', { className: 'dswb-p1-warn' }, h(Glyph, { name: 'alert', size: 12 }), t('cost.missingUsage'))
+                : null,
+              onOpen === undefined ? null : h('button', { type: 'button', className: 'dswb-primary', onClick: onOpen }, h(Glyph, { name: 'session', size: 13 }), t('cost.open')),
+            ),
+      )
+    }
+
+    function CostSessionPage({ detail, t, crumbs, openSession, now }) {
+      const url = `${REQUEST_ROUTE}?sessionId=${encodeURIComponent(detail.sessionId)}&day=${Number(detail.day)}&tzOffset=${tzOffsetSeconds()}&locale=${encodeURIComponent(localeTag())}`
+      const [state, refresh] = useRoute(url)
+      const result = state.data
+      const rows = Array.isArray(result?.rows) ? result.rows : []
+      const [selectedKey, setSelectedKey] = React.useState(undefined)
+      const selected = rows.find((row) => row.requestId === selectedKey) ?? rows[0]
+      const currency = result?.currency ?? 'CNY'
+      const pricedCount = rows.filter((row) => row.amount !== undefined && row.amount !== null).length
+      return h(
+        React.Fragment,
+        null,
+        h(PageHeader, {
+          t,
+          crumbs,
+          title: t('cost.sessionTitle'),
+          subtitle: `${detail.sessionId} · ${currency} · ${utcOffsetLabel()}`,
+          actions: h(RefreshButton, { t, onClick: refresh, status: state.status }),
+        }),
+        state.status === 'loading' && result === undefined
+          ? h(LoadingState, { t })
+          : h(
+              'div',
+              { className: 'dswb-p1-grid dswb-p1-cost-grid' },
+              h(
+                'div',
+                { className: 'dswb-p1-cost-main' },
+                h(
+                  'section',
+                  { className: 'dswb-big' },
+                  h(
+                    'div',
+                    { className: 'dswb-big-head' },
+                    h('h2', { className: 'dswb-big-title' }, t('cost.today')),
+                    h('span', { className: 'dswb-spacer' }),
+                    h('button', { type: 'button', className: 'dswb-primary dswb-p1-open', onClick: () => openSession(detail.sessionId) }, h(Glyph, { name: 'session', size: 13 }), t('cost.open')),
+                  ),
+                  h(
+                    'div',
+                    { className: 'dswb-p1-cost-total' },
+                    h('span', { className: 'dswb-p1-cost-value' }, moneyOf(result?.total, currency)),
+                    h('span', { className: 'dswb-p1-cost-note' }, t('cost.known', { currency })),
+                    h(StatusPill, { tone: (Number(result?.coverage) || 0) >= 1 ? 'ok' : 'warn', glyph: (Number(result?.coverage) || 0) >= 1 ? 'check' : 'alert', label: t('cost.coverage', { percent: String(Math.round((Number(result?.coverage) || 0) * 100)) }) }),
+                  ),
+                  h('p', { className: 'dswb-p1-cost-foot' }, t('cost.pricedRow', { priced: String(pricedCount), unpriced: String(rows.length - pricedCount) }), h('span', { className: 'dswb-spacer' }), t('cost.estimateNote')),
+                ),
+                h(
+                  'section',
+                  { className: 'dswb-big' },
+                  h('div', { className: 'dswb-big-head' }, h('h2', { className: 'dswb-big-title' }, t('cost.requests')), h('span', { className: 'dswb-spacer' }), h('span', { className: 'dswb-pill' }, t('cost.terminal', { count: String(rows.length) }))),
+                  rows.length === 0
+                    ? h(EmptyState, { text: t('cost.empty'), t, onRetry: state.status === 'error' ? refresh : undefined })
+                    : h(
+                        'ul',
+                        { className: 'dswb-p1-requests' },
+                        ...rows.map((row) =>
+                          h(
+                            'li',
+                            { key: row.requestId },
+                            h(
+                              'button',
+                              { type: 'button', className: 'dswb-p1-request', 'data-selected': selected?.requestId === row.requestId ? 'true' : undefined, onClick: () => setSelectedKey(row.requestId) },
+                              h('span', { className: 'dswb-p1-request-id' }, row.requestId),
+                              h('span', { className: 'dswb-p1-request-time' }, row.at === undefined ? t('cost.aggregate') : clockOf(row.at)),
+                              h('span', { className: 'dswb-p1-request-status', 'data-tone': row.status === 'settled' ? 'ok' : 'warn' }, row.status === 'settled' ? t('cost.success') : t('cost.failed')),
+                              h('span', { className: 'dswb-spacer' }),
+                              h('span', { className: 'dswb-p1-request-amount' }, row.amount === undefined || row.amount === null ? t('cost.unpriced') : moneyOf(row.amount, currency)),
+                              h('span', { className: 'dswb-search-result-open', 'aria-hidden': 'true' }, h(Glyph, { name: 'chevron', size: 13 })),
+                            ),
+                          ),
+                        ),
+                      ),
+                ),
+              ),
+              h(RequestDetail, { row: selected, result, t, onOpen: () => openSession(detail.sessionId) }),
+            ),
+      )
+    }
+
+    function RefreshButton({ t, onClick, status }) {
+      return h('button', { type: 'button', className: 'dswb-icon-btn dswb-refresh', onClick, disabled: status === 'loading', 'aria-label': t('page.refresh') }, h(RefreshIcon))
+    }
+
+    // --- F04: project progress and the evidence timeline ----------------------
+
+    function projectCardOf(project, t, onSelect, now) {
+      const card = project.card ?? {}
+      const counts = card.counts ?? {}
+      const label = card.lastAction?.label ?? card.name ?? '—'
+      return h(
+        'li',
+        { key: card.projectId },
+        h(
+          'button',
+          { type: 'button', className: 'dswb-p1-proj-card', onClick: () => onSelect({ kind: 'projectTimeline', projectId: card.projectId, name: card.name }) },
+          h(
+            'span',
+            { className: 'dswb-p1-proj-top' },
+            h('span', { className: 'dswb-p1-proj-name' }, h(Glyph, { name: 'folder', size: 15 }), card.name || basename(card.projectId)),
+            h('span', { className: 'dswb-p1-proj-time' }, relativeTime(t, card.lastAt, now)),
+          ),
+          h('span', { className: 'dswb-p1-proj-meta' }, t('projects.sessions', { count: String(card.sessions ?? 0) }), ' · ', t('projects.evidence', { count: String(card.evidence ?? 0) })),
+          h(
+            'span',
+            { className: 'dswb-p1-proj-counts' },
+            ...[
+              ['done', counts.done, 'projects.done'],
+              ['active', counts.active, 'projects.active'],
+              ['blocked', counts.blocked, 'projects.blocked'],
+              ['confirm', counts.confirm, 'projects.confirm'],
+            ].filter(([, count]) => Number(count) > 0).map(([tone, count, key]) => h(StatusPill, { key: tone, tone, label: t('projects.count', { count: String(count), state: t(key) }) })),
+          ),
+          h('span', { className: 'dswb-p1-proj-action' }, h(Glyph, { name: 'clock', size: 12 }), truncateText(label, 42)),
+          h('span', { className: 'dswb-p1-proj-git' }, project.git === 'ready' ? t('projects.gitReady') : t('projects.gitOff')),
+        ),
+      )
+    }
+
+    function ProjectsPage({ t, day, setDay, todayStart, onSelect, crumbs, now }) {
+      const url = `${REPORT_ROUTE}?day=${Number(day)}&tzOffset=${tzOffsetSeconds()}&locale=${encodeURIComponent(localeTag())}`
+      const [state, refresh] = useRoute(url)
+      const result = state.data
+      const projects = Array.isArray(result?.projects) ? result.projects : []
+      return h(
+        React.Fragment,
+        null,
+        h(PageHeader, {
+          t,
+          crumbs,
+          title: t('projects.title'),
+          subtitle: t('projects.subtitle', { date: dateLabel(Number(day) + 12 * 3600_000, dateParts()), count: String(projects.length) }),
+          actions: h(React.Fragment, null, h(DayPicker, { day, setDay, todayStart, t }), h(RefreshButton, { t, onClick: refresh, status: state.status })),
+        }),
+        state.status === 'loading' && result === undefined
+          ? h(LoadingState, { t })
+          : projects.length === 0
+            ? h(EmptyState, { text: t('projects.empty'), t, onRetry: state.status === 'error' ? refresh : undefined })
+            : h(
+                'ul',
+                { className: 'dswb-p1-proj-grid' },
+                ...projects.map((project) => projectCardOf(project, t, onSelect, now)),
+              ),
+      )
+    }
+
+    function TimelineRow({ entry, t, now, onSelect, openSession, selected }) {
+      const kind = String(entry.kind)
+      const glyph = kind === 'session' ? 'session' : kind === 'file' ? 'file' : kind === 'commit' ? 'git' : 'test'
+      const label =
+        kind === 'session' ? entry.title || t('row.untitled')
+          : kind === 'file' ? entry.path
+            : kind === 'commit' ? `${entry.sha} · ${entry.subject}`
+              : entry.text
+      const source = kind === 'session' ? t('cost.sessionId') : kind === 'commit' ? t('projects.source') : kind === 'test' ? t('projects.tests') : t('projects.source')
+      return h(
+        'li',
+        { key: referenceKeyOf(entry), className: 'dswb-p1-tl-row', 'data-selected': selected ? 'true' : undefined },
+        h(
+          'button',
+          { type: 'button', className: 'dswb-p1-tl-main', onClick: () => onSelect(entry) },
+          h('span', { className: 'dswb-p1-tl-glyph', 'data-kind': kind }, h(Glyph, { name: glyph, size: 14 })),
+          h(
+            'span',
+            { className: 'dswb-p1-tl-body' },
+            h('span', { className: 'dswb-p1-tl-label' }, truncateText(String(label), 64)),
+            h('span', { className: 'dswb-p1-tl-meta' }, `${clockOf(entry.at)} · ${source}`),
+          ),
+          h(StatusPill, { tone: entry.attribution === 'direct' ? 'ok' : 'idle', label: t(entry.attribution === 'direct' ? 'projects.direct' : 'projects.activity') }),
+          kind === 'commit' ? h('span', { className: 'dswb-p1-tl-files' }, t('projects.commitFiles', { count: String(entry.files ?? 0) })) : null,
+          kind === 'test' ? h('span', { className: 'dswb-p1-tl-files' }, t(entry.verified === true ? 'projects.verified' : 'projects.unverified')) : null,
+        ),
+        entry.sessionId === undefined || kind === 'commit' ? null : h('button', { type: 'button', className: 'dswb-open', 'aria-label': t('projects.openSession'), onClick: () => openSession(entry.sessionId) }, h(Glyph, { name: 'session', size: 13 })),
+      )
+    }
+
+    function referenceKeyOf(entry) {
+      return entry?.reference?.sourceRef ?? `${entry?.kind}:${entry?.at}:${entry?.path ?? entry?.sha ?? entry?.sessionId ?? ''}`
+    }
+
+    function TimelineEvidence({ entry, t, project, openSession }) {
+      const kind = String(entry?.kind ?? '')
+      const facts = []
+      if (kind === 'commit') {
+        facts.push([t('report.sha'), entry.sha || '—'], [t('projects.source'), entry.author || 'Git'], [t('projects.commitFiles', { count: String(entry.files ?? 0) })], [t('projects.time'), clockOf(entry.at)])
+      } else if (kind === 'test') {
+        facts.push([t('report.tests'), entry.verified === true ? t('projects.testVerified', { passed: String(entry.passed ?? '—'), code: String(entry.exitCode ?? 0) }) : t('projects.testUnverified')], [t('projects.source'), entry.verified === true ? t('projects.verified') : t('projects.unverified')], [t('projects.time'), clockOf(entry.at)])
+      } else if (kind === 'file') {
+        facts.push([t('projects.source'), entry.path || '—'], [t('projects.time'), clockOf(entry.at)], [t('projects.direct'), String(entry.count ?? 1)])
+      } else {
+        facts.push([t('cost.sessionId'), entry.sessionId || '—'], [t('projects.state'), t('state.' + String(entry.state ?? 'unknown'))], [t('projects.time'), clockOf(entry.at)])
+      }
+      return h(
+        'aside',
+        { className: 'dswb-big dswb-p1-detail' },
+        h('div', { className: 'dswb-big-head' }, h('h2', { className: 'dswb-big-title' }, t('report.evidence')), h('span', { className: 'dswb-spacer' }), h(StatusPill, { tone: entry?.attribution === 'direct' ? 'ok' : 'idle', label: t(entry?.attribution === 'direct' ? 'projects.direct' : 'projects.activity') })),
+        entry === undefined
+          ? h(EmptyState, { text: t('projects.emptyTimeline'), t })
+          : h(
+              React.Fragment,
+              null,
+              h('h3', { className: 'dswb-p1-detail-title' }, truncateText(String(entry.title ?? entry.subject ?? entry.path ?? entry.text ?? ''), 80)),
+              h('dl', { className: 'dswb-p1-facts' }, ...facts.map(([label, value], index) => h(Fact, { key: index, label, value }))),
+              entry.sessionId === undefined ? null : h('button', { type: 'button', className: 'dswb-primary', onClick: () => openSession(entry.sessionId) }, h(Glyph, { name: 'session', size: 13 }), t('projects.openSession')),
+              h('p', { className: 'dswb-p1-detail-note' }, project?.git === 'ready' ? t('projects.gitReady') : t('projects.gitOff')),
+            ),
+      )
+    }
+
+    function ProjectTimelinePage({ detail, t, day, setDay, todayStart, onBack, crumbs, openSession }) {
+      const url = `${REPORT_ROUTE}?day=${Number(day)}&tzOffset=${tzOffsetSeconds()}&locale=${encodeURIComponent(localeTag())}&project=${encodeURIComponent(detail.projectId)}`
+      const [state, refresh] = useRoute(url)
+      const project = (Array.isArray(state.data?.projects) ? state.data.projects : [])[0]
+      const timeline = Array.isArray(project?.timeline) ? project.timeline : []
+      const [filter, setFilter] = React.useState('all')
+      const [selectedKey, setSelectedKey] = React.useState(undefined)
+      const shown = timeline.filter((entry) => filter === 'all' || entry.kind === filter)
+      const selected = shown.find((entry) => referenceKeyOf(entry) === selectedKey) ?? shown[0]
+      const filters = ['all', 'session', 'file', 'commit', 'test']
+      return h(
+        React.Fragment,
+        null,
+        h(PageHeader, {
+          t,
+          crumbs,
+          title: `${t('projects.title')} · ${detail.name || basename(detail.projectId)}`,
+          subtitle: `${t('projects.sessions', { count: String(project?.card?.sessions ?? 0) })} · ${t('projects.evidence', { count: String(project?.card?.evidence ?? 0) })}`,
+          actions: h(React.Fragment, null,
+            h('button', { type: 'button', className: 'dswb-mini', onClick: onBack }, t('page.back')),
+            h('button', {
+              type: 'button',
+              className: 'dswb-mini',
+              'aria-pressed': project?.git === 'ready' ? 'true' : 'false',
+              onClick: async () => {
+                try {
+                  await postRoute(REPORT_ROUTE, { action: 'git', projectId: detail.projectId, enabled: project?.git !== 'ready' })
+                  refresh()
+                } catch {
+                  // The next read reconciles it.
+                }
+              },
+            }, t(project?.git === 'ready' ? 'projects.gitDisable' : 'projects.gitEnable')),
+            h(DayPicker, { day, setDay, todayStart, t }),
+            h(RefreshButton, { t, onClick: refresh, status: state.status })),
+        }),
+        h(
+          'div',
+          { className: 'dswb-p1-filters' },
+          ...filters.map((name) => h('button', { type: 'button', key: name, className: 'dswb-search-chip', 'aria-pressed': filter === name, onClick: () => setFilter(name) }, t(`projects.filter.${name}`))),
+        ),
+        state.status === 'loading' && project === undefined
+          ? h(LoadingState, { t })
+          : h(
+              'div',
+              { className: 'dswb-p1-grid' },
+              h(
+                'section',
+                { className: 'dswb-big' },
+                h('div', { className: 'dswb-big-head' }, h('h2', { className: 'dswb-big-title' }, t('projects.timeline')), h('span', { className: 'dswb-spacer' }), h('span', { className: 'dswb-pill' }, String(shown.length))),
+                shown.length === 0
+                  ? h(EmptyState, { text: t('projects.emptyTimeline'), t })
+                  : h('ul', { className: 'dswb-p1-timeline' }, ...shown.map((entry) => h(TimelineRow, { key: referenceKeyOf(entry), entry, t, onSelect: (row) => setSelectedKey(referenceKeyOf(row)), selected: selected !== undefined && referenceKeyOf(selected) === referenceKeyOf(entry), openSession }))),
+              ),
+              h(TimelineEvidence, { entry: selected, t, project, openSession }),
+            ),
+      )
+    }
+
+    // --- F08: editable evidence daily report (UI-07) --------------------------
+
+    const REPORT_GROUPS = [
+      { key: 'won', status: 'done', tone: 'ok', heading: 'report.done' },
+      { key: 'doing', status: 'active', tone: 'info', heading: 'report.doing' },
+      { key: 'blocked', status: 'blocked', tone: 'warn', heading: 'report.blocked' },
+      { key: 'confirm', status: 'confirm', tone: 'idle', heading: 'report.confirm' },
+    ]
+
+    function cloneGroups(groups) {
+      return (Array.isArray(groups) ? groups : []).map((group) => ({
+        name: String(group.name ?? ''),
+        won: (Array.isArray(group.won) ? group.won : []).map((item) => ({ ...item })),
+        doing: (Array.isArray(group.doing) ? group.doing : []).map((item) => ({ ...item })),
+        blocked: (Array.isArray(group.blocked) ? group.blocked : []).map((item) => ({ ...item })),
+        confirm: (Array.isArray(group.confirm) ? group.confirm : []).map((item) => ({ ...item })),
+      }))
+    }
+
+    /** Markdown of the *edited* draft, so a copied report matches what the reader saw. */
+    function clientReportMarkdown(dayLabel, groups, t) {
+      const lines = [`# ${t('report.title')} · ${dayLabel}`, '']
+      let any = false
+      for (const group of groups) {
+        const rows = REPORT_GROUPS.map((section) => [section, group[section.key] ?? []]).filter(([, items]) => items.length > 0)
+        if (rows.length === 0) continue
+        any = true
+        lines.push(`## ${group.name}`, '')
+        for (const [section, items] of rows) {
+          lines.push(`### ${t(section.heading)}`, '')
+          for (const item of items) {
+            const marks = []
+            if (item.edited === true) marks.push(t('report.editMark'))
+            if (item.attribution === 'activity') marks.push(t('report.activityMark'))
+            if (item.blockedBy !== undefined && item.blockedBy !== '') marks.push(t('report.blocked'))
+            lines.push(`- ${item.title}${marks.length === 0 ? '' : `（${marks.join('，')}）`}`)
+          }
+          lines.push('')
+        }
+      }
+      if (!any) lines.push(t('report.empty'), '')
+      return lines.join('\n')
+    }
+
+    function ReportItemRow({ item, group, section, t, selected, onSelect, onEdit, onConfirm, editing, setEditing, saveEdit }) {
+      const project = group.name
+      return h(
+        'li',
+        { className: 'dswb-p1-report-row', 'data-selected': selected ? 'true' : undefined },
+        h(
+          'button',
+          { type: 'button', className: 'dswb-p1-report-main', onClick: () => onSelect(item) },
+          h(StatusPill, { tone: section.tone, label: t(section.heading) }),
+          h('span', { className: 'dswb-p1-report-item' }, editing ? null : h('span', { className: 'dswb-p1-report-title' }, item.title)),
+          editing
+            ? h('input', {
+                className: 'dswb-p1-report-input',
+                defaultValue: item.title,
+                'aria-label': t('report.edit'),
+                autoFocus: true,
+                onClick: (event) => event.stopPropagation(),
+                onKeyDown: (event) => {
+                  if (event.key === 'Enter') saveEdit(event.currentTarget.value)
+                  if (event.key === 'Escape') setEditing(false)
+                },
+              })
+            : null,
+          h('span', { className: 'dswb-p1-report-meta' }, `${project} · ${item.confirmation !== undefined ? t('report.confirmBy') : item.source === 'local' ? t('report.manual') : t('projects.activity')}`),
+          h(
+            'span',
+            { className: 'dswb-p1-report-chips' },
+            item.edited === true ? h(StatusPill, { tone: 'info', label: t('report.editMark') }) : null,
+            item.attribution === 'activity' ? h(StatusPill, { tone: 'idle', label: t('report.activityMark') }) : null,
+            ...(Array.isArray(item.evidence) ? item.evidence.slice(0, 2).map((ref, index) => h(StatusPill, { key: index, tone: 'ok', glyph: ref.sourceType === 'commit' ? 'git' : ref.sourceType === 'test' ? 'test' : 'session', label: ref.sourceType === 'commit' ? t('report.sha') : ref.sourceType === 'test' ? t('report.tests') : t('cost.sessionId') })) : []),
+          ),
+        ),
+        h(
+          'span',
+          { className: 'dswb-p1-report-actions' },
+          editing
+            ? h('button', { type: 'button', className: 'dswb-mini', onClick: () => setEditing(false) }, t('report.cancel'))
+            : h('button', { type: 'button', className: 'dswb-mini', onClick: () => setEditing(true) }, t('report.edit')),
+          item.status === 'done' || item.status === 'active' ? null : h('button', { type: 'button', className: 'dswb-mini dswb-mini-primary', onClick: () => onConfirm(item, project) }, t('report.confirmTask')),
+        ),
+      )
+    }
+
+    function ReportEvidence({ item, t, openSession, timeline }) {
+      const refs = Array.isArray(item?.evidence) ? item.evidence : []
+      const session = refs.find((ref) => ref.sourceType === 'session')
+      const entries = Array.isArray(timeline) ? timeline : []
+      const commit = entries.find((entry) => entry.kind === 'commit' && (entry.relatedSessions ?? []).includes(item?.sessionId))
+      const test = entries.find((entry) => entry.kind === 'test' && entry.sessionId === item?.sessionId)
+      const sha = commit?.short ?? refs.find((ref) => ref.sourceType === 'commit')?.sourceRef?.split(':').pop()?.slice(0, 8)
+      const testsLabel = test === undefined ? t('projects.unverified') : test.verified === true ? t('projects.testVerified', { passed: String(test.passed ?? '—'), code: String(test.exitCode ?? 0) }) : t('projects.testUnverified')
+      return h(
+        'aside',
+        { className: 'dswb-big dswb-p1-detail' },
+        h('div', { className: 'dswb-big-head' }, h('h2', { className: 'dswb-big-title' }, t('report.evidence')), h('span', { className: 'dswb-spacer' }), h(StatusPill, { tone: 'ok', glyph: 'check', label: t('projects.verified') })),
+        item === undefined
+          ? h(EmptyState, { text: t('report.empty'), t })
+          : h(
+              React.Fragment,
+              null,
+              h('h3', { className: 'dswb-p1-detail-title' }, truncateText(String(item.title ?? ''), 84)),
+              h(
+                'dl',
+                { className: 'dswb-p1-facts' },
+                h(Fact, { label: t('report.sha'), value: sha ?? '—', mono: true }),
+                h(Fact, { label: t('report.tests'), value: testsLabel }),
+                h(Fact, { label: t('report.verification'), value: t('projects.activity') }),
+                h(Fact, { label: t('report.confirmBy'), value: item.confirmation === undefined ? '—' : t('report.localUser', { time: clockOf(item.confirmation.at) }) }),
+              ),
+              h(
+                'div',
+                { className: 'dswb-p1-detail-actions' },
+                session === undefined ? null : h('button', { type: 'button', className: 'dswb-mini', onClick: () => openSession(session.sourceRef) }, h(Glyph, { name: 'session', size: 12 }), t('projects.openSession')),
+                commit === undefined ? null : h('button', { type: 'button', className: 'dswb-mini', onClick: () => openSession(item.sessionId ?? '') }, h(Glyph, { name: 'git', size: 12 }), t('report.openCommit')),
+                test === undefined ? null : h('button', { type: 'button', className: 'dswb-mini', onClick: () => openSession(item.sessionId ?? '') }, h(Glyph, { name: 'test', size: 12 }), t('report.openTest')),
+              ),
+              h('p', { className: 'dswb-p1-detail-note' }, t('report.note')),
+            ),
+      )
+    }
+
+    function ReportPage({ t, day, setDay, todayStart, crumbs, openSession, narrow }) {
+      const url = `${REPORT_ROUTE}?day=${Number(day)}&tzOffset=${tzOffsetSeconds()}&locale=${encodeURIComponent(localeTag())}`
+      const [state, refresh] = useRoute(url)
+      const result = state.data
+      const [draft, setDraft] = React.useState([])
+      const [editingKey, setEditingKey] = React.useState(undefined)
+      const [selected, setSelected] = React.useState(undefined)
+      const [copied, setCopied] = React.useState(false)
+      const [manual, setManual] = React.useState('')
+      React.useEffect(() => {
+        const groups = cloneGroups(result?.report?.groups)
+        setDraft(groups)
+        const first = REPORT_GROUPS.map((section) => groups[0]?.[section.key]?.[0]).find((item) => item !== undefined)
+        setSelected(first)
+        setEditingKey(undefined)
+      }, [result])
+
+      const totals = result?.totals ?? {}
+      const dayLabel = dateLabel(Number(day) + 12 * 3600_000, { month: 'long', day: 'numeric' })
+      const updateItem = (groupIndex, sectionKey, index, patch) => {
+        setDraft((previous) =>
+          previous.map((group, gi) =>
+            gi !== groupIndex ? group : { ...group, [sectionKey]: group[sectionKey].map((item, i) => (i === index ? { ...item, ...patch } : item)) },
+          ),
+        )
+      }
+      const confirmTask = async (item, projectName) => {
+        const project = Array.isArray(result?.projects) ? result.projects.find((entry) => entry.card?.name === projectName) : undefined
+        try {
+          await postRoute(TASKS_ROUTE, {
+            action: 'add',
+            task: { title: item.title, projectId: project?.card?.projectId ?? projectName, sessionId: item.sessionId, state: 'done' },
+          })
+          refresh()
+        } catch {
+          // The Host keeps its own state; the next read reconciles it.
+        }
+      }
+      const copy = async () => {
+        const ok = await copyText(clientReportMarkdown(dayLabel, draft, t))
+        if (ok) {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2200)
+        }
+      }
+      const addManual = () => {
+        const text = manual.trim()
+        if (text === '') return
+        if (draft.length === 0) setDraft([{ name: t('page.all'), won: [], doing: [], blocked: [], confirm: [] }])
+        setDraft((previous) => {
+          const next = previous.length === 0 ? [{ name: t('page.all'), won: [], doing: [], blocked: [], confirm: [] }] : previous.map((group) => ({ ...group }))
+          next[0].confirm = [...(next[0].confirm ?? []), { title: text, status: 'confirm', attribution: 'activity', edited: true, source: 'manual', evidence: [] }]
+          return next
+        })
+        setManual('')
+      }
+      return h(
+        React.Fragment,
+        null,
+        h(PageHeader, {
+          t,
+          crumbs,
+          title: t('report.title'),
+          subtitle: t('report.subtitle', { date: dayLabel, projects: t('page.all'), zone: utcOffsetLabel() }),
+          actions: h(React.Fragment, null, h(DayPicker, { day, setDay, todayStart, t }), h('button', { type: 'button', className: 'dswb-primary dswb-p1-copy', onClick: copy }, h(Glyph, { name: copied ? 'check' : 'copy', size: 13 }), copied ? t('report.copied') : t('report.copy')), h(RefreshButton, { t, onClick: refresh, status: state.status })),
+        }),
+        state.status === 'loading' && result === undefined
+          ? h(LoadingState, { t })
+          : h(
+              React.Fragment,
+              null,
+              h(
+                'div',
+                { className: 'dswb-p1-status-row' },
+                ...REPORT_GROUPS.map((section) => h(StatusPill, { key: section.key, tone: section.tone, label: `${t(section.heading)} ${String(totals[section.key === 'won' ? 'done' : section.key === 'doing' ? 'active' : section.key] ?? 0)}` })),
+              ),
+              h(
+                'div',
+                { className: narrow === true ? 'dswb-p1-stack' : 'dswb-p1-grid' },
+                h(
+                  'section',
+                  { className: 'dswb-big' },
+                  h('div', { className: 'dswb-big-head' }, h('h2', { className: 'dswb-big-title' }, t('report.draft')), h('span', { className: 'dswb-spacer' }), h(StatusPill, { tone: 'info', label: t('report.editable') }), draft.length > 0 ? h('button', { type: 'button', className: 'dswb-mini', onClick: () => setDraft(cloneGroups(result?.report?.groups)) }, t('report.reset')) : null),
+                  draft.length === 0
+                    ? h(EmptyState, { text: t('report.empty'), t, onRetry: state.status === 'error' ? refresh : undefined })
+                    : h(
+                        'div',
+                        { className: 'dswb-p1-report-groups' },
+                        ...draft.map((group, gi) =>
+                          h(
+                            'div',
+                            { key: `${group.name}-${gi}`, className: 'dswb-p1-report-group' },
+                            h('h3', { className: 'dswb-p1-report-group-name' }, group.name),
+                            ...REPORT_GROUPS.map((section) => {
+                              const items = group[section.key] ?? []
+                              if (items.length === 0) return null
+                              return h(
+                                'div',
+                                { key: section.key, className: 'dswb-p1-report-section' },
+                                h('h4', { className: 'dswb-p1-report-section-title' }, t(section.heading)),
+                                h(
+                                  'ul',
+                                  { className: 'dswb-p1-report-list' },
+                                  ...items.map((item, index) =>
+                                    h(ReportItemRow, {
+                                      key: `${section.key}-${index}`,
+                                      item,
+                                      group,
+                                      section,
+                                      t,
+                                      selected: selected?.title === item.title,
+                                      editing: editingKey === `${gi}:${section.key}:${index}`,
+                                      setEditing: (value) => setEditingKey(value ? `${gi}:${section.key}:${index}` : undefined),
+                                      saveEdit: (value) => {
+                                        const text = String(value).trim()
+                                        if (text !== '') updateItem(gi, section.key, index, { title: text, edited: true })
+                                        setEditingKey(undefined)
+                                      },
+                                      onSelect: setSelected,
+                                      onConfirm: confirmTask,
+                                    }),
+                                  ),
+                                ),
+                              )
+                            }),
+                          ),
+                        ),
+                      ),
+                  h(
+                    'div',
+                    { className: 'dswb-p1-add' },
+                    h('input', { className: 'dswb-p1-report-input', value: manual, placeholder: t('report.manual'), 'aria-label': t('report.addItem'), onChange: (event) => setManual(event.target.value), onKeyDown: (event) => { if (event.key === 'Enter') addManual() } }),
+                    h('button', { type: 'button', className: 'dswb-mini', onClick: addManual }, t('report.addItem')),
+                  ),
+                ),
+                narrow === true ? null : h(ReportEvidence, { item: selected, t, openSession, timeline: (Array.isArray(result?.projects) ? result.projects : []).flatMap((entry) => Array.isArray(entry.timeline) ? entry.timeline : []) }),
+              ),
+            ),
+      )
+    }
+
+
     function Spinner() {
       return h(
         'svg',
@@ -1892,7 +4324,7 @@ window.__ModuleLoader__.load({
 
     const CSS = [
       // --- page shell -------------------------------------------------------
-      '.dswb-page{background-color:var(--dsw-alias-bg-base);--wb-grad:linear-gradient(135deg,#8ea7ff,#5eead4);--wb-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;width:100%;min-width:0;height:100%;min-height:0;position:relative;color:var(--dsw-alias-label-primary);background:radial-gradient(780px 460px at 8% -12%,color-mix(in srgb,#6f8cff 14%,transparent),transparent 68%),radial-gradient(620px 380px at 100% 110%,color-mix(in srgb,#2dd4bf 9%,transparent),transparent 72%),var(--dsw-alias-bg-base);font-size:14px;line-height:1.6;font-feature-settings:"tnum" 1;display:flex;overflow:hidden}',
+      '.dswb-page{background-color:var(--dsw-alias-bg-base);--wb-grad:linear-gradient(135deg,#8ea7ff,#5eead4);--wb-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;width:100%;min-width:0;height:100%;min-height:0;position:relative;color:var(--dsw-alias-label-primary);background:radial-gradient(780px 460px at 8% -12%,color-mix(in srgb,#6f8cff 14%,transparent),transparent 68%),radial-gradient(620px 380px at 100% 110%,color-mix(in srgb,#2dd4bf 9%,transparent),transparent 72%),var(--dsw-alias-bg-base);font-size:14px;line-height:1.6;font-feature-settings:"tnum" 1;display:flex;flex-direction:column;overflow:hidden}',
       '.dswb-page:before{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(circle,color-mix(in srgb,var(--dsw-alias-label-primary) 12%,transparent) 1px,transparent 1.2px);background-size:24px 24px;opacity:.2;-webkit-mask-image:linear-gradient(180deg,#000,rgba(0,0,0,.3) 55%,transparent 92%);mask-image:linear-gradient(180deg,#000,rgba(0,0,0,.3) 55%,transparent 92%)}',
       '.dswb-mascot{position:absolute;top:40px;right:0;z-index:0;height:clamp(300px,42vh,440px);aspect-ratio:469/720;background-image:url("' + MASCOT + '");background-size:100% 100%;background-repeat:no-repeat;pointer-events:none;user-select:none;opacity:.4;-webkit-mask-image:linear-gradient(180deg,#000 64%,transparent 98%);mask-image:linear-gradient(180deg,#000 64%,transparent 98%)}',
       '@media (width<=720px){.dswb-mascot{opacity:.22;height:190px}}',
@@ -1969,7 +4401,7 @@ window.__ModuleLoader__.load({
       '.dswb-speed-heading{display:flex;flex-direction:column;gap:2px;min-width:0}',
       '.dswb-speed-title-row{display:flex;align-items:baseline;gap:8px;min-width:0}',
       '.dswb-speed-title{margin:0;font-size:16px;font-weight:500;line-height:24px;letter-spacing:-.01em}',
-      '.dswb-speed-window{color:var(--dswb-alias-label-tertiary);color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10px;line-height:18px;letter-spacing:.04em}',
+      '.dswb-speed-window{color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10px;line-height:18px;letter-spacing:.04em}',
       '.dswb-speed-stats{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;padding:2px 0 12px;border-bottom:.5px solid var(--dsw-alias-border-l1);margin-bottom:12px}',
       '.dswb-speed-stat{display:inline-flex;align-items:baseline;gap:4px;color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10.5px;line-height:18px;font-variant-numeric:tabular-nums}',
       '.dswb-speed-stat b{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500}',
@@ -2123,7 +4555,314 @@ window.__ModuleLoader__.load({
       '@media (width<=720px){.dswb-panels{grid-template-columns:minmax(0,1fr)}.dswb-hero-side{flex-basis:100%}.dswb-speed-current{align-items:flex-start;text-align:left}.dswb-speed-current-meta{max-width:100%}}',
       '@media (width<=560px){.dswb-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.dswb-card-total{grid-column:1/-1}}',
       '@media (width<=540px){.dswb-head h1{font-size:26px;line-height:34px}.dswb-monogram{width:40px;height:40px;font-size:16px}.dswb-hero-value{font-size:30px;line-height:38px}}',
-      '@media (prefers-reduced-motion:reduce){.dswb-spinner{animation:none}.dswb-eyebrow-dot,.dswb-dot,.dswb-log-dot,.dswb-head,.dswb-hero,.dswb-cards,.dswb-speed,.dswb-log,.dswb-panels,.dswb-refresh:disabled svg{animation:none}}',
+      // --- overview home: tokens, header, metrics ---------------------------
+      '.dswb-home{--wb-ok:#08724c;--wb-warn:#92500a;--wb-err:#ac2b40;--wb-accent:#6241bf;--wb-accent-soft:#efeafe;--wb-ok-soft:color-mix(in srgb,#08724c 10%,transparent);--wb-warn-soft:color-mix(in srgb,#92500a 12%,transparent);--wb-err-soft:color-mix(in srgb,#ac2b40 10%,transparent)}',
+      'body[data-ds-dark-theme] .dswb-home{--wb-ok:#5dd9a3;--wb-warn:#f0b66b;--wb-err:#ff8fa0;--wb-accent:#c4b0ff;--wb-accent-soft:#302448;--wb-ok-soft:color-mix(in srgb,#5dd9a3 14%,transparent);--wb-warn-soft:color-mix(in srgb,#f0b66b 16%,transparent);--wb-err-soft:color-mix(in srgb,#ff8fa0 14%,transparent)}',
+      '.dswb-home .dswb-eyebrow{letter-spacing:.08em}',
+      '.dswb-home-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 20px;padding-top:28px;margin-bottom:18px}',
+      '[data-platform=darwin] .dswb-home-head{padding-top:calc(28px + var(--dsh-frame-top-clearance,0px))}',
+      '.dswb-home-title{display:flex;flex-direction:column;gap:2px;min-width:0}',
+      '.dswb-home-title h1{margin:0;font-size:28px;font-weight:600;line-height:36px;letter-spacing:-.02em}',
+      '.dswb-home-sub{margin:0;color:var(--dsw-alias-label-tertiary);font-size:12.5px;line-height:19px}',
+      '.dswb-home-side{display:flex;align-items:center;gap:10px;flex:none}',
+      '.dswb-fresh{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:12px;color:var(--wb-ok);font-size:11.5px;line-height:22px;background:var(--wb-ok-soft)}',
+      '.dswb-fresh[data-state=stale]{color:var(--wb-warn);background:var(--wb-warn-soft)}',
+      '.dswb-fresh-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:dswb-breathe 2.4s ease-in-out infinite}',
+      '.dswb-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;border-radius:15px;border:.5px solid var(--dsw-alias-border-l3);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}',
+      '.dswb-icon-btn:hover:not(:disabled){color:var(--dsw-alias-label-primary);background:color-mix(in srgb,var(--dsw-alias-label-primary) 6%,transparent)}',
+      '.dswb-icon-btn:disabled{opacity:.5;cursor:default}',
+      '.dswb-icon-btn:disabled svg{animation:dswb-spin 1s linear infinite}',
+      '.dswb-icon-btn:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
+      '.dswb-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px}',
+      '.dswb-kpi{display:flex;flex-direction:column;gap:2px;min-width:0;padding:14px 16px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l1);border-color:color-mix(in srgb,var(--dsw-alias-label-primary) 10%,transparent);background:var(--dsw-alias-bg-layer-1);color:inherit;font:inherit;text-align:left}',
+      'button.dswb-kpi{cursor:pointer;transition:border-color .15s,background .15s}',
+      'button.dswb-kpi:hover{border-color:color-mix(in srgb,var(--dsw-alias-label-primary) 22%,transparent)}',
+      'button.dswb-kpi:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
+      '.dswb-kpi-label{color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px}',
+      '.dswb-kpi-value{font-family:var(--wb-mono);font-size:24px;font-weight:600;line-height:32px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}',
+      '.dswb-kpi-value[data-tone=muted]{color:var(--dsw-alias-label-tertiary);font-size:18px;line-height:32px}',
+      '.dswb-kpi-value[data-tone=alert]{color:var(--wb-err)}',
+      '.dswb-kpi-detail{display:flex;flex-wrap:wrap;gap:0 4px;color:var(--dsw-alias-label-tertiary);font-size:11.5px;line-height:17px}',
+      '.dswb-kpi-detail em{color:var(--wb-warn);font-style:normal}',
+
+      // --- home grid and sections -----------------------------------------
+      '.dswb-home-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,1fr);gap:16px;align-items:start}',
+      '.dswb-home-main,.dswb-home-aside{display:flex;flex-direction:column;gap:16px;min-width:0}',
+      '.dswb-big{min-width:0;padding:16px 18px 14px;border-radius:10px;border:.5px solid color-mix(in srgb,var(var(--dsw-alias-label-primary)) 10%,transparent);background:var(--dsw-alias-bg-layer-1)}',
+      '.dswb-big-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px}',
+      '.dswb-big-title{margin:0;font-size:15px;font-weight:600;line-height:23px}',
+      '.dswb-pill{display:inline-flex;align-items:center;min-width:20px;height:20px;padding:0 7px;border-radius:10px;background:color-mix(in srgb,var(var(--dsw-alias-label-tertiary)) 12%,transparent);color:var(--dsw-alias-label-secondary);font-family:var(--wb-mono);font-size:11px;font-variant-numeric:tabular-nums;justify-content:center}',
+      '.dswb-pill[data-tone=warn]{background:var(--wb-warn-soft);color:var(--wb-warn)}',
+      '.dswb-spacer{flex:1}',
+      '.dswb-big-hint,.dswb-big-foot{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:17px}',
+      '.dswb-big-foot{margin:10px 0 0}',
+      '.dswb-link{height:26px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:var(var(--dsw-alias-label-secondary));font:inherit;font-size:12px;cursor:pointer}',
+      '.dswb-link:hover{color:var(--wb-accent)}',
+      '.dswb-link:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
+      '.dswb-quiet{margin:8px 0 0;color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px}',
+
+      // --- state badge ------------------------------------------------------
+      '.dswb-state{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px;border-radius:5px;font-size:11px;line-height:20px;white-space:nowrap}',
+      '.dswb-state[data-tone=ok]{color:var(--wb-ok);background:var(--wb-ok-soft)}',
+      '.dswb-state[data-tone=warn]{color:var(--wb-warn);background:var(--wb-warn-soft)}',
+      '.dswb-state[data-tone=error]{color:var(--wb-err);background:var(--wb-err-soft)}',
+      '.dswb-state[data-tone=muted],.dswb-state[data-tone=idle],.dswb-state[data-tone=unknown]{color:var(--dsw-alias-label-tertiary);background:color-mix(in srgb,var(--dsw-alias-label-primary) 6%,transparent)}',
+
+      // --- running rows -------------------------------------------------------
+      '.dswb-runs-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12.5px}',
+      '.dswb-runs-table th{padding:0 10px 6px;border-bottom:.5px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-label-tertiary);font-size:11px;font-weight:400;text-align:left}',
+      '.dswb-runs-table th:nth-child(1){width:33%}.dswb-runs-table th:nth-child(2){width:15%}.dswb-runs-table th:nth-child(3){width:auto}.dswb-runs-table th:nth-child(4),.dswb-runs-table th:nth-child(5){width:84px}.dswb-runs-table th:nth-child(6){width:40px}',
+      '.dswb-runs-table th.dswb-col-num,.dswb-runs-table td.dswb-col-num{text-align:right}',
+      '.dswb-runs-table td{padding:10px;border-bottom:.5px solid var(--dsw-alias-border-l1);vertical-align:middle}',
+      '.dswb-runs-table tr:last-child td{border-bottom:0}',
+      '.dswb-run-row[data-tone=warn]{background:var(--wb-warn-soft)}',
+      '.dswb-run-row[data-tone=error]{background:var(--wb-err-soft)}',
+      '.dswb-run-link{display:flex;flex-direction:column;gap:1px;min-width:0;max-width:100%;padding:2px 0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:4px}',
+      '.dswb-run-link:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
+      '.dswb-run-link-title{overflow:hidden;font-weight:500;font-size:13px;line-height:19px;text-overflow:ellipsis;white-space:nowrap}',
+      '.dswb-run-link-project{overflow:hidden;color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10.5px;line-height:15px;text-overflow:ellipsis;white-space:nowrap}',
+      '.dswb-run-detail{display:block;overflow:hidden;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;text-overflow:ellipsis;white-space:nowrap}',
+      '.dswb-run-elapsed-value{font-family:var(--wb-mono);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}',
+      '.dswb-open{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-tertiary);cursor:pointer}',
+      '.dswb-open:hover{color:var(var(--dsw-alias-label-primary));background:color-mix(in srgb,var(--dsw-alias-label-primary) 6%,transparent)}',
+      '.dswb-open:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:1px}',
+      '.dswb-runs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}',
+      '.dswb-run{position:relative;display:flex;align-items:stretch;gap:6px;min-width:0;padding:2px 4px 2px 2px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l1);border-left-width:3px;background:var(--dsw-alias-bg-base)}',
+      '.dswb-run[data-tone=warn]{border-left-color:var(--wb-warn);background:var(--wb-warn-soft)}',
+      '.dswb-run[data-tone=error]{border-left-color:var(--wb-err);background:var(--wb-err-soft)}',
+      '.dswb-run[data-tone=ok]{border-left-color:var(--wb-ok)}',
+      '.dswb-run[data-tone=unknown]{border-left-color:var(--dsw-alias-label-tertiary);border-left-style:dashed}',
+      '.dswb-run-main{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0;padding:10px 8px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}',
+      '.dswb-run-main:hover{background:color-mix(in srgb,var(--dsw-alias-label-primary) 4%,transparent)}',
+      '.dswb-run-main:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:-2px}',
+      '.dswb-run-topline{display:flex;align-items:center;justify-content:space-between;gap:8px}',
+      '.dswb-run-index{color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10px;line-height:15px;opacity:.7}',
+      '.dswb-run-title{font-size:13.5px;font-weight:600;line-height:20px;overflow-wrap:anywhere}',
+      '.dswb-run-project{color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10.5px;line-height:15px;overflow-wrap:anywhere}',
+      '.dswb-run-metric{display:flex;align-items:flex-end;flex:none;padding:10px 6px 10px 0}',
+      '.dswb-run-elapsed{display:inline-flex;flex-direction:column;align-items:flex-end;gap:1px;color:var(--dsw-alias-label-tertiary);font-size:10.5px;line-height:15px;white-space:nowrap}',
+      '.dswb-run-elapsed-label{font-size:10px}',
+      '.dswb-run-elapsed-value{font-family:var(--wb-mono);font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary)}',
+      '.dswb-run .dswb-open{align-self:center}',
+
+      // --- attention ---------------------------------------------------------
+      '.dswb-alerts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}',
+      '.dswb-alert{display:flex;align-items:flex-start;gap:8px;min-width:0;padding:9px 8px;border-radius:8px;background:var(--dsw-alias-bg-base);border:.5px solid var(--dsw-alias-border-l1);color:var(--wb-err)}',
+      '.dswb-alert[data-tone=warn]{color:var(--wb-warn)}',
+      '.dswb-alert[data-ack=true]{opacity:.72}',
+      '.dswb-alert-main{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}',
+      '.dswb-alert-title{color:var(var(--dsw-alias-label-primary));font-size:12.5px;font-weight:600;line-height:18px;overflow-wrap:anywhere}',
+      '.dswb-alert-reason{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;overflow-wrap:anywhere}',
+      '.dswb-alert-meta{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px}',
+      '.dswb-alert-actions{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}',
+      '.dswb-mini{height:24px;padding:0 8px;border-radius:6px;border:.5px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11.5px;line-height:16px;cursor:pointer;white-space:nowrap}',
+      '.dswb-mini:hover{border-color:var(--dsw-alias-label-tertiary);color:var(--dsw-alias-label-primary)}',
+      '.dswb-mini:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:1px}',
+      '.dswb-mini-primary{border-color:color-mix(in srgb,var(--wb-accent) 55%,transparent);color:var(--wb-accent)}',
+
+      // --- recent ------------------------------------------------------------
+      '.dswb-recents{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}',
+      '.dswb-recent-row{display:flex;align-items:center;gap:8px;min-width:0;padding:6px 0;border-bottom:.5px solid var(--dsw-alias-border-l1)}',
+      '.dswb-recent-row:last-child{border-bottom:0}',
+      '.dswb-recent-main{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;padding:4px;border:0;border-radius:6px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}',
+      '.dswb-recent-main:hover{background:color-mix(in srgb,var(--dsw-alias-label-primary) 4%,transparent)}',
+      '.dswb-recent-main:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:-2px}',
+      '.dswb-recent-title{overflow:hidden;font-size:12.5px;line-height:19px;text-overflow:ellipsis;white-space:nowrap}',
+      '.dswb-recent-meta{overflow:hidden;color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10.5px;line-height:15px;text-overflow:ellipsis;white-space:nowrap}',
+
+      // --- offline / detail / tabs ------------------------------------------
+      '.dswb-offline{margin-bottom:14px;padding:12px 14px;border-radius:10px;border:.5px solid color-mix(in srgb,var(--wb-warn) 45%,transparent);background:var(--wb-warn-soft)}',
+      '.dswb-offline-head{display:flex;align-items:center;gap:8px}',
+      '.dswb-offline-title{color:var(--wb-warn);font-size:13px;font-weight:600;line-height:20px}',
+      '.dswb-offline-body{margin:4px 0 8px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px}',
+      '.dswb-offline-btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:8px;border:.5px solid color-mix(in srgb,var(--wb-accent) 55%,transparent);background:transparent;color:var(--wb-accent);font:inherit;font-size:12px;cursor:pointer}',
+      '.dswb-offline-btn:disabled{opacity:.6;cursor:default}',
+      '.dswb-offline-btn:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
+      '.dswb-detailbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px}',
+      '.dswb-detailbar-title{margin:0;font-size:16px;font-weight:600;line-height:24px}',
+      '.dswb-back{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:8px;border:.5px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;cursor:pointer}',
+      '.dswb-back:hover{color:var(--dsw-alias-label-primary)}',
+      '.dswb-back:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
+      '.dswb-evidence-head{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}',
+      '.dswb-evidence-key{color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10.5px;overflow-wrap:anywhere}',
+      '.dswb-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px 16px;margin:0 0 12px}',
+      '.dswb-fact{display:flex;flex-direction:column;gap:1px;min-width:0}',
+      '.dswb-fact dt{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px}',
+      '.dswb-fact dd{margin:0;font-family:var(--wb-mono);font-size:12px;line-height:18px;overflow-wrap:anywhere}',
+      '.dswb-primary{height:32px;padding:0 14px;border-radius:8px;border:.5px solid color-mix(in srgb,var(--wb-accent) 60%,transparent);background:var(--wb-accent-soft);color:var(--wb-accent);font:inherit;font-size:12.5px;cursor:pointer}',
+      '.dswb-primary:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
+      '.dswb-narrow{display:flex;flex-direction:column;gap:14px}',
+      '.dswb-tabs{position:sticky;bottom:0;z-index:2;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:8px 12px calc(8px + env(safe-area-inset-bottom));border-top:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-base)}',
+      '.dswb-tab{position:relative;display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:12px;cursor:pointer}',
+      '.dswb-tab[aria-current=page]{background:var(--wb-accent-soft);color:var(--wb-accent);font-weight:600}',
+      '.dswb-tab:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:-2px}',
+      '.dswb-tab-badge{position:absolute;top:6px;right:18%;min-width:14px;height:14px;padding:0 3px;border-radius:7px;background:var(--wb-err);color:#fff;font-size:9.5px;line-height:14px;font-style:normal;text-align:center}',
+      '.dswb-home-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 16px;margin-top:18px;color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:17px}',
+      '.dswb-home-foot-time{font-family:var(--wb-mono);font-variant-numeric:tabular-nums}',
+      '.dswb-home-body{min-width:0}',
+
+      // --- home responsive ---------------------------------------------------
+      '@media (width<=1199px){.dswb-home-grid{grid-template-columns:minmax(0,1fr)}.dswb-home-aside{flex-direction:row;flex-wrap:wrap}.dswb-home-aside>*{flex:1 1 320px}}',
+      '@media (width<=767px){.dswb-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.dswb-home-aside{flex-direction:column}.dswb-home-head{padding-top:20px}.dswb-home-title h1{font-size:24px;line-height:32px}.dswb-content{padding-bottom:8px}}',
+      '@media (width<=479px){.dswb-kpis{gap:8px}.dswb-kpi{padding:10px 12px}.dswb-kpi-value{font-size:20px;line-height:28px}.dswb-kpi-detail{font-size:11px}.dswb-mini{min-height:32px}.dswb-run-main{min-height:44px}.dswb-run-engine{gap:4px}.dswb-big{padding:12px 12px 10px}}',
+      '@media (width<=359px){.dswb-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.dswb-kpi{padding:8px 10px}.dswb-kpi-value{font-size:18px;line-height:26px}.dswb-content{padding-left:12px;padding-right:12px}}',
+      '@media (prefers-reduced-motion:reduce){.dswb-spinner{animation:none}.dswb-eyebrow-dot,.dswb-dot,.dswb-log-dot,.dswb-head,.dswb-hero,.dswb-cards,.dswb-speed,.dswb-log,.dswb-panels,.dswb-refresh:disabled svg,.dswb-fresh-dot{animation:none}}',
+      // --- P1: search, cost, projects and the evidence report -------------------
+      '.dswb-search-open{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;border-radius:15px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;cursor:pointer;white-space:nowrap}',
+      '.dswb-search-open:hover{color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-brand-primary)}',
+      '.dswb-search-open:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
+      '.dswb-search-kbd{font-family:var(--wb-mono);font-size:10px;padding:1px 5px;border-radius:4px;border:.5px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-label-tertiary)}',
+      '.dswb-search-overlay{position:fixed;inset:0;z-index:60;display:flex;align-items:flex-start;justify-content:center;padding:9vh 16px 24px;background:var(--dsw-alias-bg-mask);backdrop-filter:blur(3px)}',
+      '.dswb-search-dialog{width:min(720px,100%);max-height:82vh;display:flex;flex-direction:column;border-radius:14px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);box-shadow:0 24px 70px -18px rgba(20,15,45,.42);overflow:hidden}',
+      '.dswb-search-input-row{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:.5px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-label-tertiary)}',
+      '.dswb-search-input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:16px;line-height:24px}',
+      '.dswb-search-input::placeholder{color:var(--dsw-alias-label-quaternary)}',
+      '.dswb-search-ime{font-size:11px;color:var(--dsw-alias-brand-primary);white-space:nowrap}',
+      '.dswb-search-esc{height:24px;padding:0 8px;border-radius:6px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-fill);color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:11px;cursor:pointer}',
+      '.dswb-search-tools{display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:.5px solid var(--dsw-alias-border-l1)}',
+      '.dswb-search-toggle,.dswb-search-rebuild{border:0;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;cursor:pointer;padding:4px 6px;border-radius:6px;display:inline-flex;align-items:center;gap:6px}',
+      '.dswb-search-toggle:hover,.dswb-search-rebuild:hover:not(:disabled){background:var(--dsw-alias-bg-fill);color:var(--dsw-alias-label-primary)}',
+      '.dswb-search-rebuild:disabled{opacity:.6;cursor:default}',
+      '.dswb-search-active{width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-brand-primary)}',
+      '.dswb-search-filters{display:flex;flex-direction:column;gap:10px;padding:12px 16px;border-bottom:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2)}',
+      '.dswb-search-group{display:flex;flex-wrap:wrap;align-items:center;gap:8px}',
+      '.dswb-search-group-label{width:44px;flex:none;color:var(--dsw-alias-label-tertiary);font-size:11px}',
+      '.dswb-search-chips{display:flex;flex-wrap:wrap;gap:6px}',
+      '.dswb-search-chip{height:26px;padding:0 10px;border-radius:13px;border:.5px solid var(--dsw-alias-border-l1);background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11.5px;cursor:pointer}',
+      '.dswb-search-chip[aria-pressed=true]{border-color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-brand);color:var(--dsw-alias-brand-text);font-weight:600}',
+      '.dswb-search-chip:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
+      '.dswb-search-summary{display:flex;align-items:center;gap:8px;padding:9px 16px;color:var(--dsw-alias-label-secondary);font-size:12px;border-bottom:.5px solid var(--dsw-alias-border-l1)}',
+      '.dswb-search-index{color:var(--dsw-alias-label-quaternary);font-size:11px;white-space:nowrap}',
+      '.dswb-search-results{list-style:none;margin:0;padding:6px;overflow:auto;min-height:60px}',
+      '.dswb-search-result{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;border-radius:9px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}',
+      '.dswb-search-result[data-selected=true]{background:var(--dsw-alias-bg-brand)}',
+      '.dswb-search-result-glyph{display:grid;place-items:center;width:28px;height:28px;flex:none;border-radius:8px;background:var(--dsw-alias-bg-fill);color:var(--dsw-alias-label-secondary)}',
+      '.dswb-search-result-main{display:flex;flex-direction:column;min-width:0;flex:1}',
+      '.dswb-search-result-title{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.dswb-search-result-meta{font-size:11px;color:var(--dsw-alias-label-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.dswb-search-result-time{font-family:var(--wb-mono);font-size:11px;color:var(--dsw-alias-label-tertiary);white-space:nowrap}',
+      '.dswb-search-result-open{color:var(--dsw-alias-label-quaternary);flex:none}',
+      '.dswb-search-none{padding:28px 12px;display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--dsw-alias-label-tertiary);font-size:13px}',
+      '.dswb-search-more{padding:6px 16px 10px;display:flex;justify-content:center}',
+      '.dswb-search-foot{padding:9px 16px;border-top:.5px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-label-quaternary);font-size:11px}',
+      '.dswb-p1-head{margin:0 0 16px}',
+      '.dswb-p1-crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:4px;color:var(--dsw-alias-label-tertiary);font-size:12px;margin-bottom:8px}',
+      '.dswb-p1-crumb{border:0;background:transparent;color:inherit;font:inherit;padding:0;cursor:pointer}',
+      '.dswb-p1-crumb[aria-current=page]{color:var(--dsw-alias-brand-primary);font-weight:600}',
+      '.dswb-p1-crumb-sep{margin:0 2px;color:var(--dsw-alias-label-quaternary)}',
+      '.dswb-p1-title-row{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 18px}',
+      '.dswb-p1-titles{min-width:0}',
+      '.dswb-p1-title{margin:0;font-size:24px;font-weight:600;line-height:32px;letter-spacing:-.02em}',
+      '.dswb-p1-sub{margin:2px 0 0;color:var(--dsw-alias-label-tertiary);font-size:12px}',
+      '.dswb-p1-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}',
+      '.dswb-p1-day{display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:9px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}',
+      '.dswb-p1-day-btn{width:26px;height:26px;border:0;background:transparent;color:var(--dsw-alias-label-secondary);font-size:16px;line-height:24px;cursor:pointer;border-radius:7px}',
+      '.dswb-p1-day-btn:hover:not(:disabled){background:var(--dsw-alias-bg-fill)}',
+      '.dswb-p1-day-btn:disabled{opacity:.35;cursor:default}',
+      '.dswb-p1-day-label{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 8px;border:0;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;cursor:pointer;border-radius:7px;white-space:nowrap}',
+      '.dswb-p1-nav{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 14px;padding:3px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}',
+      '.dswb-p1-nav-item{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12.5px;cursor:pointer}',
+      '.dswb-p1-nav-item:hover{background:var(--dsw-alias-bg-fill);color:var(--dsw-alias-label-primary)}',
+      '.dswb-p1-nav-item[aria-current=page]{background:var(--dsw-alias-bg-brand);color:var(--dsw-alias-brand-text);font-weight:600}',
+      '.dswb-p1-nav-item:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:-2px}',
+      '.dswb-p1-nav-badge{width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-state-error-primary)}',
+      '.dswb-p1-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:11px;font-size:11px;line-height:18px;white-space:nowrap;border:.5px solid transparent;background:var(--dsw-alias-bg-fill);color:var(--dsw-alias-label-secondary)}',
+      '.dswb-p1-pill[data-tone=ok]{background:var(--dsw-alias-state-success-secondary);color:var(--dsw-alias-state-success-primary)}',
+      '.dswb-p1-pill[data-tone=warn]{background:var(--dsw-alias-state-warning-secondary);color:var(--dsw-alias-state-warning-primary)}',
+      '.dswb-p1-pill[data-tone=error]{background:var(--dsw-alias-state-error-secondary);color:var(--dsw-alias-state-error-primary)}',
+      '.dswb-p1-pill[data-tone=info]{background:var(--dsw-alias-bg-brand);color:var(--dsw-alias-brand-text)}',
+      '.dswb-p1-pill[data-tone=idle]{background:var(--dsw-alias-bg-fill);color:var(--dsw-alias-label-tertiary)}',
+      '.dswb-p1-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr);gap:12px;align-items:start}',
+      '.dswb-p1-stack{display:flex;flex-direction:column;gap:12px}',
+      '.dswb-p1-notes{padding:16px}',
+      '.dswb-p1-notes .dswb-big-title{font-size:15px;margin:0 0 10px}',
+      '.dswb-p1-empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:30px 16px;color:var(--dsw-alias-label-tertiary);font-size:13px;text-align:center}',
+      '.dswb-p1-loading{display:flex;align-items:center;gap:8px;padding:22px 4px;color:var(--dsw-alias-label-tertiary);font-size:13px}',
+      '.dswb-p1-cost-total{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 12px;padding:6px 16px 16px}',
+      '.dswb-p1-cost-value{font-family:var(--wb-mono);font-size:32px;font-weight:600;line-height:40px;letter-spacing:-.02em}',
+      '.dswb-p1-cost-note{color:var(--dsw-alias-label-tertiary);font-size:12px}',
+      '.dswb-p1-cost-foot{display:flex;align-items:center;gap:8px;margin:0;padding:10px 16px;border-top:.5px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-label-tertiary);font-size:11px}',
+      '.dswb-p1-projects,.dswb-p1-sessions,.dswb-p1-requests,.dswb-p1-timeline,.dswb-p1-report-list{list-style:none;margin:0;padding:0}',
+      '.dswb-p1-project,.dswb-p1-session,.dswb-p1-request,.dswb-p1-tl-main,.dswb-p1-report-main{display:flex;align-items:center;gap:10px;width:100%;padding:11px 16px;border:0;border-bottom:.5px solid var(--dsw-alias-border-l1);background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}',
+      '.dswb-p1-project{flex-direction:column;align-items:stretch;gap:7px}',
+      '.dswb-p1-project:hover,.dswb-p1-session:hover,.dswb-p1-request:hover,.dswb-p1-tl-main:hover,.dswb-p1-report-main:hover{background:var(--dsw-alias-bg-fill)}',
+      '.dswb-p1-project:focus-visible,.dswb-p1-session:focus-visible,.dswb-p1-request:focus-visible,.dswb-p1-tl-main:focus-visible,.dswb-p1-report-main:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:-2px}',
+      '.dswb-p1-request[data-selected=true]{background:var(--dsw-alias-bg-brand)}',
+      '.dswb-p1-project-top{display:flex;align-items:center;justify-content:space-between;gap:10px}',
+      '.dswb-p1-project-name{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600}',
+      '.dswb-p1-project-amount{font-family:var(--wb-mono);font-size:14px;font-weight:600}',
+      '.dswb-p1-bar{display:block;height:5px;border-radius:3px;background:var(--dsw-alias-bg-fill);overflow:hidden}',
+      '.dswb-p1-bar>span{display:block;height:100%;border-radius:3px;background:var(--dsw-alias-brand-primary)}',
+      '.dswb-p1-project-meta{display:flex;align-items:center;color:var(--dsw-alias-label-tertiary);font-size:11px}',
+      '.dswb-p1-session-glyph,.dswb-p1-tl-glyph{display:grid;place-items:center;width:28px;height:28px;flex:none;border-radius:8px;background:var(--dsw-alias-bg-fill);color:var(--dsw-alias-label-secondary)}',
+      '.dswb-p1-session-main,.dswb-p1-tl-body,.dswb-p1-report-main{display:flex;flex-direction:column;align-items:flex-start;min-width:0;flex:1;gap:2px}',
+      '.dswb-p1-session-title,.dswb-p1-tl-label{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.dswb-p1-session-meta,.dswb-p1-tl-meta{font-size:11px;color:var(--dsw-alias-label-tertiary)}',
+      '.dswb-p1-session-amount,.dswb-p1-request-amount{font-family:var(--wb-mono);font-size:13px;font-weight:600;white-space:nowrap}',
+      '.dswb-p1-cost-grid{grid-template-columns:minmax(0,1.35fr) minmax(300px,1fr)}',
+      '.dswb-p1-cost-main{display:flex;flex-direction:column;gap:12px;min-width:0}',
+      '.dswb-p1-open{height:30px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;font-size:12px}',
+      '.dswb-p1-request-id{font-family:var(--wb-mono);font-size:12.5px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.dswb-p1-request-time,.dswb-p1-request-status{font-size:11px;color:var(--dsw-alias-label-tertiary);white-space:nowrap}',
+      '.dswb-p1-request-status[data-tone=ok]{color:var(--dsw-alias-state-success-primary)}',
+      '.dswb-p1-request-status[data-tone=warn]{color:var(--dsw-alias-state-error-primary)}',
+      '.dswb-p1-detail{padding:0;overflow:hidden}',
+      '.dswb-p1-detail .dswb-big-head{padding:12px 16px}',
+      '.dswb-p1-detail-value{padding:6px 16px 16px;border-bottom:.5px solid var(--dsw-alias-border-l1)}',
+      '.dswb-p1-detail-amount{display:block;font-family:var(--wb-mono);font-size:30px;font-weight:600;line-height:38px;letter-spacing:-.02em}',
+      '.dswb-p1-detail-meta{display:block;font-size:11px;color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono)}',
+      '.dswb-p1-detail-title{margin:0;padding:14px 16px 0;font-size:14px;font-weight:600;line-height:20px}',
+      '.dswb-p1-facts{margin:0;padding:6px 16px 12px}',
+      '.dswb-p1-fact{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:.5px solid var(--dsw-alias-border-l1);font-size:12.5px}',
+      '.dswb-p1-fact dt{color:var(--dsw-alias-label-tertiary);flex:none}',
+      '.dswb-p1-fact dd{margin:0;text-align:right;font-weight:600;overflow-wrap:anywhere}',
+      '.dswb-p1-mono{font-family:var(--wb-mono);font-variant-numeric:tabular-nums}',
+      '.dswb-p1-price-note,.dswb-p1-warn,.dswb-p1-detail-note{display:flex;align-items:flex-start;gap:6px;margin:0;padding:10px 16px;font-size:11px;line-height:17px;color:var(--dsw-alias-label-tertiary);border-top:.5px solid var(--dsw-alias-border-l1)}',
+      '.dswb-p1-warn{color:var(--dsw-alias-state-warning-primary);background:var(--dsw-alias-state-warning-secondary)}',
+      '.dswb-p1-detail .dswb-primary{margin:0 16px 14px;display:inline-flex;align-items:center;gap:6px}',
+      '.dswb-p1-detail-actions{display:flex;flex-wrap:wrap;gap:8px;padding:10px 16px}',
+      '.dswb-p1-proj-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}',
+      '.dswb-p1-proj-card{display:flex;flex-direction:column;gap:8px;width:100%;padding:14px 16px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);color:inherit;font:inherit;text-align:left;cursor:pointer}',
+      '.dswb-p1-proj-card:hover{border-color:var(--dsw-alias-brand-primary);box-shadow:0 6px 18px -12px rgba(98,65,191,.7)}',
+      '.dswb-p1-proj-card:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
+      '.dswb-p1-proj-top{display:flex;align-items:center;justify-content:space-between;gap:8px}',
+      '.dswb-p1-proj-name{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600}',
+      '.dswb-p1-proj-time{font-size:11px;color:var(--dsw-alias-label-tertiary);white-space:nowrap}',
+      '.dswb-p1-proj-meta{font-size:11.5px;color:var(--dsw-alias-label-secondary)}',
+      '.dswb-p1-proj-counts{display:flex;flex-wrap:wrap;gap:5px}',
+      '.dswb-p1-proj-action{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--dsw-alias-label-tertiary)}',
+      '.dswb-p1-proj-git{font-size:10.5px;color:var(--dsw-alias-label-quaternary)}',
+      '.dswb-p1-filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}',
+      '.dswb-p1-tl-row{display:flex;align-items:center;border-bottom:.5px solid var(--dsw-alias-border-l1)}',
+      '.dswb-p1-tl-row[data-selected=true]{background:var(--dsw-alias-bg-brand)}',
+      '.dswb-p1-tl-main{flex:1;border:0}',
+      '.dswb-p1-tl-glyph[data-kind=commit]{background:var(--dsw-alias-bg-brand);color:var(--dsw-alias-brand-text)}',
+      '.dswb-p1-tl-glyph[data-kind=test]{background:var(--dsw-alias-state-success-secondary);color:var(--dsw-alias-state-success-primary)}',
+      '.dswb-p1-tl-files{font-size:11px;color:var(--dsw-alias-label-tertiary);white-space:nowrap}',
+      '.dswb-p1-status-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}',
+      '.dswb-p1-report-group{border-bottom:.5px solid var(--dsw-alias-border-l1)}',
+      '.dswb-p1-report-group-name{margin:0;padding:12px 16px 4px;font-size:13px;font-weight:600}',
+      '.dswb-p1-report-section-title{margin:0;padding:6px 16px;font-size:11px;font-weight:600;color:var(--dsw-alias-label-tertiary)}',
+      '.dswb-p1-report-row{display:flex;align-items:center;border-bottom:.5px solid var(--dsw-alias-border-l1)}',
+      '.dswb-p1-report-row[data-selected=true]{background:var(--dsw-alias-bg-brand)}',
+      '.dswb-p1-report-main{gap:4px;padding:10px 8px 10px 16px;border:0}',
+      '.dswb-p1-report-item{min-width:0}',
+      '.dswb-p1-report-title{font-size:13.5px;font-weight:600}',
+      '.dswb-p1-report-meta{font-size:11px;color:var(--dsw-alias-label-tertiary)}',
+      '.dswb-p1-report-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}',
+      '.dswb-p1-report-actions{display:flex;flex-direction:column;gap:4px;padding:8px 12px;flex:none}',
+      '.dswb-p1-report-input{min-width:0;width:100%;padding:5px 8px;border-radius:7px;border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:13px}',
+      '.dswb-p1-report-input:focus{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:0}',
+      '.dswb-p1-add{display:flex;align-items:center;gap:8px;padding:12px 16px}',
+      '.dswb-p1-copy{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;font-size:12px;white-space:nowrap}',
+      '.dswb-p1-narrow-menu{display:flex;flex-direction:column;margin-bottom:12px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);overflow:hidden}',
+      '.dswb-p1-narrow-link{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border:0;border-bottom:.5px solid var(--dsw-alias-border-l1);background:transparent;color:inherit;font:inherit;font-size:13.5px;text-align:left;cursor:pointer;min-height:44px}',
+      '.dswb-p1-narrow-link:last-child{border-bottom:0}',
+      '@media (width<=1199px){.dswb-p1-grid,.dswb-p1-cost-grid{grid-template-columns:minmax(0,1fr)}}',
+      '@media (width<=767px){.dswb-p1-title{font-size:21px;line-height:29px}.dswb-p1-nav{overflow:auto;flex-wrap:nowrap}.dswb-p1-nav-item{white-space:nowrap}.dswb-search-open-text{display:none}.dswb-p1-report-actions{flex-direction:row}.dswb-p1-cost-value{font-size:26px}}',
+      '@media (width<=419px){.dswb-search-open{padding:0 8px}.dswb-search-kbd{display:none}.dswb-p1-fact{font-size:11.5px}.dswb-p1-proj-grid{grid-template-columns:minmax(0,1fr)}}',
+      '.dswb-search-dialog[data-narrow=true]{position:fixed;inset:0;width:100%;max-height:none;border-radius:0;border:0}',
+      '.dswb-search-overlay:has(.dswb-search-dialog[data-narrow=true]){padding:0;align-items:stretch}',
     ].join('')
 
     // --- registration ---------------------------------------------------------
@@ -2155,13 +4894,24 @@ window.__ModuleLoader__.load({
         }
       }
 
+      const summarize = (sessionId) => {
+        const workspace = ctx.get('uiWorkspace')
+        if (workspace !== undefined && typeof workspace.openSession === 'function') {
+          workspace.openSession(sessionId)
+          return
+        }
+        // Fallback: the runtime's own selection API (used when the workspace service is absent).
+        const sessions = ctx.get('sessions')
+        if (sessions !== undefined && typeof sessions.open === 'function') sessions.open(sessionId)
+      }
+
       ctx.slots.inject('main', () =>
         ctx.slots.register(
           {
             name: 'main',
             key: PANEL_ID,
             locale: NS,
-            inject: () => ({ openSession }),
+            inject: () => ({ openSession: summarize }),
           },
           WorkbenchPage,
         ),

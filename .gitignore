@@ -3,3 +3,8 @@ publish/dist/
 *.tgz
 .DS_Store
 .env
+.tmp-prd/
+qa/out/
+qa/.chrome-*/
+qa/.page*.html
+qa/try.html

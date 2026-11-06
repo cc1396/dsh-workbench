@@ -249,6 +249,8 @@ window.__ModuleLoader__.load({
       'page.dateHint': '按本地日期查看',
       'projects.tests': '测试',
       'projects.state': '状态',
+      'report.viewEvidence': '查看这条记录的证据',
+      'report.confirming': '确认中…',
       'projects.gitEnable': '启用 Git 证据',
       'projects.gitDisable': '停用 Git 证据',
       'search.filters': '筛选',
@@ -626,6 +628,8 @@ window.__ModuleLoader__.load({
       'page.dateHint': 'Browse by local date',
       'projects.tests': 'Tests',
       'projects.state': 'State',
+      'report.viewEvidence': 'Show evidence for this line',
+      'report.confirming': 'Confirming…',
       'projects.gitEnable': 'Enable Git evidence',
       'projects.gitDisable': 'Disable Git evidence',
       'search.filters': 'Filters',
@@ -4042,23 +4046,26 @@ window.__ModuleLoader__.load({
       return lines.join('\n')
     }
 
-    function ReportItemRow({ item, group, section, t, selected, onSelect, onEdit, onConfirm, editing, setEditing, saveEdit }) {
+    function ReportItemRow({ item, group, section, index, t, selected, onSelect, onConfirm, pending, editing, setEditing, saveEdit }) {
       const project = group.name
       return h(
         'li',
         { className: 'dswb-p1-report-row', 'data-selected': selected ? 'true' : undefined },
         h(
-          'button',
-          { type: 'button', className: 'dswb-p1-report-main', onClick: () => onSelect(item) },
-          h(StatusPill, { tone: section.tone, label: t(section.heading) }),
-          h('span', { className: 'dswb-p1-report-item' }, editing ? null : h('span', { className: 'dswb-p1-report-title' }, item.title)),
+          'div',
+          { className: 'dswb-p1-report-main' },
+          h(
+            'button',
+            { type: 'button', className: 'dswb-p1-report-title-btn', onClick: () => onSelect(item), 'aria-label': t('report.viewEvidence'), 'aria-pressed': selected === true },
+            h(StatusPill, { tone: section.tone, label: t(section.heading) }),
+            h('span', { className: 'dswb-p1-report-item' }, editing ? null : h('span', { className: 'dswb-p1-report-title' }, item.title)),
+          ),
           editing
             ? h('input', {
                 className: 'dswb-p1-report-input',
                 defaultValue: item.title,
                 'aria-label': t('report.edit'),
                 autoFocus: true,
-                onClick: (event) => event.stopPropagation(),
                 onKeyDown: (event) => {
                   if (event.key === 'Enter') saveEdit(event.currentTarget.value)
                   if (event.key === 'Escape') setEditing(false)
@@ -4080,7 +4087,18 @@ window.__ModuleLoader__.load({
           editing
             ? h('button', { type: 'button', className: 'dswb-mini', onClick: () => setEditing(false) }, t('report.cancel'))
             : h('button', { type: 'button', className: 'dswb-mini', onClick: () => setEditing(true) }, t('report.edit')),
-          item.status === 'done' || item.status === 'active' ? null : h('button', { type: 'button', className: 'dswb-mini dswb-mini-primary', onClick: () => onConfirm(item, project) }, t('report.confirmTask')),
+          item.status === 'done' || item.status === 'active'
+            ? null
+            : h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'dswb-mini dswb-mini-primary',
+                  disabled: pending === true,
+                  onClick: () => onConfirm(item, project, section.key, index),
+                },
+                t(pending === true ? 'report.confirming' : 'report.confirmTask'),
+              ),
         ),
       )
     }
@@ -4132,15 +4150,30 @@ window.__ModuleLoader__.load({
       const [selected, setSelected] = React.useState(undefined)
       const [copied, setCopied] = React.useState(false)
       const [manual, setManual] = React.useState('')
+      const [confirming, setConfirming] = React.useState({})
+      /** Lines this page already confirmed, kept across re-renders. */
+      const confirmedKeys = React.useRef(new Set())
+      /**
+       * The draft is this page's own copy of the Host's report: it is rebuilt only
+       * when the day changes or the reader asks to restore it, never on every poll.
+       * That keeps a just-confirmed or just-edited line from being overwritten by an
+       * answer that was already in flight — the busiest way to lose a confirmation.
+       */
+      const buildForDay = React.useRef(undefined)
       React.useEffect(() => {
-        const groups = cloneGroups(result?.report?.groups)
+        if (result === undefined || buildForDay.current === day) return
+        buildForDay.current = day
+        const groups = cloneGroups(result.report?.groups)
         setDraft(groups)
-        const first = REPORT_GROUPS.map((section) => groups[0]?.[section.key]?.[0]).find((item) => item !== undefined)
-        setSelected(first)
+        setSelected(REPORT_GROUPS.map((section) => groups[0]?.[section.key]?.[0]).find((item) => item !== undefined))
         setEditingKey(undefined)
-      }, [result])
+        setConfirming({})
+      }, [result, day])
 
-      const totals = result?.totals ?? {}
+      // Counts come from the draft, not the Host's pre-edit totals, so a confirmation
+      // shows at once. The keys are the draft's own (`won`/`doing`/`blocked`/`confirm`).
+      const countOf = (sectionKey) => draft.reduce((sum, group) => sum + (Array.isArray(group[sectionKey]) ? group[sectionKey].length : 0), 0)
+      const totals = { won: countOf('won'), doing: countOf('doing'), blocked: countOf('blocked'), confirm: countOf('confirm') }
       const dayLabel = dateLabel(Number(day) + 12 * 3600_000, { month: 'long', day: 'numeric' })
       const updateItem = (groupIndex, sectionKey, index, patch) => {
         setDraft((previous) =>
@@ -4149,29 +4182,56 @@ window.__ModuleLoader__.load({
           ),
         )
       }
-      const confirmTask = async (item, projectName) => {
-        const project = Array.isArray(result?.projects) ? result.projects.find((entry) => entry.card?.name === projectName) : undefined
+      /**
+       * One confirmation per line. A line is identified by its group, section and
+       * position in the draft; a click already in flight is ignored and a confirmed
+       * line never confirms twice.
+       */
+      const confirmTask = async (item, groupName, sectionKey, index) => {
+        const key = `${groupName}\u0000${sectionKey}\u0000${index}`
+        if (confirmedKeys.current.has(key) || confirming[key] === true) return
+        const project = Array.isArray(result?.projects) ? result.projects.find((entry) => entry.card?.name === groupName) : undefined
+        setConfirming((previous) => ({ ...previous, [key]: true }))
         try {
           await postRoute(TASKS_ROUTE, {
             action: 'add',
-            task: { title: item.title, projectId: project?.card?.projectId ?? projectName, sessionId: item.sessionId, state: 'done' },
+            task: { title: item.title, projectId: project?.card?.projectId ?? groupName, sessionId: item.sessionId, state: 'done' },
           })
+          confirmedKeys.current.add(key)
           refresh()
+          // Reflect the confirmation at once: the line moves to "done" with its confirmer.
+          const confirmed = { ...item, status: 'done', attribution: 'direct', confirmation: { by: 'local-user', at: Date.now() }, source: 'local' }
+          setDraft((previous) =>
+            previous.map((group) => {
+              if (group.name !== groupName) return group
+              const next = {}
+              for (const section of REPORT_GROUPS) {
+                next[section.key] = (group[section.key] ?? []).filter((_, position) => !(section.key === sectionKey && position === index))
+              }
+              next.won = [...next.won, confirmed]
+              return { name: group.name, ...next }
+            }),
+          )
+          setSelected(confirmed)
         } catch {
           // The Host keeps its own state; the next read reconciles it.
+        } finally {
+          setConfirming((previous) => ({ ...previous, [key]: false }))
         }
       }
+      const mountedRef = React.useRef(true)
+      React.useEffect(() => () => { mountedRef.current = false }, [])
       const copy = async () => {
         const ok = await copyText(clientReportMarkdown(dayLabel, draft, t))
-        if (ok) {
-          setCopied(true)
-          setTimeout(() => setCopied(false), 2200)
-        }
+        if (!ok || !mountedRef.current) return
+        setCopied(true)
+        setTimeout(() => {
+          if (mountedRef.current) setCopied(false)
+        }, 2200)
       }
       const addManual = () => {
         const text = manual.trim()
         if (text === '') return
-        if (draft.length === 0) setDraft([{ name: t('page.all'), won: [], doing: [], blocked: [], confirm: [] }])
         setDraft((previous) => {
           const next = previous.length === 0 ? [{ name: t('page.all'), won: [], doing: [], blocked: [], confirm: [] }] : previous.map((group) => ({ ...group }))
           next[0].confirm = [...(next[0].confirm ?? []), { title: text, status: 'confirm', attribution: 'activity', edited: true, source: 'manual', evidence: [] }]
@@ -4197,7 +4257,7 @@ window.__ModuleLoader__.load({
               h(
                 'div',
                 { className: 'dswb-p1-status-row' },
-                ...REPORT_GROUPS.map((section) => h(StatusPill, { key: section.key, tone: section.tone, label: `${t(section.heading)} ${String(totals[section.key === 'won' ? 'done' : section.key === 'doing' ? 'active' : section.key] ?? 0)}` })),
+                ...REPORT_GROUPS.map((section) => h(StatusPill, { key: section.key, tone: section.tone, label: `${t(section.heading)} ${String(totals[section.key] ?? 0)}` })),
               ),
               h(
                 'div',
@@ -4243,6 +4303,8 @@ window.__ModuleLoader__.load({
                                       },
                                       onSelect: setSelected,
                                       onConfirm: confirmTask,
+                                      index,
+                                      pending: confirming[`${group.name}\u0000${section.key}\u0000${index}`] === true,
                                     }),
                                   ),
                                 ),
@@ -4845,7 +4907,9 @@ window.__ModuleLoader__.load({
       '.dswb-p1-report-section-title{margin:0;padding:6px 16px;font-size:11px;font-weight:600;color:var(--dsw-alias-label-tertiary)}',
       '.dswb-p1-report-row{display:flex;align-items:center;border-bottom:.5px solid var(--dsw-alias-border-l1)}',
       '.dswb-p1-report-row[data-selected=true]{background:var(--dsw-alias-bg-brand)}',
-      '.dswb-p1-report-main{gap:4px;padding:10px 8px 10px 16px;border:0}',
+      '.dswb-p1-report-main{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;flex:1;padding:10px 8px 10px 16px}',
+      '.dswb-p1-report-title-btn{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0;max-width:100%;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:6px}',
+      '.dswb-p1-report-title-btn:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
       '.dswb-p1-report-item{min-width:0}',
       '.dswb-p1-report-title{font-size:13.5px;font-weight:600}',
       '.dswb-p1-report-meta{font-size:11px;color:var(--dsw-alias-label-tertiary)}',

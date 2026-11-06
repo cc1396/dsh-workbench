@@ -45,7 +45,7 @@ if (!/^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0
 if (name === LIVE_NAME) fail(`choose a public name; ${LIVE_NAME} is the local link and cannot be published`)
 
 const out = resolve(options.get('out') ?? join(here, 'dist'))
-const files = ['index.js', 'client.js', 'cordis.patch.yml', 'README.md', 'icon.svg']
+const files = ['index.js', 'client.js', 'sessions.js', 'ledger.js', 'search.js', 'progress.js', 'store.js', 'cordis.patch.yml', 'README.md', 'icon.svg']
 for (const file of files) if (!existsSync(join(source, file))) fail(`missing ${file} in ${source}`)
 
 rmSync(out, { recursive: true, force: true })

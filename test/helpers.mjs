@@ -29,45 +29,148 @@ export function makeLlm(answer) {
   return { llm, calls }
 }
 
-export function makeHarness({ sessions, llm, account } = {}) {
+/**
+ * A scripted Host: Session summaries plus, per Session, its events and the
+ * projection values a real Host would expose. `settings` is passed to `apply`.
+ */
+export function makeHarness({ sessions, llm, account, settings } = {}) {
   const routes = []
+  // The Host derives origin from lineage: a row with a parent is a child.
   const items = sessions.map((session) => ({
     sessionId: session.id,
     cwd: session.cwd,
+    parentId: session.parentId,
+    origin: session.parentId !== undefined || session.origin === 'subagent' ? 'subagent' : 'user',
+    title: session.title,
     updatedAt: session.updatedAt ?? Date.now(),
     running: session.running === true,
     blank: false,
-    origin: 'user',
+    pendingInteraction: session.pendingInteraction,
   }))
+  // `inspect` answers with the log the fake Host has committed, like the real catalog.
+  const inspectEvents = new Map(
+    sessions.map((session) => [session.id, session.inspectEvents ?? session.events ?? []]),
+  )
   const events = new Map(sessions.map((session) => [session.id, session.events]))
+  const live = new Map(
+    sessions.map((session) => [
+      session.id,
+      {
+        id: session.id,
+        events: session.events,
+        projectionValues: session.values ?? {},
+      },
+    ]),
+  )
   const ctx = {
     effect: (fn) => fn(),
-    get: (name) => (name === 'llm' ? llm : name === 'deepseekAccount' ? account : undefined),
+    get: (name) =>
+      name === 'llm'
+        ? llm
+        : name === 'deepseekAccount'
+          ? account
+          : name === 'sessions'
+            ? { get: (id) => live.get(id), list: () => [...live.values()] }
+            : name === 'sessionProjections'
+              ? { snapshot: (session) => ({ asOfSeq: 0, values: session?.projectionValues ?? {} }) }
+              : undefined,
     connection: { fetch: { register: (route) => routes.push(route) } },
     sessionController: {
       list: async () => ({ items }),
-      inspect: async (sessionId) => ({ inheritedEventCount: 0, events: events.get(sessionId) ?? [] }),
+      // The catalog's inspect returns the committed log; a Session that never wrote
+      // one is absent, not a Session with an empty log.
+      inspect: async (sessionId) => (inspectEvents.has(sessionId) ? { inheritedEventCount: 0, events: inspectEvents.get(sessionId) } : undefined),
     },
   }
-  apply(ctx, {})
+  apply(ctx, settings ?? {})
   return { routes }
 }
 
-export async function status(routes, { now, tzOffset = 28800, locale = 'zh' } = {}) {
-  const realNow = Date.now
-  if (Number.isFinite(now)) Date.now = () => now
-  try {
-    const response = await routes[0].fetch(
-      new Request(`http://local/api/workbench/status?tzOffset=${tzOffset}&locale=${locale}`),
+/** POST one attention action to the alert route. */
+export async function alertAction(routes, body, { now } = {}) {
+  const route = routes.find((entry) => entry.path === '/api/workbench/alerts')
+  const request = () =>
+    route.fetch(
+      new Request('http://local/api/workbench/alerts', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
     )
-    return await response.json()
+  let pending
+  if (Number.isFinite(now)) {
+    const realNow = Date.now
+    Date.now = () => now
+    try {
+      pending = request()
+    } finally {
+      Date.now = realNow
+    }
+  } else {
+    pending = request()
+  }
+  const response = await pending
+  return { status: response.status, body: await response.json() }
+}
+
+/**
+ * Call any Workbench route under a frozen clock, like {@link status}.
+ *
+ * @param path - the full route path plus its query string.
+ * @param options - `{ method, body, now }`; a body is sent as JSON.
+ */
+export async function route(routes, path, { method = 'GET', body, now } = {}) {
+  const routeEntry = routes.find((entry) => entry.path === path.split('?')[0])
+  // The clock is sampled before any await: the route reads `Date.now()` first.
+  const request = () =>
+    routeEntry.fetch(
+      new Request(`http://local${path}`, {
+        method,
+        headers: body === undefined ? undefined : { 'content-type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      }),
+    )
+  let pending
+  if (Number.isFinite(now)) {
+    const realNow = Date.now
+    Date.now = () => now
+    try {
+      pending = request()
+    } finally {
+      Date.now = realNow
+    }
+  } else {
+    pending = request()
+  }
+  const response = await pending
+  return { status: response.status, body: await response.json() }
+}
+
+/**
+ * Read the snapshot at a frozen `now`.
+ *
+ * Only the route call runs under the stubbed clock: the route samples its time
+ * synchronously, and restoring the clock before any timer wait keeps the rest of
+ * the event loop (and its scheduled deadlines) on real time.
+ */
+export async function status(routes, { now, tzOffset = 28800, locale = 'zh' } = {}) {
+  const route = routes.find((entry) => entry.path === '/api/workbench/status')
+  const url = `http://local/api/workbench/status?tzOffset=${tzOffset}&locale=${locale}`
+  if (!Number.isFinite(now)) return (await route.fetch(new Request(url))).json()
+  const realNow = Date.now
+  Date.now = () => now
+  let pending
+  try {
+    pending = route.fetch(new Request(url))
   } finally {
     Date.now = realNow
   }
+  return (await pending).json()
 }
 
 export async function summarize(routes, body) {
-  const response = await routes[1].fetch(
+  const route = routes.find((entry) => entry.path === '/api/workbench/summarize')
+  const response = await route.fetch(
     new Request('http://local/api/workbench/summarize', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -86,7 +189,8 @@ export function sessionMaterial({ id = 's1', cwd = '/work/proj', start, title = 
       time: start + 1000,
       data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'Build the thing' }] },
     },
-    { type: 'request/context', time: start + 1000, data: { provider: 'mock', model: 'mock-model' } },
+    // The Host stamps wall-clock time; the material only needs the route.
+    { type: 'request/context', time: Date.now(), data: { provider: 'mock', model: 'mock-model' } },
     {
       type: 'assistant/message',
       time: start + 2000,
@@ -97,4 +201,47 @@ export function sessionMaterial({ id = 's1', cwd = '/work/proj', start, title = 
 
 export function localDayStart(now, tzOffset = 28800) {
   return Math.floor((now + tzOffset * 1000) / 86_400_000) * 86_400_000 - tzOffset * 1000
+}
+
+/** One running turn's log: title, turn start, tool call, optional end. */
+export function turnEvents({ start, title = 'Build the thing', calls = [], end, pending, output } = {}) {
+  const events = [
+    { type: 'session/title', time: start, data: { title } },
+    { type: 'user/message', time: start + 10, data: { source: { kind: 'user' }, content: [{ type: 'text', text: title }] } },
+    { type: 'turn/start', time: start + 20, data: { turn: 1 } },
+  ]
+  let at = start + 30
+  for (const call of calls) {
+    at += 10
+    events.push({ type: 'tool/call', time: at, data: { callId: call.id, name: call.name ?? 'bash', arguments: '{}' } })
+    if (call.doneAt !== undefined) {
+      events.push({
+        type: 'tool/result',
+        time: call.doneAt,
+        data: { message: { toolCallId: call.id, isError: call.error === true, content: [] } },
+      })
+    }
+  }
+  if (output !== undefined) {
+    events.push({
+      type: 'assistant/message',
+      time: output,
+      data: { turn: 1, step: 1, usage: { inputTokens: 100, outputTokens: 50 }, message: { source: { model: 'deepseek-chat' }, content: [{ type: 'text', text: 'done' }] } },
+    })
+  }
+  if (pending !== undefined) {
+    events.push({ type: pending.kind === 'question' ? 'question/asked' : 'approval/asked', time: pending.at, data: { requestId: pending.id, toolName: 'bash' } })
+  }
+  if (end !== undefined) events.push({ type: 'turn/end', time: end.at, data: { turn: 1, reason: end.reason } })
+  return events
+}
+
+/** Projection values as the projection cache would expose them. */
+export function valuesOf({ uncachedInputTokens = 0, cacheReadTokens = 0, cacheWriteTokens = 0, outputTokens = 0, last, models } = {}) {
+  const totals = { uncachedInputTokens, cacheReadTokens, cacheWriteTokens, outputTokens }
+  return {
+    tokenUsage: { totals, last: last === undefined ? undefined : { turn: 1, step: 1, buckets: last } },
+    ...(models === undefined ? {} : { byModel: models }),
+    modelSelection: { lastUsed: { provider: 'mock', model: 'deepseek-chat' } },
+  }
 }

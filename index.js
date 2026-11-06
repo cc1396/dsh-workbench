@@ -12,8 +12,21 @@
  * every caller and only the owner peer can read the snapshot.
  */
 
-const ROUTE_PATH = '/api/workbench/status'
+import { existsSync } from 'node:fs'
+import { allotByDay, allotDays, buildLedger, buildRequestDetail, dayKey, priceRow, summarizeSpeed, totalOf } from './ledger.js'
+import { foldProject, reportMarkdown } from './progress.js'
+import { gitLogArgs, parseGitLog, repoRootOf, searchSessions } from './search.js'
+import { alertsOf, lastEndOf, localDayStart, orderOf, projectSession, tokensOf } from './sessions.js'
+import { emptyProgress, emptyTasks, openStore } from './store.js'
+
+export const ROUTE_PATH = '/api/workbench/status'
 const SUMMARY_ROUTE = '/api/workbench/summarize'
+const ALERT_ROUTE = '/api/workbench/alerts'
+const SEARCH_ROUTE = '/api/workbench/search'
+const REQUEST_ROUTE = '/api/workbench/requests'
+const TASKS_ROUTE = '/api/workbench/tasks'
+const REPORT_ROUTE = '/api/workbench/report'
+const DAY_WINDOW = 7
 const DAYS = 7
 const DAY_MS = 86_400_000
 const MAX_SPEED_SAMPLES = 600
@@ -21,6 +34,8 @@ const LOG_DAYS = 31
 const MAX_LOG_TURNS = 200
 const MAX_LOG_FILES = 400
 const MAX_LOG_COMMANDS = 200
+const MAX_LOG_TESTS = 60
+const GIT_TIMEOUT_MS = 3000
 const MAX_LOG_SAMPLES = 3000
 const MIN_SPEED_RATE = 1
 const HAN_CHAR = /[\u4e00-\u9fff]/u
@@ -32,7 +47,7 @@ const SUMMARY_STORE_LIMIT = 40
 const TOKENS_PER_UNIT = 1_000_000
 const FALLBACK_PRICE = { input: 2, output: 8, cacheRead: 0.5 }
 
-/** Hard requirements: the authenticated Fetch transport and the Session catalog. */
+/** Hard requirements: the authenticated Fetch transport and the Session catalog. Soft: `sessions`. */
 export const inject = ['connection', 'sessionController']
 
 /**
@@ -50,6 +65,19 @@ export function apply(ctx, config) {
   const summaryCache = new Map()
   /** Generated summaries survive a restart in $DSH_HOME/workbench/summaries.json. */
   const summaryStorePromise = openSummaryStore()
+  /** Attention acknowledgements survive a restart in the same directory. */
+  const alertStore = openAlertStore()
+  /** Local tasks and project preferences (evidence report), under `$DSH_HOME/workbench`. */
+  const taskStore = openStore('tasks.json', emptyTasks())
+  const progressStore = openStore('progress.json', emptyProgress())
+  /** Live Session objects, for event logs and the projection registry. */
+  const sessionStore = () => {
+    try {
+      return typeof ctx.get === 'function' ? ctx.get('sessions') : undefined
+    } catch {
+      return undefined
+    }
+  }
 
   ctx.effect(
     () =>
@@ -57,7 +85,7 @@ export function apply(ctx, config) {
         path: ROUTE_PATH,
         methods: ['GET'],
         requestBody: 'buffered',
-        fetch: (request) => snapshot(ctx, settings, usageCache, walletCache, request),
+        fetch: (request) => snapshot(ctx, settings, usageCache, walletCache, alertStore, sessionStore, request),
       }),
     'dsh-workbench: /api/workbench/status',
   )
@@ -72,6 +100,61 @@ export function apply(ctx, config) {
       }),
     'dsh-workbench: /api/workbench/summarize',
   )
+
+  ctx.effect(
+    () =>
+      ctx.connection.fetch.register({
+        path: ALERT_ROUTE,
+        methods: ['POST'],
+        requestBody: 'buffered',
+        fetch: (request) => updateAlert(ctx, request, alertStore),
+      }),
+    'dsh-workbench: /api/workbench/alerts',
+  )
+
+  ctx.effect(
+    () =>
+      ctx.connection.fetch.register({
+        path: SEARCH_ROUTE,
+        methods: ['GET', 'POST'],
+        requestBody: 'buffered',
+        fetch: (request) => searchRoute(ctx, settings, usageCache, sessionStore, taskStore, request),
+      }),
+    'dsh-workbench: /api/workbench/search',
+  )
+
+  ctx.effect(
+    () =>
+      ctx.connection.fetch.register({
+        path: REQUEST_ROUTE,
+        methods: ['GET'],
+        requestBody: 'buffered',
+        fetch: (request) => requestRoute(ctx, settings, sessionStore, request),
+      }),
+    'dsh-workbench: /api/workbench/requests',
+  )
+
+  ctx.effect(
+    () =>
+      ctx.connection.fetch.register({
+        path: TASKS_ROUTE,
+        methods: ['GET', 'POST'],
+        requestBody: 'buffered',
+        fetch: (request) => tasksRoute(request, taskStore),
+      }),
+    'dsh-workbench: /api/workbench/tasks',
+  )
+
+  ctx.effect(
+    () =>
+      ctx.connection.fetch.register({
+        path: REPORT_ROUTE,
+        methods: ['GET', 'POST'],
+        requestBody: 'buffered',
+        fetch: (request) => reportRoute(ctx, settings, usageCache, sessionStore, taskStore, progressStore, request),
+      }),
+    'dsh-workbench: /api/workbench/report',
+  )
 }
 
 /**
@@ -83,15 +166,17 @@ export function apply(ctx, config) {
  * @param request - incoming Fetch request.
  * @returns JSON response with the Workbench snapshot.
  */
-async function snapshot(ctx, settings, usageCache, walletCache, request) {
+async function snapshot(ctx, settings, usageCache, walletCache, alertStore, sessionStore, request) {
   const url = new URL(request.url)
   const tzOffsetSeconds = clampInteger(url.searchParams.get('tzOffset'), -86_400, 86_400, 0)
   const locale = normalizeLocale(url.searchParams.get('locale'))
+  // Time is sampled before the first await: later awaits resume on the real timer.
   const generatedAt = Date.now()
+  const now = generatedAt
   const dayStart = localDayStart(generatedAt, tzOffsetSeconds)
-  const input = { dayStart, tzOffsetSeconds, locale, signal: request.signal }
+  const input = { now, dayStart, tzOffsetSeconds, locale, signal: request.signal }
   try {
-    const body = await buildSnapshot(ctx, settings, usageCache, walletCache, input, generatedAt)
+    const body = await buildSnapshot(ctx, settings, usageCache, walletCache, input, generatedAt, alertStore, sessionStore)
     return jsonResponse(200, body)
   } catch (error) {
     return jsonResponse(500, { error: messageOf(error) })
@@ -99,55 +184,1141 @@ async function snapshot(ctx, settings, usageCache, walletCache, request) {
 }
 
 /**
- * Compose the snapshot.
+ * Compose the snapshot: one consistent cut over the Host's Sessions.
+ *
+ * Every visible Session is projected once (its own events plus the `tokenUsage`,
+ * `sessionStats` and `modelSelection` projections), and every view — states,
+ * attention items, the request ledger, the recent list — reads those projections,
+ * so a card, its alert and its amount can never disagree.
+ *
  * @param ctx - Host context.
  * @param settings - resolved configuration.
- * @param usageCache - per-Session fold cache.
+ * @param usageCache - per-Session legacy fold cache (work log, summary route).
  * @param walletBox - mutable wallet cache.
  * @param input - request-scoped facts.
  * @param generatedAt - snapshot timestamp.
+ * @param alertStore - promise of the persisted acknowledgement store.
+ * @param sessionStore - accessor of the live Session store.
  * @returns the snapshot body.
  */
-async function buildSnapshot(ctx, settings, usageCache, walletBox, input, generatedAt) {
+async function buildSnapshot(ctx, settings, usageCache, walletBox, input, generatedAt, alertStore, sessionStore) {
   const listed = await ctx.sessionController.list({}, input.signal)
   const sessions = Array.isArray(listed?.items) ? listed.items.filter(isSummary) : []
-  const tasks = sessions.filter((item) => item.origin !== 'subagent' && item.blank !== true)
-  const runningTasks = tasks.filter((item) => item.running === true).sort(byActivity)
-  const recentTasks = tasks.filter((item) => item.running !== true).sort(byActivity)
+  const usable = sessions.filter((item) => item.blank !== true).sort(byActivity)
+  // A child Session never appears on its own: its errors belong to itself, and the
+  // root Session's state is decided only by its own turns (PRD F02).
+  const primary = usable.filter((item) => item.origin !== 'subagent')
+  // Children are still read (for their parent's count) but never listed on their own.
+  const ordered = [
+    ...primary.filter((item) => item.running === true),
+    ...usable.filter((item) => item.origin === 'subagent'),
+    ...primary.filter((item) => item.running !== true),
+  ]
+  const [processed, account, store] = await Promise.all([
+    processSessions(ctx, settings, ordered, input, sessionStore, usageCache),
+    readAccount(ctx, settings, walletBox, input, generatedAt),
+    alertStore,
+  ])
 
-  const usage = await foldUsage(ctx, settings, usageCache, sessions, {
-    ...input,
-    first: [...runningTasks, ...recentTasks].slice(0, settings.maxRunningTasks + settings.maxRecentTasks),
+  const views = processed.views
+  // Searchable rows and local tasks ride the same cut, so a task can always find its Session.
+  const summaryTitles = new Map(primary.map((item) => [item.sessionId, item.title]))
+  // A Session folded twice in one cut keeps the first (most recently read) view, so
+  // its activity can never appear on two days.
+  const viewById = new Map()
+  for (const view of views) if (!viewById.has(view.sessionId)) viewById.set(view.sessionId, view)
+  const searchRows = primary.flatMap((item) => {
+    const view = viewById.get(item.sessionId)
+    if (view === undefined) return []
+    return [{
+      sessionId: item.sessionId,
+      title: titleOf(view, summaryTitles),
+      projectId: view.projectId,
+      projectName: view.projectName,
+      model: view.model,
+      provider: view.provider,
+      state: view.state?.state ?? 'unknown',
+      endedAt: view.state?.running === true ? undefined : view.endedAt || undefined,
+      lastAt: view.lastAt,
+      day: dayKey(
+        view.state?.running === true ? Number(view.lastAt) || input.now : Number(view.endedAt) || Number(view.lastAt) || input.now,
+        input.tzOffsetSeconds,
+      ),
+    }]
   })
-  const account = await readAccount(ctx, settings, walletBox, input, generatedAt)
+  const tasks = await storeTasks(store.tasks)
+
+  // A child's errors belong to itself: attention items are for root Sessions only.
+  const children = new Set(
+    usable.filter((item) => item.origin === 'subagent' || typeof item.parentId === 'string').map((item) => item.sessionId),
+  )
+  const alerts = collectAlerts(
+    views.filter((view) => !children.has(view.sessionId)),
+    store,
+    input,
+    settings,
+  )
+  const days = Array.from({ length: DAY_WINDOW }, (_, index) => input.dayStart - index * DAY_MS)
+  const ledger = buildLedger({
+    sessions: processed.ledgerSessions,
+    now: generatedAt,
+    tzOffsetSeconds: input.tzOffsetSeconds,
+    dayStart: input.dayStart,
+    days,
+    currency: settings.currency,
+  })
+  const speed = summarizeSpeed(processed.ledgerSessions, days[days.length - 1])
+  if (speed.current === undefined && processed.speedCurrent !== undefined) speed.current = processed.speedCurrent
+  const states = stateSummary(views)
+  const todayText = dayKey(input.dayStart, input.tzOffsetSeconds)
+
+  const running = views
+    .filter((view) => view.state?.running === true)
+    .sort(
+      (left, right) =>
+        orderOf(left.state) - orderOf(right.state) ||
+        right.lastAt - left.lastAt ||
+        left.sessionId.localeCompare(right.sessionId),
+    )
+    .slice(0, settings.maxRunningTasks)
+    .map((view) => publicSession(view, ledger, todayText, alerts))
+  const recent = processed.recent.map((view) => publicSession(view, ledger, todayText, alerts))
+
+  for (const row of [...running, ...recent]) {
+    row.children = processed.childCounts.get(row.sessionId) ?? 0
+  }
 
   return {
     generatedAt,
     account,
-    usage: usage.summary,
-    speed: usage.speed,
-    worklog: publicWorklog(usage.worklog),
-    tasks: { total: tasks.length, running: runningTasks.length, recent: recentTasks.length },
-    running: runningTasks.slice(0, settings.maxRunningTasks).map((item) => taskRow(item, usageCache)),
-    recent: recentTasks.slice(0, settings.maxRecentTasks).map((item) => taskRow(item, usageCache)),
+    usage: processed.usage,
+    speed: {
+      current: speed.current,
+      models: speed.models,
+      samples: speed.samples,
+      week: processed.speedWeek,
+      today: processed.speedToday,
+      recent: processed.speedRecent,
+    },
+    worklog: publicWorklog(processed.worklog),
+    capabilities: {
+      live: 'poll',
+      pollMs: 15000,
+      alertsWait: processed.waitsFromHost ? 'ready' : processed.waitsFromEvents ? 'event-only' : 'degraded',
+      alertsInfer: processed.p1Ready ? 'ready' : 'degraded',
+      // P1 inference needs committed activity; without the projection registry it stays off (PRD table 10).
+      rules: processed.p1Ready ? 'ready' : 'paused',
+      states: 'ready',
+      ledger: processed.tokensAvailable ? 'ready' : 'degraded',
+      performance: speed.samples >= 20 ? 'ready' : 'insufficient',
+      account: account.status === 'ready' ? 'ready' : 'unavailable',
+      openSession: 'host',
+    },
+    freshness: {
+      at: generatedAt,
+      tzOffset: input.tzOffsetSeconds,
+      state: account.status === 'failed' ? 'fresh' : 'fresh',
+      reason: processed.tokensAvailable ? undefined : 'session-projection-unavailable',
+    },
+    overview: {
+      todayStart: input.dayStart,
+      amount: ledger.amount,
+      amountPartial: ledger.amountPartial,
+      currency: ledger.currency,
+      coverage: ledger.coverage,
+      unpricedTokens: ledger.unpricedTokens,
+      running: states.runningTotal,
+      runningByState: states.running,
+      failed: states.failed,
+      ended: states.ended + states.cancelled,
+      attention: alerts.filter((alert) => alert.state === 'open').length,
+      attentionByType: alerts
+        .filter((alert) => alert.state === 'open')
+        .reduce((sum, alert) => ({ ...sum, [alert.type]: (sum[alert.type] ?? 0) + 1 }), {}),
+      speedP50: speed.models[0]?.p50TokensPerSecond,
+      speedSamples: speed.samples,
+      models: speed.models.length,
+      scanned: processed.scan.scanned,
+      sessions: processed.scan.total,
+    },
+    states: {
+      total: views.length,
+      running: states.runningTotal,
+      runningByState: states.running,
+      failed: states.failed,
+      ended: states.ended,
+      cancelled: states.cancelled,
+      unknown: states.unknown,
+      counts: states.all,
+    },
+    running,
+    recent,
+    alerts,
+    // Metadata-only index: titles, projects, routes, states, times and IDs.
+    search: { rows: searchRows, total: searchRows.length },
+    // Local tasks (PRD F04): created by the user, never inferred from a single run.
+    tasks_local: tasks,
+    ledger: {
+      today: ledger.today,
+      projects: ledger.projects,
+      trend: ledger.trend,
+      trendMax: ledger.trendMax,
+      sessions: ledger.sessions,
+      daySessions: ledger.daySessions,
+      currency: ledger.currency,
+      coverage: ledger.coverage,
+      days,
+    },
+    tasks: { total: usable.length, running: states.runningTotal, recent: processed.recent.length },
   }
 }
 
-/** Project one Session summary into the row the panel renders. */
-function taskRow(item, usageCache) {
-  const cached = usageCache.get(item.sessionId)
-  const fallback = cached?.title
-  const usable = cached !== undefined && cached.failed !== true
-  const tokens = usable && cached.total.tokens > 0 ? Math.round(cached.total.tokens) : 0
-  const costCny = usable && cached.total.costCny > 0 ? roundCost(cached.total.costCny) : 0
+/**
+ * GET /api/workbench/report — one day of project progress and the evidence report
+ * draft (PRD F04 / F08).
+ *
+ * Query: `day` (local day start, defaults to today), `tzOffset`, `project` (one
+ * project ID, else every project with activity that day), `locale`.
+ *
+ * Each project's card, timeline and draft come from the same fold, so a report line
+ * and the evidence panel beside it can never disagree. Git evidence is read only for
+ * projects that explicitly enabled it (`progress.json`); the command is a read-only
+ * `git log`, and its output is reduced to SHAs, subjects, authors and relative paths.
+ */
+async function reportRoute(ctx, settings, usageCache, sessionStore, taskStore, progressStore, request) {
+  const generatedAt = Date.now()
+  // POST /api/workbench/report — the only write: a per-project, explicit Git opt-in.
+  if (request.method === 'POST') {
+    let body
+    try {
+      body = JSON.parse(await request.text())
+    } catch {
+      return jsonResponse(400, { code: 'INVALID_BODY', error: 'invalid JSON body' })
+    }
+    if (body?.action !== 'git' || typeof body.projectId !== 'string' || body.projectId === '') {
+      return jsonResponse(400, { code: 'INVALID_BODY', error: 'action git and a projectId are required' })
+    }
+    const enabled = body.enabled === true
+    await progressStore.update((store) => {
+      if (store.projects === null || typeof store.projects !== 'object') store.projects = {}
+      store.projects[body.projectId] = { ...(store.projects[body.projectId] ?? {}), git: enabled }
+    })
+    return jsonResponse(200, { ok: true, projectId: body.projectId, git: enabled })
+  }
+  const url = new URL(request.url)
+  const tzOffsetSeconds = clampInteger(url.searchParams.get('tzOffset'), -86_400, 86_400, 0)
+  const today = localDayStart(generatedAt, tzOffsetSeconds)
+  const day = numberParam(url.searchParams.get('day')) ?? today
+  const wanted = url.searchParams.get('project') ?? ''
+  const locale = normalizeLocale(url.searchParams.get('locale'))
+  const input = { now: generatedAt, dayStart: today, tzOffsetSeconds, locale, signal: request.signal }
+  const dayEnd = day + DAY_MS
+  try {
+    const listed = await ctx.sessionController.list({}, request.signal)
+    const sessions = Array.isArray(listed?.items) ? listed.items.filter(isSummary) : []
+    const primary = sessions.filter((item) => item.blank !== true && item.origin !== 'subagent')
+    const ordered = [...primary.filter((item) => item.running === true), ...primary.filter((item) => item.running !== true)]
+    const processed = await processSessions(ctx, settings, ordered, input, sessionStore, usageCache)
+    const children = new Set(
+      sessions.filter((item) => item.origin === 'subagent' || typeof item.parentId === 'string').map((item) => item.sessionId),
+    )
+    const views = processed.views.filter((view) => !children.has(view.sessionId))
+    const tasksAll = await storeTasks(await taskStore.read())
+
+    const preference = await progressStore.read()
+    const enabled = preference.projects !== null && typeof preference.projects === 'object' ? preference.projects : {}
+
+    // Group this day's Sessions by project.
+    const projects = new Map()
+    for (const view of views) {
+      const projectId = view.projectId || ''
+      if (wanted !== '' && projectId !== wanted) continue
+      // A Host summary's `updatedAt` may sit a little ahead of the snapshot clock
+      // (write skew, or a frozen test clock); activity after the snapshot was taken
+      // belongs to no day this view can show, so clamp it to that clock.
+      const active = Math.min(
+        Math.max(Number(view.lastAt) || 0, Number(view.endedAt) || 0),
+        generatedAt,
+      )
+      if (active < day || active >= dayEnd) continue
+      const bucket = projects.get(projectId) ?? { projectId, cwd: view.cwd, sessions: [] }
+      bucket.sessions.push(view)
+      projects.set(projectId, bucket)
+    }
+    // A local task is created on its own day, so it also brings its project in when
+    // that day has no Session rows (a project renamed, an archived Session, a task
+    // recorded by hand). The task itself is always folded through its project's list.
+    for (const task of tasksAll) {
+      if (wanted !== '' && task.projectId !== wanted) continue
+      if (!(Number(task.at) >= day && Number(task.at) < dayEnd)) continue
+      if (!projects.has(task.projectId)) projects.set(task.projectId, { projectId: task.projectId, cwd: undefined, sessions: [] })
+    }
+
+    const caches = processed.legacy ?? usageCache
+    const shell = ctx.bash ?? (typeof ctx.get === 'function' ? ctx.get('bash') : undefined)
+    const shellReady = typeof shell?.run === 'function'
+    const rows = []
+    for (const bucket of projects.values()) {
+      const projectName = projectLabel(bucket.projectId)
+      const root = rootOfSafe(bucket.cwd, bucket.projectId)
+      const gitOn = enabled[bucket.projectId]?.git === true
+      let commits = []
+      if (gitOn && root !== undefined && shellReady) {
+        const output = await runGitLog(shell, root, day, dayEnd)
+        commits = output === undefined ? [] : parseGitLog(output)
+      }
+      // The legacy fold cache is keyed by Session ID; carry that ID explicitly,
+      // because the cached entry itself keeps only its fold results.
+      const folds = bucket.sessions
+        .map((view) => ({ entry: caches.get(view.sessionId), sessionId: view.sessionId, title: view.title }))
+        .filter((row) => row.entry !== undefined)
+      const writes = folds.flatMap(({ entry, sessionId, title }) =>
+        (Array.isArray(entry.writes) ? entry.writes : []).map((write) => ({ ...write, sessionId, title })),
+      )
+      const rawCommands = folds.flatMap(({ entry, sessionId }) =>
+        (Array.isArray(entry.commands) ? entry.commands : []).map((command) => ({ ...command, sessionId, verified: false })),
+      )
+      // A structured test result on a normally ended turn upgrades the command row;
+      // a command with no structured result stays "unverified" (PRD F08).
+      const tests = folds.flatMap(({ entry, sessionId }) =>
+        (Array.isArray(entry.tests) ? entry.tests : []).map((test) => ({
+          text: test.text,
+          count: test.count,
+          first: test.first,
+          last: test.last,
+          verified: test.verified === true && test.isError !== true,
+          exitCode: test.exitCode,
+          passed: test.passed,
+          failed: test.failed,
+          sessionId,
+        })),
+      )
+      const commands = [
+        ...rawCommands.filter((row) => !tests.some((test) => test.text === row.text && test.sessionId === row.sessionId)),
+        ...tests,
+      ]
+      const fold = foldProject({
+        project: { projectId: bucket.projectId, name: projectName, cwd: bucket.cwd, root },
+        day: { dayStart: day, dayEnd },
+        sessions: bucket.sessions.map((view) => ({
+          sessionId: view.sessionId,
+          title: view.title,
+          state: view.state?.state,
+          lastEnd: view.lastEnd,
+          lastAt: view.lastAt,
+          turnStartedAt: view.turnStartedAt,
+          endedAt: view.endedAt,
+          pending: view.pending,
+        })),
+        writes,
+        commands,
+        commits,
+        tasks: tasksAll.filter((task) => task.projectId === bucket.projectId),
+      })
+      const gitState = !gitOn ? 'off' : root === undefined ? 'unavailable' : shellReady ? 'ready' : 'unsupported'
+      rows.push({ ...fold, git: gitState, root })
+    }
+    rows.sort((left, right) => (Number(right.card.lastAt) || 0) - (Number(left.card.lastAt) || 0) || left.card.projectId.localeCompare(right.card.projectId))
+
+    const totals = { done: 0, active: 0, blocked: 0, confirm: 0, evidence: 0, projects: rows.length }
+    for (const row of rows) {
+      for (const key of ['done', 'active', 'blocked', 'confirm']) totals[key] += row.card.counts[key]
+      totals.evidence += row.card.evidence
+    }
+    const dayLabel = dayKey(day, tzOffsetSeconds)
+    const words = markdownWords(locale)
+    const groups = rows.map((row) => ({ name: row.card.name || row.card.projectId, ...row.report }))
+    return jsonResponse(200, {
+      generatedAt,
+      day,
+      dayLabel,
+      projects: rows,
+      totals,
+      report: { markdown: reportMarkdown(dayLabel, groups, words), groups },
+      capabilities: {
+        git: rows.some((row) => row.git === 'ready') ? 'ready' : 'off',
+        tests: rows.some((row) => row.card.tests > 0) ? 'ready' : 'no-structured-results',
+        tasks: 'local',
+        verification: locale === 'en' ? 'turn-end + structured results' : '轮次正常结束 + 结构化测试结果',
+      },
+    })
+  } catch (error) {
+    return jsonResponse(500, { code: 'TEMPORARY', error: messageOf(error) })
+  }
+}
+
+/** The Markdown headings and notes of the evidence report, in the reader's language. */
+function markdownWords(locale) {
+  if (locale === 'en') {
+    return { title: 'Daily report · {date}', done: 'Done', doing: 'In progress', blocked: 'Blocked', confirm: 'To confirm', empty: 'No evidence recorded for this day.', editMark: 'edited', activityMark: 'project activity', blockMark: 'blocked', evidenceMark: 'evidence attached' }
+  }
+  return { title: '日报 · {date}', done: '已完成', doing: '进行中', blocked: '阻塞', confirm: '待确认', empty: '这天没有记录到可查看的证据。', editMark: '人工编辑', activityMark: '项目活动', blockMark: '阻塞', evidenceMark: '有证据' }
+}
+
+/** Existence probe for the repository-root search (a synchronous stat is enough here). */
+function existsOf(path) {
+  try {
+    return existsSync(path)
+  } catch {
+    return false
+  }
+}
+
+/** Repository root, or the project path itself when the workspace is not in a repo. */
+function rootOfSafe(cwd, fallback) {
+  try {
+    return cwd === undefined ? fallback : repoRootOf(cwd, existsOf)
+  } catch {
+    return fallback
+  }
+}
+
+/** Run the read-only Git log for one day of one repository; `undefined` when unavailable. */
+async function runGitLog(shell, root, day, dayEnd) {
+  try {
+    const result = await shell.run({
+      command: gitLogArgs(root, day, dayEnd),
+      cwd: root,
+      timeout: GIT_TIMEOUT_MS,
+      signal: undefined,
+    })
+    const stdout = typeof result?.stdout === 'string' ? result.stdout : typeof result?.output === 'string' ? result.output : ''
+    if (typeof result?.exitCode === 'number' && result.exitCode !== 0) return undefined
+    return stdout
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * The title of one Session: its committed log first, else the Host summary. An empty
+ * string never wins, so a project-only Session still shows a title once it has one.
+ */
+function titleOf(view, summaryTitles) {
+  for (const value of [view?.title, summaryTitles?.get(view?.sessionId)]) {
+    if (typeof value === 'string' && value.trim() !== '') return value
+  }
+  return ''
+}
+
+/** The local task list, whatever the store holds. */
+async function storeTasks(store) {
+  const tiles = store === undefined ? undefined : store.tasks
+  return Array.isArray(tiles)
+    ? tiles
+        .filter((task) => task !== null && typeof task === 'object' && typeof task.taskId === 'string')
+        .sort((left, right) => (Number(right.at) || 0) - (Number(left.at) || 0) || left.taskId.localeCompare(right.taskId))
+        .slice(0, 400)
+    : []
+}
+
+/**
+ * GET/POST /api/workbench/search — rank the indexed Sessions (PRD F07).
+ *
+ * GET reads `q, project, model, state, from, to, limit, offset` (repeated or
+ * comma-separated); POST takes the same as a JSON body. The response is metadata
+ * only: an ID, a title, a project label, the route, the state and the times.
+ */
+async function searchRoute(ctx, settings, usageCache, sessionStore, taskStore, request) {
+  const generatedAt = Date.now()
+  const url = new URL(request.url)
+  let params = Object.fromEntries(url.searchParams)
+  if (request.method === 'POST') {
+    try {
+      const body = JSON.parse(await request.text())
+      if (body !== null && typeof body === 'object') params = { ...body, ...params }
+    } catch {
+      return jsonResponse(400, { code: 'INVALID_BODY', error: 'invalid JSON body' })
+    }
+  }
+  const tzOffsetSeconds = clampInteger(params.tzOffset, -86_400, 86_400, 0)
+  const dayStart = localDayStart(generatedAt, tzOffsetSeconds)
+  const input = { now: generatedAt, dayStart, tzOffsetSeconds, locale: 'zh', signal: request.signal }
+  try {
+    const listed = await ctx.sessionController.list({}, request.signal)
+    const sessions = Array.isArray(listed?.items) ? listed.items.filter(isSummary) : []
+    const primary = sessions.filter((item) => item.blank !== true && item.origin !== 'subagent')
+    const ordered = [
+      ...primary.filter((item) => item.running === true),
+      ...primary.filter((item) => item.running !== true),
+    ]
+    const processed = await processSessions(ctx, settings, ordered, input, sessionStore, usageCache)
+    const children = new Set(
+      sessions.filter((item) => item.origin === 'subagent' || typeof item.parentId === 'string').map((item) => item.sessionId),
+    )
+    const titles = new Map(primary.map((entry) => [entry.sessionId, entry.title]))
+    const rows = processed.views
+      .filter((view) => !children.has(view.sessionId))
+      .map((view) => ({
+        sessionId: view.sessionId,
+        title: titleOf(view, titles),
+        projectId: view.projectId,
+        projectName: view.projectName,
+        model: view.model,
+        provider: view.provider,
+        state: view.state?.state ?? 'unknown',
+        endedAt: view.state?.running === true ? undefined : view.endedAt || undefined,
+        lastAt: view.lastAt,
+        day: dayKey(
+          view.state?.running === true ? Number(view.lastAt) || generatedAt : Number(view.endedAt) || Number(view.lastAt) || generatedAt,
+          tzOffsetSeconds,
+        ),
+        running: view.state?.running === true,
+      }))
+    const result = searchSessions(rows, {
+      text: typeof params.q === 'string' ? params.q : '',
+      projects: listParam(params.project),
+      models: listParam(params.model),
+      states: listParam(params.state),
+      from: numberParam(params.from),
+      to: numberParam(params.to),
+      limit: numberParam(params.limit) ?? 20,
+      offset: numberParam(params.offset) ?? 0,
+    })
+    return jsonResponse(200, {
+      generatedAt,
+      query: typeof params.q === 'string' ? params.q : '',
+      total: result.total,
+      items: result.items.map((row) => ({
+        sessionId: row.sessionId,
+        title: row.title,
+        projectId: row.projectId,
+        projectName: row.projectName,
+        model: row.model,
+        provider: row.provider,
+        state: row.state,
+        at: Number(row.endedAt) || Number(row.lastAt) || 0,
+        running: row.running === true,
+        rank: row.rank,
+        order: row.order,
+      })),
+      hasMore: result.hasMore,
+      // Where the index came from: metadata only, rebuilt on every query from the Host.
+      index: { kind: 'local-metadata', rows: rows.length, fullText: false },
+      capabilities: { events: 'id-only', fullText: 'off' },
+    })
+  } catch (error) {
+    return jsonResponse(500, { code: 'TEMPORARY', error: messageOf(error) })
+  }
+}
+
+function listParam(value) {
+  const list = Array.isArray(value) ? value : typeof value === 'string' ? value.split(',') : []
+  return list.map((entry) => String(entry).trim()).filter((entry) => entry !== '')
+}
+
+function numberParam(value) {
+  const text = Array.isArray(value) ? value[0] : value
+  if (text === undefined || text === null || text === '') return undefined
+  const number = Number(text)
+  return Number.isFinite(number) ? number : undefined
+}
+
+/**
+ * GET /api/workbench/requests — one Session's priced requests for one local day.
+ *
+ * Query: `sessionId`, `day` (local day start, defaults to today), `tzOffset`.
+ * A Session the Host does not list is NOT_FOUND; it is never answered from cache.
+ */
+async function requestRoute(ctx, settings, sessionStore, request) {
+  const generatedAt = Date.now()
+  const url = new URL(request.url)
+  const sessionId = url.searchParams.get('sessionId') ?? ''
+  const tzOffsetSeconds = clampInteger(url.searchParams.get('tzOffset'), -86_400, 86_400, 0)
+  const today = localDayStart(generatedAt, tzOffsetSeconds)
+  const day = numberParam(url.searchParams.get('day')) ?? today
+  if (sessionId === '' || !Number.isFinite(day)) {
+    return jsonResponse(400, { code: 'INVALID_BODY', error: 'sessionId and a day are required' })
+  }
+  try {
+    const listed = await ctx.sessionController.list({}, request.signal)
+    const items = Array.isArray(listed?.items) ? listed.items.filter(isSummary) : []
+    const item = items.find((entry) => entry.sessionId === sessionId)
+    if (item === undefined || item.blank === true) return jsonResponse(404, { code: 'NOT_FOUND', error: 'unknown Session' })
+    const live = sessionStore()
+    const session = typeof live?.get === 'function' ? live.get(sessionId) : undefined
+    const liveEvents = Array.isArray(session?.events) ? session.events : []
+    // The committed log completes the live one when both exist.
+    let events = liveEvents
+    if (liveEvents.length === 0) {
+      const inspected = await ctx.sessionController.inspect?.(sessionId, request.signal)
+      events = Array.isArray(inspected?.events) ? inspected.events : []
+    }
+    const projections = registryOf(ctx)
+    let values = {}
+    if (projections !== undefined && session !== undefined) {
+      try {
+        values = projections.snapshot(session)?.values ?? {}
+      } catch {
+        values = {}
+      }
+    }
+    const projectId = normalizeProject(item.cwd)
+    const model = values.modelSelection?.lastUsed?.model
+    const title = item.title ?? values.title?.title
+    const projectName = projectLabel(projectId)
+    const modelRows = modelsOf(values.tokenUsage, model, [])
+    const priceForModel = (name) => priceFor(settings, name)
+    // The Session's own total for that day, priced exactly like the ledger does.
+    const sessionRows = allotDays({
+      totals: values.tokenUsage?.totals,
+      last: values.tokenUsage?.last?.buckets,
+      events,
+      turns: [],
+      dayStart: today,
+      days: [today],
+      tzOffsetSeconds,
+    }).map((row) => pricedRow(row, modelRows, settings))
+    const todayEntry = sessionRows[0]
+    const dayTokens = allotByDay({
+      totals: values.tokenUsage?.totals,
+      last: values.tokenUsage?.last?.buckets,
+      events,
+      turns: [],
+      tzOffsetSeconds,
+    }).get(day)
+    const detail = buildRequestDetail({
+      events,
+      day,
+      tzOffsetSeconds,
+      models: modelRows,
+      priceFor: priceForModel,
+      dayTokens,
+      currency: settings.currency,
+      priceRef: settings.priceRef,
+    })
+    return jsonResponse(200, {
+      generatedAt,
+      sessionId,
+      projectId,
+      projectName,
+      day,
+      dayLabel: dayKey(day, tzOffsetSeconds),
+      title,
+      state: item.running === true ? 'running' : undefined,
+      // The Session's own total for the day: every request row plus the remainder fits it.
+      total: todayEntry === undefined ? 0 : todayEntry.amount,
+      totalQuality: todayEntry === undefined ? 'empty' : todayEntry.quality,
+      ...detail,
+    })
+  } catch (error) {
+    return jsonResponse(500, { code: 'TEMPORARY', error: messageOf(error) })
+  }
+}
+
+/**
+ * GET/POST /api/workbench/tasks — the user's local tasks (PRD F04 fallback).
+ *
+ * POST `{ action: 'add' | 'update' | 'remove', task }`. Only fields this module
+ * understands are kept; `state` is one of active, blocked, confirm, done, and a
+ * `done` task records who confirmed it and when.
+ */
+async function tasksRoute(request, taskStore) {
+  const now = Date.now()
+  if (request.method === 'GET') {
+    const store = await taskStore.read()
+    return jsonResponse(200, { tasks: await storeTasks(store) })
+  }
+  let body
+  try {
+    body = JSON.parse(await request.text())
+  } catch {
+    return jsonResponse(400, { code: 'INVALID_BODY', error: 'invalid JSON body' })
+  }
+  const action = body?.action
+  const task = body?.task ?? {}
+  const taskId = typeof task.taskId === 'string' && /^[\w-]{1,64}$/u.test(task.taskId) ? task.taskId : undefined
+  const title = typeof task.title === 'string' ? task.title.replace(/\s+/gu, ' ').trim().slice(0, 120) : ''
+  const state = ['active', 'blocked', 'confirm', 'done'].includes(task.state) ? task.state : undefined
+  if (action === 'add') {
+    if (title === '' || typeof task.projectId !== 'string' || task.projectId === '') {
+      return jsonResponse(400, { code: 'INVALID_BODY', error: 'title and projectId are required' })
+    }
+    const saved = await taskStore.update((store) => {
+      const list = Array.isArray(store.tasks) ? store.tasks : (store.tasks = [])
+      const entry = {
+        taskId: `t_${now.toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        projectId: task.projectId.slice(0, 400),
+        title,
+        state: state ?? 'active',
+        sessionId: typeof task.sessionId === 'string' && task.sessionId !== '' ? task.sessionId : undefined,
+        source: 'local',
+        at: now,
+        by: 'local-user',
+      }
+      list.unshift(entry)
+      store.tasks = list.slice(0, 400)
+      return entry
+    })
+    return jsonResponse(200, { ok: true, task: saved })
+  }
+  if (action === 'update' || action === 'remove') {
+    if (taskId === undefined) return jsonResponse(400, { code: 'INVALID_BODY', error: 'taskId is required' })
+    const saved = await taskStore.update((store) => {
+      const list = Array.isArray(store.tasks) ? store.tasks : []
+      const index = list.findIndex((entry) => entry.taskId === taskId)
+      if (index < 0) return undefined
+      if (action === 'remove') {
+        list.splice(index, 1)
+        return { removed: taskId }
+      }
+      const entry = { ...list[index] }
+      if (title !== '') entry.title = title
+      if (state !== undefined) {
+        entry.state = state
+        // A confirmation is a person's act: it keeps the confirmer and the time.
+        entry.confirmation = state === 'done' ? { by: 'local-user', at: now } : undefined
+      }
+      if (typeof task.sessionId === 'string') entry.sessionId = task.sessionId === '' ? undefined : task.sessionId
+      entry.at = now
+      list[index] = entry
+      return entry
+    })
+    if (saved === undefined) return jsonResponse(404, { code: 'NOT_FOUND', error: 'unknown task' })
+    return jsonResponse(200, { ok: true, task: saved })
+  }
+  return jsonResponse(400, { code: 'INVALID_BODY', error: 'action must be add, update or remove' })
+}
+
+/** The public slice of one Session view the panel renders. */
+function publicSession(view, ledger, todayText, alerts) {
+  const cost = (Array.isArray(ledger.sessions) ? ledger.sessions : []).find(
+    (entry) => entry.sessionId === view.sessionId,
+  )
+  const mine = alerts.filter((alert) => alert.sessionId === view.sessionId && alert.state !== 'solved')
+  const state = view.state ?? {}
   return {
-    sessionId: item.sessionId,
-    title: typeof fallback === 'string' && fallback !== '' ? fallback : undefined,
-    cwd: typeof item.cwd === 'string' ? item.cwd : undefined,
-    updatedAt: typeof item.updatedAt === 'number' ? item.updatedAt : 0,
-    usage: tokens > 0 || costCny > 0 ? { tokens, costCny } : undefined,
-    tools: usable && cached.tools > 0 ? cached.tools : undefined,
-    lastAction: usable ? cached.lastAction : undefined,
+    sessionId: view.sessionId,
+    title: view.title,
+    cwd: view.cwd,
+    projectId: view.projectId,
+    projectName: view.projectName,
+    state: state.state ?? 'unknown',
+    activity: state.activity,
+    running: state.running === true,
+    lastAt: view.lastAt,
+    lastAction: view.lastAction,
+    turn: view.turn,
+    turnStartedAt: view.turnStartedAt,
+    // Turn duration runs start → end (or now), waiting included; missing start reads "—".
+    turnDurationMs: state.open === true ? state.sinceStart : view.lastEnd?.startedAt === undefined ? undefined : (view.endedAt || 0) - state0(view, view.lastEnd),
+    idleForMs: state.idleFor,
+    waiting: state.open === true ? (state.pendingItem === undefined ? [] : [state.pendingItem]) : [],
+    lastEnd: view.lastEnd,
+    endedAt: view.endedAt,
+    model: view.model,
+    provider: view.provider,
+    toolCalls: view.toolCalls,
+    tokens: view.tokens,
+    speed: view.speed,
+    usage:
+      cost === undefined
+        ? undefined
+        : { amount: cost.amount, quality: cost.quality, coverage: cost.coverage, day: todayText },
+    alerts: mine.map((alert) => ({ key: alert.key, type: alert.type, state: alert.state, severity: alert.severity })),
+    evidence: state.evidence,
+    evidenceAt: view.lastAt,
+  }
+}
+
+/** Closed-turn duration of a Session view. */
+function state0(view, lastEnd) {
+  return Number.isFinite(Number(lastEnd?.startedAt)) ? Number(lastEnd.startedAt) : Number(view.lastAt) || 0
+}
+
+/**
+ * Apply the persisted acknowledgements and snoozes to the fresh rule hits.
+ * Same key ⇒ one item: a replayed event or a repeated poll never duplicates it.
+ */
+function collectAlerts(views, store, input, settings) {
+  const alerts = []
+  // A first encounter records the trigger time so a reload keeps the original time.
+  let seen = false
+  const entries = store?.entries
+  for (const view of views) {
+    const hits = alertsOf(view, {
+      sessionId: view.sessionId,
+      projectId: view.projectId,
+      title: view.title,
+      now: input.now,
+      rules: settings.rules,
+    })
+    for (const hit of hits) {
+      let pointer = entries?.get(hit.key)
+      if (entries !== undefined && pointer === undefined) {
+        pointer = { triggeredAt: hit.triggeredAt, stateAt: view.state?.state }
+        entries.set(hit.key, pointer)
+        seen = true
+      }
+      const state = alertStateOf(pointer, view, input.now)
+      alerts.push({
+        key: hit.key,
+        type: hit.type,
+        severity: hit.severity,
+        sessionId: hit.sessionId,
+        projectId: hit.projectId,
+        title: hit.title,
+        reason: hit.reason,
+        triggeredAt: hit.triggeredAt,
+        updatedAt: view.lastAt,
+        thresholdMs: hit.thresholdMs,
+        lastEvidence: hit.lastEvidence,
+        count: hit.count,
+        state,
+        snoozedUntil: pointer?.snoozedUntil,
+        acknowledgedAt: pointer?.acknowledgedAt,
+        currentState: view.state?.state,
+      })
+    }
+  }
+  if (seen) void saveAlertStore(store)
+  return alerts.sort(byAlert).slice(0, 40)
+}
+
+/** Open → acknowledged → snoozed → solved, from the persisted pointer and the live Session. */
+function alertStateOf(pointer, view, now) {
+  if (pointer === undefined) return 'open'
+  const name = view.state?.state ?? 'unknown'
+  if (!['waiting', 'running', 'stuck', 'failed', 'unknown'].includes(name)) return 'solved'
+  if (name !== pointer.stateAt) return 'open'
+  if (pointer.acknowledgedAt !== undefined && pointer.acknowledgedAt >= pointer.triggeredAt) return 'acknowledged'
+  if (pointer.snoozedUntil !== undefined && pointer.snoozedUntil > now) return 'snoozed'
+  return 'open'
+}
+
+/** Failure, then waits, then inferred signals; newest first inside a tier. */
+function byAlert(left, right) {
+  const rank = { failure: 0, waiting: 1, question: 2, stuck: 3, toolFailure: 4 }
+  return (
+    (rank[left.type] ?? 9) - (rank[right.type] ?? 9) ||
+    (right.triggeredAt || 0) - (left.triggeredAt || 0) ||
+    left.key.localeCompare(right.key)
+  )
+}
+
+/** Count the running states for the overview cards. */
+function stateSummary(views) {
+  const all = { waiting: 0, running: 0, stuck: 0, failed: 0, ended: 0, unknown: 0, cancelled: 0 }
+  for (const view of views) {
+    const name = String(view.state?.state ?? 'unknown')
+    if (name === 'cancelled') all.cancelled += 1
+    else if (Object.hasOwn(all, name)) all[name] += 1
+    else all.unknown += 1
+    // A stall sits on top of the state: it always shows in the stuck lane.
+    if (view.state?.stalled === true) all.stuck += 1
+  }
+  return {
+    all,
+    running: all.waiting + all.running + all.stuck,
+    runningTotal: all.waiting + all.running + all.stuck,
+    failed: all.failed,
+    ended: all.ended,
+    cancelled: all.cancelled,
+    unknown: all.unknown,
+  }
+}
+
+/**
+ * Project every ordered Session and fold its legacy usage, bounded by the scan budget.
+ *
+ * @param ctx - Host context.
+ * @param settings - resolved configuration.
+ * @param ordered - Sessions to read: running ones first, then the rest by activity.
+ * @param input - request-scoped facts.
+ * @param sessionStore - accessor of the live Session store.
+ * @param legacyCache - per-Session legacy fold cache.
+ * @returns `{ views, recent, ledgerSessions, tokensAvailable, p1Ready, usage, worklog, speed* }`.
+ */
+async function processSessions(ctx, settings, ordered, input, sessionStore, legacyCache) {
+  const live = sessionStore()
+  const projections = registryOf(ctx)
+  const deadline = Date.now() + settings.scanBudgetMs
+  const queue = ordered.slice()
+  const views = []
+  const entries = new Map()
+  const childCounts = new Map()
+  let scanned = 0
+  let tokensAvailable = true
+
+  const read = (item) => {
+    const session = typeof live?.get === 'function' ? live.get(item.sessionId) : undefined
+    const events = Array.isArray(session?.events) ? session.events : []
+    let values = {}
+    if (projections !== undefined && session !== undefined) {
+      try {
+        values = projections.snapshot(session)?.values ?? {}
+      } catch {
+        values = {}
+      }
+    }
+    return { events, values }
+  }
+
+  const one = async (item) => {
+    // Fold first: the fold reads the committed log through inspect, which may be the
+    // only source when the live Session registry is not composed.
+    const fresh = legacyCache.get(item.sessionId)
+    if (fresh === undefined || fresh.failed === true || fresh.updatedAt !== item.updatedAt) {
+      await foldSession(ctx, settings, legacyCache, item, input.dayStart)
+    }
+    const sources = read(item)
+    const view = projectSession(sources.events, 0, {
+      running: item.running === true,
+      updatedAt: Number(item.updatedAt) || 0,
+      now: input.now,
+      pendingInteraction: item.pendingInteraction,
+    })
+    if (item.origin === 'subagent' && typeof item.parentId === 'string') {
+      childCounts.set(item.parentId, (childCounts.get(item.parentId) ?? 0) + 1)
+    }
+    const tokens = tokensOf(sources.values.tokenUsage?.totals)
+    if (sources.values.tokenUsage === undefined) tokensAvailable = false
+    const projectId = normalizeProject(item.cwd)
+    const legacy = legacyCache.get(item.sessionId)
+    const title =
+      (typeof view.title === 'string' && view.title !== '' ? view.title : undefined) ??
+      (typeof item.title === 'string' && item.title !== '' ? item.title : undefined) ??
+      (typeof legacy?.title === 'string' && legacy.title !== '' ? legacy.title : undefined)
+    const model = view.model ?? sources.values.modelSelection?.lastUsed?.model
+    const provider = view.provider ?? sources.values.modelSelection?.lastUsed?.provider
+    const modelRows = modelsOf(sources.values.tokenUsage, model, view.turnTokens)
+    const window = Array.from({ length: DAY_WINDOW }, (_, slot) => input.dayStart - slot * DAY_MS)
+    const ownTokens = sources.values.tokenUsage?.totals
+    const ownLast = sources.values.tokenUsage?.last?.buckets
+    const ownEvents = sources.events
+    const ownTurns = view.turnTokens ?? []
+    const rows = allotDays({
+      totals: ownTokens,
+      last: ownLast,
+      events: ownEvents,
+      turns: ownTurns,
+      dayStart: input.dayStart,
+      days: window,
+      tzOffsetSeconds: input.tzOffsetSeconds,
+    }).map((row) => pricedRow(row, modelRows, settings))
+    view.sessionId = item.sessionId
+    view.cwd = typeof item.cwd === 'string' ? item.cwd : undefined
+    view.projectId = projectId
+    view.projectName = projectLabel(projectId)
+    view.title = title
+    view.model = model
+    view.provider = provider
+    view.tokens = tokens
+    // endedAt/lastEnd already come from the fold (newest closed turn).
+    view.lastEnd = lastEndOf(view) ?? view.lastEnd
+    views.push(view)
+    entries.set(item.sessionId, {
+      sessionId: item.sessionId,
+      title,
+      cwd: view.cwd,
+      projectId,
+      projectName: view.projectName,
+      model,
+      provider,
+      events: sources.events,
+      tokens,
+      rows,
+      speed: Array.isArray(view.speed) ? view.speed : [],
+    })
+  }
+
+  // The clock is the snapshot's: a slow scan must not re-date a Session mid-cut.
+  const worker = async () => {
+    while (queue.length > 0) {
+      if (input.now > deadline || scanned >= settings.maxScanSessions) return
+      scanned += 1
+      await one(queue.shift())
+    }
+  }
+  await Promise.all([worker(), worker(), worker(), worker()])
+
+  const recent = [...new Map(views.map((view) => [view.sessionId, view])).values()]
+    .filter((view) => view.state?.running !== true && view.endedAt > 0)
+    .sort((left, right) => right.endedAt - left.endedAt || left.sessionId.localeCompare(right.sessionId))
+    .slice(0, settings.maxRecentTasks)
+    .map((view, index) => ({
+      ...view,
+      state: view.state,
+      recent: true,
+      order: index,
+    }))
+
+  return {
+    views,
+    recent,
+    ledgerSessions: [...entries.values()],
+    tokensAvailable,
+    waitsFromHost: ordered.some((item) => typeof item.pendingInteraction === 'string'),
+    waitsFromEvents: views.some((view) => (view.pending?.length ?? 0) > 0),
+    p1Ready: projections !== undefined && tokensAvailable,
+    scan: { scanned, total: ordered.length },
+    childCounts,
+    ...collectLegacy(legacyCache, ordered, input),
+  }
+}
+
+/** One day row plus its price, in one object literal (never a spread into a literal). */
+function pricedRow(row, modelRows, settings) {
+  const priced = priceRow(row.tokens, modelRows, (selected) => priceFor(settings, selected))
+  return {
+    day: row.day,
+    tokens: row.tokens,
+    dropped: row.dropped,
+    parts: priced.parts,
+    amount: priced.amount,
+    quality: priced.quality,
+    coverage: priced.coverage,
+  }
+}
+
+/**
+ * The per-model token split of one Session: the projection keeps only totals, so
+ * the split falls back to each turn's own billed output (labelled with the model
+ * that produced the latest message). Days without a split price with the default row.
+ */
+function modelsOf(tokenUsage, model, turnTokens) {
+  const projected = Array.isArray(tokenUsage?.byModel) ? tokenUsage.byModel : []
+  if (projected.length > 0) {
+    return projected
+      .map((row) => ({ model: typeof row?.model === 'string' ? row.model : undefined, totals: tokensOf(row) }))
+      .filter((row) => totalOf(row.totals) > 0)
+  }
+  const totals = tokensOf(tokenUsage?.totals)
+  if (totalOf(totals) === 0) return []
+  const turns = Array.isArray(turnTokens) ? turnTokens : []
+  const output = turns.reduce((sum, turn) => sum + (Number(turn.tokens) || 0), 0)
+  return [{ model, totals: { ...totals, output: output > 0 ? output : totals.output } }]
+}
+
+/**
+ * Roll the legacy folds up: usage totals, the 31-day work log and the speed buckets.
+ * Sessions past this snapshot's scan budget keep their last fold, as before.
+ */
+function collectLegacy(cache, ordered, input) {
+  let total = emptyUsage()
+  let today = emptyUsage()
+  let days = emptyDays()
+  let speedWeek = emptySpeed()
+  let speedToday = emptySpeed()
+  let summaryTarget
+  const speedRecent = []
+  const windowStart = input.dayStart - (DAYS - 1) * DAY_MS
+  const windowEnd = input.dayStart + DAY_MS
+  let pending = 0
+  let failed = 0
+  const failedReasons = []
+  const logStart = input.dayStart - LOG_DAYS * DAY_MS
+  const logEnd = input.dayStart + DAY_MS
+  const logTurns = []
+  const logWrites = []
+  const logCommands = []
+  let logSamples = []
+  for (const item of ordered) {
+    const cached = cache.get(item.sessionId)
+    if (cached === undefined) {
+      pending += 1
+      continue
+    }
+    if (cached.updatedAt !== item.updatedAt) pending += 1
+    if (cached.failed === true) {
+      failed += 1
+      if (cached.cacheError !== undefined && !failedReasons.includes(cached.cacheError)) failedReasons.push(cached.cacheError)
+    }
+    total = mergeUsage(total, cached.total)
+    const shift = dayShift(cached.dayStart, input.dayStart)
+    if (shift === 0) {
+      today = mergeUsage(today, cached.today)
+      days = mergeDays(days, cached.days)
+    } else if (shift > 0 && shift < DAYS) {
+      for (let offset = 0; offset < DAYS; offset += 1) {
+        const target = offset + shift
+        if (target < DAYS) days[target] += Number(cached.days?.[offset]) || 0
+      }
+    }
+    if (cached.target !== undefined && Number.isFinite(cached.target.time)) {
+      if (summaryTarget === undefined || cached.target.time > summaryTarget.time) summaryTarget = cached.target
+    }
+    const samples = Array.isArray(cached.speedSamples) ? cached.speedSamples : []
+    const sessionRecent = []
+    for (const sample of samples) {
+      if (!(sample.time >= windowStart && sample.time < windowEnd)) continue
+      const rate = rateOf(sample.outputTokens, sample.durationMs)
+      if (speedToday.current === undefined || sample.time > speedToday.current.time) {
+        speedToday.current = { ...sample, sessionId: item.sessionId }
+      }
+      if (rate < MIN_SPEED_RATE) continue
+      addSpeedSample(speedWeek, sample)
+      if (sample.time >= input.dayStart) addSpeedSample(speedToday, sample)
+      sessionRecent.push(sample)
+    }
+    for (const sample of sessionRecent.slice(-6)) {
+      speedRecent.push({ ...sample, sessionId: item.sessionId, title: cached.title })
+    }
+    for (const turn of cached.turns ?? []) {
+      if (turn.time >= logStart && turn.time < logEnd) {
+        logTurns.push({ ...turn, sessionId: item.sessionId, cwd: item.cwd, title: cached.title ?? item.title })
+      }
+    }
+    for (const entry of cached.commands ?? []) {
+      if (entry.last >= logStart && entry.last < logEnd) {
+        logCommands.push({ ...entry, sessionId: item.sessionId, cwd: item.cwd, title: cached.title ?? item.title })
+      }
+    }
+    if (cached.writes !== undefined) {
+      for (const entry of writeRows(cached.writes, input.dayStart, LOG_DAYS)) {
+        logWrites.push({ ...entry, sessionId: item.sessionId, cwd: item.cwd, title: cached.title ?? item.title })
+      }
+    }
+    for (const sample of cached.speedSamples ?? []) {
+      if (sample.time >= logStart && sample.time < logEnd) {
+        logSamples.push({ ...sample, sessionId: item.sessionId, cwd: item.cwd, title: cached.title ?? item.title })
+      }
+    }
+  }
+  logTurns.sort((left, right) => left.time - right.time)
+  logSamples = logSamples.sort((left, right) => left.time - right.time).slice(-MAX_LOG_SAMPLES)
+  const workLog = buildWorkLog({
+    dayStart: input.dayStart,
+    days: LOG_DAYS,
+    turns: logTurns,
+    writes: logWrites,
+    commands: logCommands,
+    samples: logSamples,
+  })
+  speedRecent.sort((left, right) => right.time - left.time)
+  const todaySpeed = finalizeSpeed(speedToday)
+  todaySpeed.models = []
+  return {
+    usage: {
+      today: finalizeUsage(today),
+      total: finalizeUsage(total),
+      previousAverageCny: previousAverageCny(days),
+      pendingSessions: pending,
+      failedSessions: failed,
+      failedReasons,
+      estimated: true,
+    },
+    speedWeek: finalizeSpeed(speedWeek),
+    speedToday: todaySpeed,
+    speedRecent: speedRecent.slice(0, 6).map((sample) => ({
+      time: sample.time,
+      sessionId: sample.sessionId,
+      title: sample.title,
+      model: sample.model,
+      outputTokens: Math.round(sample.outputTokens),
+      durationMs: Math.round(sample.durationMs),
+      tokensPerSecond: rateOf(sample.outputTokens, sample.durationMs),
+    })),
+    worklog: workLog,
+  }
+}
+
+/** The session-projection registry, when this Host composes it. */
+function registryOf(ctx) {
+  try {
+    return typeof ctx.get === 'function' ? ctx.get('sessionProjections') : undefined
+  } catch {
+    return undefined
   }
 }
 
@@ -336,6 +1507,47 @@ async function foldUsage(ctx, settings, cache, sessions, input) {
 
 /** Read one Session log and fold its usage, title, tools and latest action. */
 async function foldSession(ctx, settings, cache, item, dayStart) {
+  const inspect = typeof ctx.sessionController?.inspect === 'function' ? ctx.sessionController.inspect : undefined
+  if (typeof inspect !== 'function') return
+  try {
+    const inspected = await inspect.call(ctx.sessionController, item.sessionId)
+    const inherited = Number(inspected?.inheritedEventCount ?? 0)
+    const events = Array.isArray(inspected?.events) ? inspected.events : []
+    await foldEvents(cache, item, events, 0, events.length, dayStart, settings, inherited)
+  } catch (error) {
+    cache.set(item.sessionId, {
+      updatedAt: item.updatedAt,
+      dayStart,
+      title: undefined,
+      total: emptyUsage(),
+      today: emptyUsage(),
+      days: emptyDays(),
+      speedSamples: [],
+      turns: [],
+      writes: [],
+      commands: [],
+      target: undefined,
+      tools: 0,
+      lastAction: undefined,
+      failed: true,
+      cacheError: messageOf(error),
+    })
+  }
+}
+
+/**
+ * Fold one Session's events into the legacy cache the work log reads.
+ *
+ * @param cache - per-Session cache.
+ * @param item - the Session summary row.
+ * @param events - the events to fold (the whole log, or the Session's own tail).
+ * @param from - first event index to read.
+ * @param to - one past the last event index to read.
+ * @param dayStart - the client's local midnight of the snapshot.
+ * @param settings - resolved configuration.
+ * @param inherited - inherited events are title material only.
+ */
+async function foldEvents(cache, item, events, from, to, dayStart, settings, inherited = 0) {
   let title
   let total = emptyUsage()
   let today = emptyUsage()
@@ -345,6 +1557,10 @@ async function foldSession(ctx, settings, cache, item, dayStart) {
   const turns = []
   const writes = new Map()
   const commands = new Map()
+  const tests = new Map()
+  /** Shell calls of the current turn, by call id: only structured results count as proof. */
+  let shellCalls = new Map()
+  tests.clear()
   let currentTurn = 0
   let target
   let tools = 0
@@ -353,11 +1569,8 @@ async function foldSession(ctx, settings, cache, item, dayStart) {
   let failed = false
   let cacheError
   let firstUserText
-  try {
-    const inspected = await ctx.sessionController.inspect(item.sessionId)
-    const inherited = Number(inspected?.inheritedEventCount ?? 0)
-    const events = Array.isArray(inspected?.events) ? inspected.events : []
-    for (let index = 0; index < events.length; index += 1) {
+  {
+    for (let index = Math.max(0, from); index < Math.min(events.length, to); index += 1) {
       const event = events[index]
       if (event === null || typeof event !== 'object') continue
       if (event.type === 'session/title' && typeof event.data?.title === 'string') title = event.data.title
@@ -402,11 +1615,36 @@ async function foldSession(ctx, settings, cache, item, dayStart) {
         tools += 1
         lastToolEvent = event
         recordWrite(event, item.cwd, writes)
-        recordCommand(event, commands)
+        if (recordCommand(event, commands)) {
+          const callId = typeof event.data?.callId === 'string' ? event.data.callId : undefined
+          const args = parseToolArguments(event.data?.arguments)
+          const text = clipText(firstString(args?.description)) || clipFirstLine(args?.command)
+          if (callId !== undefined && text !== '') shellCalls.set(callId, text)
+        }
+        continue
+      }
+      if (event.type === 'tool/result') {
+        const callId = event.data?.toolCallId ?? event.data?.message?.toolCallId ?? event.data?.message?.source?.callId
+        const text = typeof callId === 'string' ? shellCalls.get(callId) : undefined
+        if (text !== undefined) {
+          shellCalls.delete(callId)
+          recordTest(event, text, tests)
+        }
         continue
       }
       if (event.type === 'turn/end') {
+        // A structured result only proves something if the turn then settled normally.
         const reason = String(event.data?.reason?.kind ?? '')
+        if (tests.size > 0 && (reason === '' || reason === 'stop' || reason === 'done' || reason === 'completed')) {
+          const at = Number(event.time)
+          for (const entry of tests.values()) {
+            if (entry.structured === true && entry.verified !== true && Number.isFinite(at)) {
+              entry.verified = true
+              entry.last = Math.max(entry.last, at)
+            }
+          }
+        }
+        shellCalls = new Map()
         if (Number.isFinite(Number(event.data?.turn))) currentTurn = Number(event.data.turn)
         if (reason === 'error' || reason === 'cancelled') {
           const message = String(event.data?.reason?.error?.message ?? reason)
@@ -434,7 +1672,7 @@ async function foldSession(ctx, settings, cache, item, dayStart) {
         turns.push({ time: at, text, turn: Number.isFinite(rawTurn) ? rawTurn : currentTurn, role: 'assistant' })
         if (turns.length > MAX_LOG_TURNS) turns.shift()
       }
-      const price = priceFor(settings, typeof model === 'string' ? model : '')
+      const price = priceFor(settings, typeof model === 'string' ? model : '') ?? settings.defaultPrice
       const cost = costOf(tokens, price)
       total = addUsage(total, tokens, cost)
       if (!Number.isFinite(at)) continue
@@ -460,9 +1698,6 @@ async function foldSession(ctx, settings, cache, item, dayStart) {
       }
     }
     if (lastToolEvent !== undefined) lastAction = actionOf(lastToolEvent, item.cwd)
-  } catch (error) {
-    failed = true
-    cacheError = messageOf(error)
   }
   cache.set(item.sessionId, {
     updatedAt: item.updatedAt,
@@ -475,6 +1710,7 @@ async function foldSession(ctx, settings, cache, item, dayStart) {
     turns: turns.slice(-MAX_LOG_TURNS),
     writes: [...writes.values()].slice(-MAX_LOG_FILES),
     commands: [...commands.values()].slice(-MAX_LOG_COMMANDS),
+    tests: [...tests.values()].slice(-MAX_LOG_TESTS),
     target,
     tools,
     lastAction,
@@ -567,23 +1803,39 @@ function resolveSettings(config) {
     scanBudgetMs: integer(source.scanBudgetMs, 4000, 250, 20_000),
     balanceTtlMs: integer(source.balanceTtlMs, 60_000, 5_000, 3_600_000),
     clientVersion: typeof source.clientVersion === 'string' && source.clientVersion !== '' ? source.clientVersion : '1.0.0',
+    currency: typeof source.currency === 'string' && /^[A-Z]{3}$/.test(source.currency) ? source.currency : 'CNY',
+    // The price table version the amounts were computed with (PRD F05 priceRef).
+    priceRef: typeof prices.ref === 'string' && prices.ref !== '' ? prices.ref.slice(0, 60) : 'configured',
     defaultPrice: normalizePrice(prices.default) ?? FALLBACK_PRICE,
     modelPrices,
+    rules: {
+      stuck: source.rules?.stuck !== false,
+      toolFailures: source.rules?.toolFailures !== false,
+      costThreshold: source.rules?.costThreshold === true,
+      costSpike: source.rules?.costSpike === true,
+    },
   }
 }
 
+/** The price row of one model, or undefined when the model is unpriced. */
 function priceFor(settings, model) {
-  return settings.modelPrices.get(model) ?? settings.defaultPrice
+  if (typeof model !== 'string' || model === '') return undefined
+  return settings.modelPrices.get(model)
 }
 
 function normalizePrice(value) {
   if (value === null || typeof value !== 'object') return undefined
-  const numbers = ['input', 'output', 'cacheRead'].map((key) => {
+  const alias = { uncachedInput: 'input', input: 'input', cacheReadInput: 'cacheRead', cacheRead: 'cacheRead', cacheWriteInput: 'cacheWrite', cacheWrite: 'cacheWrite', output: 'output' }
+  const row = { input: 0, cacheRead: 0, cacheWrite: Number(value.cacheWrite ?? value.cacheWriteInput ?? value.cacheRead ?? value.cacheReadInput), output: 0 }
+  let present = false
+  for (const [key, target] of Object.entries(alias)) {
+    if (value[key] === undefined) continue
     const number = Number(value[key])
-    return Number.isFinite(number) && number >= 0 ? number : undefined
-  })
-  if (numbers.some((number) => number === undefined)) return undefined
-  return { input: numbers[0], output: numbers[1], cacheRead: numbers[2] }
+    if (!Number.isFinite(number) || number < 0) return undefined
+    row[target] = number
+    present = true
+  }
+  return present ? row : undefined
 }
 
 function integer(value, fallback, min, max) {
@@ -602,12 +1854,6 @@ function normalizeLocale(value) {
   if (typeof value !== 'string') return 'en'
   const trimmed = value.trim().slice(0, 32)
   return trimmed === '' ? 'en' : trimmed
-}
-
-/** Start of the client's local calendar day, in epoch milliseconds. */
-function localDayStart(now, tzOffsetSeconds) {
-  const offsetMs = tzOffsetSeconds * 1000
-  return Math.floor((now + offsetMs) / DAY_MS) * DAY_MS - offsetMs
 }
 
 function emptyUsage() {
@@ -1083,6 +2329,73 @@ function recordCommand(event, commands) {
   return true
 }
 
+/**
+ * A test command's outcome. The result is structured only when the tool reported an
+ * exit code or explicit pass/fail counts; a bare text output stays "unverified", and
+ * only a structured result on a normally ended turn becomes "verified" (PRD F08).
+ */
+function recordTest(event, text, tests) {
+  const data = event.data
+  const message = data?.message
+  if (message === null || typeof message !== 'object') return false
+  const at = Number(event.time)
+  if (!Number.isFinite(at)) return false
+  const output = resultTextOf(message)
+  const exitCode = exitCodeOf(data, message, output)
+  const counts = countsOf(output)
+  // Commands without any result shape are not evidence; a test command that produced
+  // a pass/fail summary is, even when the tool exposed no counts.
+  const structured = exitCode !== undefined || counts.passed !== undefined || counts.failed !== undefined
+  if (!structured && counts.total === undefined) return false
+  const key = text
+  const entry = tests.get(key) ?? { text, count: 0, first: at, last: at, exitCode: undefined, passed: undefined, failed: undefined, structured: false, verified: false, isError: false }
+  entry.count += 1
+  entry.first = Math.min(entry.first, at)
+  entry.last = Math.max(entry.last, at)
+  if (exitCode !== undefined) entry.exitCode = exitCode
+  if (counts.passed !== undefined) entry.passed = counts.passed
+  if (counts.failed !== undefined) entry.failed = counts.failed
+  entry.isError = message.isError === true || (exitCode !== undefined && exitCode !== 0)
+  entry.structured = entry.structured || structured
+  tests.set(key, entry)
+  return true
+}
+
+/** Text of a tool result: string items of its content. */
+function resultTextOf(message) {
+  const content = message?.content
+  if (typeof content === 'string') return content.slice(0, 4000)
+  if (!Array.isArray(content)) return ''
+  return content
+    .map((item) => (typeof item === 'string' ? item : typeof item?.text === 'string' ? item.text : ''))
+    .join('\n')
+    .slice(0, 4000)
+}
+
+/** Exit status as reported: data.exitCode, message.exitCode, or an "exit code N" line. */
+function exitCodeOf(data, message, output) {
+  for (const value of [data?.exitCode, data?.status, message?.exitCode, message?.metadata?.exitCode]) {
+    const number = Number(value)
+    if (Number.isFinite(number)) return Math.round(number)
+  }
+  const match = /exit(?:\s+code)?\s*[:=]?\s*(\d{1,3})\b/iu.exec(output)
+  return match === null ? undefined : Number(match[1])
+}
+
+/** Pass/fail/total counts from common test reporters ("12 passed", "3 failed", "Tests  12 passed"). */
+function countsOf(output) {
+  if (output === '') return {}
+  const number = (pattern) => {
+    const match = pattern.exec(output)
+    return match === null ? undefined : Number(match[1])
+  }
+  return {
+    passed: number(/(\d[\d,]*)\s*(?:passed|passing|通过)/iu) ?? number(/(?:pass(?:ed)?|passing)\D{0,4}(\d[\d,]*)/iu),
+    failed: number(/(\d[\d,]*)\s*(?:failed|failing|失败)/iu) ?? number(/(?:fail(?:ed)?|failing)\D{0,4}(\d[\d,]*)/iu),
+    total: number(/(?:tests?|用例|总计)\D{0,4}(\d[\d,]*)/iu),
+  }
+}
+
 /** Per-day view of a write entry: same file, both read and write, grouped. */
 function writeRows(writes, dayStart, days) {
   const rows = new Map()
@@ -1254,6 +2567,112 @@ function pruneSummaryStore(store) {
   if (store.entries.size <= SUMMARY_STORE_LIMIT) return
   const ordered = [...store.entries.keys()].sort((left, right) => Number(right) - Number(left))
   for (const key of ordered.slice(SUMMARY_STORE_LIMIT)) store.entries.delete(key)
+}
+
+const ALERT_STORE_VERSION = 1
+const ALERT_STORE_LIMIT = 300
+
+/**
+ * Load the persisted attention acknowledgements: a first-seen trigger time per
+ * key, plus the last acknowledgement or snooze. Loading is non-fatal — without a
+ * store the panel still lists the rule hits, only the marks are lost on exit.
+ *
+ * @returns `{ fs, path, entries: Map<key, pointer> }` or undefined.
+ */
+async function openAlertStore() {
+  try {
+    const fs = await import('node:fs/promises')
+    const path = await import('node:path')
+    const os = await import('node:os')
+    const home =
+      typeof process.env.DSH_HOME === 'string' && process.env.DSH_HOME !== ''
+        ? process.env.DSH_HOME
+        : path.join(os.homedir(), '.dsh')
+    const file = path.join(home, 'workbench', 'alerts.json')
+    const entries = new Map()
+    try {
+      const parsed = JSON.parse(await fs.readFile(file, 'utf8'))
+      if (parsed !== null && typeof parsed === 'object' && parsed.version === ALERT_STORE_VERSION) {
+        for (const [key, value] of Object.entries(parsed.entries ?? {})) {
+          if (value !== null && typeof value === 'object') entries.set(key, value)
+        }
+      }
+    } catch {
+      // A missing or corrupt store starts empty.
+    }
+    return { fs, file, entries }
+  } catch {
+    return undefined
+  }
+}
+
+/** Serialized atomic save, shared by every mutation of the alert store. */
+let alertSaveChain = Promise.resolve()
+
+function saveAlertStore(store) {
+  if (store === undefined) return Promise.resolve()
+  const job = async () => {
+    try {
+      const { fs, file } = store
+      const path = await import('node:path')
+      const trimmed = [...store.entries.entries()]
+        .sort((left, right) => (Number(right[1]?.triggeredAt) || 0) - (Number(left[1]?.triggeredAt) || 0))
+        .slice(0, ALERT_STORE_LIMIT)
+      store.entries = new Map(trimmed)
+      await fs.mkdir(path.dirname(file), { recursive: true })
+      const body = JSON.stringify({
+        version: ALERT_STORE_VERSION,
+        entries: Object.fromEntries(store.entries),
+      })
+      const temporary = `${file}.${process.pid}.${Date.now()}.tmp`
+      await fs.writeFile(temporary, body, 'utf8')
+      await fs.rename(temporary, file)
+    } catch {
+      // Persistence is best effort.
+    }
+  }
+  alertSaveChain = alertSaveChain.then(job, job)
+  return alertSaveChain
+}
+
+/**
+ * POST /api/workbench/alerts — acknowledge or snooze one attention item.
+ *
+ * The body is `{ key, action: 'ack'|'snooze'|'solve', snoozedUntil?, triggeredAt? }`.
+ * Acknowledgement is idempotent by key: replaying the same call rewrites the same
+ * pointer. It only marks the local item; handling the wait itself stays in the
+ * original Session, which is what the item's button opens.
+ */
+async function updateAlert(ctx, request, alertStorePromise) {
+  // The clock is sampled before the first await, like the snapshot's.
+  const now = Date.now()
+  let body
+  try {
+    body = JSON.parse(await request.text())
+  } catch {
+    return jsonResponse(400, { code: 'INVALID_BODY', error: 'invalid JSON body' })
+  }
+  const key = typeof body?.key === 'string' && body.key !== '' ? body.key.slice(0, 400) : undefined
+  const action = body?.action
+  if (key === undefined || !['ack', 'snooze', 'solve'].includes(action)) {
+    return jsonResponse(400, { code: 'INVALID_BODY', error: 'key and action are required' })
+  }
+  const store = await alertStorePromise
+  if (store === undefined) return jsonResponse(503, { code: 'TEMPORARY', retryable: true, error: 'alert store unavailable' })
+  const previous = store.entries.get(key) ?? {}
+  const triggeredAt = Number(body?.triggeredAt) || Number(previous.triggeredAt) || now
+  const stateAt = typeof body?.state === 'string' ? body.state : previous.stateAt
+  const pointer = { ...previous, triggeredAt, stateAt }
+  if (action === 'ack') pointer.acknowledgedAt = now
+  if (action === 'solve') pointer.solvedAt = now
+  if (action === 'snooze') {
+    const until = Number(body?.snoozedUntil)
+    const minutes = Number(body?.minutes)
+    pointer.snoozedUntil = Number.isFinite(until) && until > now ? until : now + Math.max(1, Math.min(24 * 60, Number(minutes) || 30)) * 60_000
+  }
+  store.entries.set(key, pointer)
+  await saveAlertStore(store)
+  return jsonResponse(200, { key, pointer })
 }
 
 /**

@@ -11,9 +11,10 @@
         scanBudgetMs: 4000
         # 钱包查询频率上限（毫秒）。
         balanceTtlMs: 60000
-        # 本地金额估算用的单价：元 / 每 100 万 Token。
-        # 默认值只是示例，请按你实际使用的模型定价修改。
+        # 本地估算用的币种与价目版本。金额是估算，不是平台账单。
+        currency: USD
         prices:
+          ref: configured
           default:
             input: 2
             output: 8
@@ -27,3 +28,10 @@
               input: 4
               output: 16
               cacheRead: 1
+        # P1 推断类关注项：可能卡住 / 工具连续失败默认开；
+        # 费用阈值与费用突增默认关，待基线数据验证后开启。
+        rules:
+          stuck: true
+          toolFailures: true
+          costThreshold: false
+          costSpike: false

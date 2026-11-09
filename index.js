@@ -47,8 +47,15 @@ const SUMMARY_STORE_LIMIT = 40
 const TOKENS_PER_UNIT = 1_000_000
 const FALLBACK_PRICE = { input: 2, output: 8, cacheRead: 0.5 }
 
-/** Hard requirements: the authenticated Fetch transport and the Session catalog. Soft: `sessions`. */
-export const inject = ['connection', 'sessionController']
+/**
+ * Hard requirement: the authenticated Fetch transport.
+ *
+ * The Session catalog is resolved at call time from the services this DSH actually
+ * provides — `sessionQuery` (listSessions/readSession) over `sessions` — because a
+ * declared `inject` on a service the Host does not have would stop this plugin from
+ * mounting at all, which is exactly how the panel once rendered nothing.
+ */
+export const inject = ['connection']
 
 /**
  * Install the snapshot route.
@@ -179,7 +186,9 @@ async function snapshot(ctx, settings, usageCache, walletCache, alertStore, sess
     const body = await buildSnapshot(ctx, settings, usageCache, walletCache, input, generatedAt, alertStore, sessionStore)
     return jsonResponse(200, body)
   } catch (error) {
-    return jsonResponse(500, { error: messageOf(error) })
+    // A failed read must still answer a well-formed snapshot: the panel then shows its
+    // own empty and error states instead of a blank page or a failed mount.
+    return jsonResponse(200, emptySnapshot(generatedAt, input, error))
   }
 }
 
@@ -202,8 +211,8 @@ async function snapshot(ctx, settings, usageCache, walletCache, alertStore, sess
  * @returns the snapshot body.
  */
 async function buildSnapshot(ctx, settings, usageCache, walletBox, input, generatedAt, alertStore, sessionStore) {
-  const listed = await ctx.sessionController.list({}, input.signal)
-  const sessions = Array.isArray(listed?.items) ? listed.items.filter(isSummary) : []
+  const catalog = await listSessions(ctx, input.signal)
+  const sessions = catalog.items.filter(isSummary)
   const usable = sessions.filter((item) => item.blank !== true).sort(byActivity)
   // A child Session never appears on its own: its errors belong to itself, and the
   // root Session's state is decided only by its own turns (PRD F02).
@@ -414,8 +423,8 @@ async function reportRoute(ctx, settings, usageCache, sessionStore, taskStore, p
   const input = { now: generatedAt, dayStart: today, tzOffsetSeconds, locale, signal: request.signal }
   const dayEnd = day + DAY_MS
   try {
-    const listed = await ctx.sessionController.list({}, request.signal)
-    const sessions = Array.isArray(listed?.items) ? listed.items.filter(isSummary) : []
+    const catalog = await listSessions(ctx, request.signal)
+    const sessions = catalog.items.filter(isSummary)
     const primary = sessions.filter((item) => item.blank !== true && item.origin !== 'subagent')
     const ordered = [...primary.filter((item) => item.running === true), ...primary.filter((item) => item.running !== true)]
     const processed = await processSessions(ctx, settings, ordered, input, sessionStore, usageCache)
@@ -601,6 +610,205 @@ function titleOf(view, summaryTitles) {
   return ''
 }
 
+/**
+ * The Session catalog, read through the services this DSH actually provides.
+ *
+ * `sessionQuery.listSessions(signal)` returns cloned `{ header, live, persisted }`
+ * records newest-first; `sessions.list()` returns live `Session` objects. This
+ * adapter normalizes both into the flat summary the rest of the Host reads, and it
+ * never throws: a missing service yields an empty list with a capability note, so
+ * the panel shows "no data" instead of failing to mount.
+ *
+ * @returns `{ items, source }` where `source` is `'sessionQuery' | 'sessions' | 'none'`.
+ */
+async function listSessions(ctx, signal) {
+  const live = liveAgentsOf(ctx)
+  const query = serviceOf(ctx, 'sessionQuery')
+  if (typeof query?.listSessions === 'function') {
+    try {
+      const records = await query.listSessions(signal)
+      const items = (Array.isArray(records) ? records : [])
+        .map((record) => ({
+          ...summaryOf(record?.header ?? record, record?.live === true),
+          // Newer catalogs expose the wait kind on the record itself.
+          pendingInteraction: typeof record?.pendingInteraction === 'string' ? record.pendingInteraction : undefined,
+        }))
+        .map((item) => withLive(item, live))
+        .filter((item) => item.sessionId !== '')
+      return { items, source: 'sessionQuery' }
+    } catch (error) {
+      if (signal?.aborted === true) throw error
+      // A broken persistence backend must not empty a live-only corpus.
+    }
+  }
+  const store = serviceOf(ctx, 'sessions')
+  if (typeof store?.list === 'function') {
+    try {
+      const live = store.list()
+      const items = (Array.isArray(live) ? live : [])
+        .map((session) => summaryOf(session?.header ?? session, true))
+        .map((item) => withLive(item, live))
+        .filter((item) => item.sessionId !== '')
+      return { items, source: 'sessions' }
+    } catch {
+      return { items: [], source: 'none' }
+    }
+  }
+  return { items: [], source: 'none' }
+}
+
+/**
+ * Live agents by Session id (`ctx.agents`): an agent is registered for exactly the
+ * Sessions the Host is running, and `agent/status` carries running/idle.
+ *
+ * @returns `Map<sessionId, { running, pendingInteraction }>`
+ */
+function liveAgentsOf(ctx) {
+  const live = new Map()
+  const registry = serviceOf(ctx, 'agents')
+  if (typeof registry?.list !== 'function') return live
+  let agents = []
+  try {
+    agents = registry.list()
+  } catch {
+    return live
+  }
+  for (const agent of Array.isArray(agents) ? agents : []) {
+    const id = agent?.id ?? agent?.session?.id
+    if (typeof id !== 'string') continue
+    // `status` is the documented agent/status value; absence of it still means a live agent.
+    const status = agent?.status ?? agent?.state
+    const running = status === undefined || status === 'running'
+    live.set(id, { running, pendingInteraction: agent?.pendingInteraction })
+  }
+  return live
+}
+
+/** Fold live-agent state onto one summary without inventing a running Session. */
+function withLive(item, live) {
+  const entry = live.get(item.sessionId)
+  if (entry === undefined) return item
+  return {
+    ...item,
+    live: true,
+    running: entry.running === true,
+    pendingInteraction:
+      typeof entry.pendingInteraction === 'string'
+        ? entry.pendingInteraction
+        : typeof item.pendingInteraction === 'string'
+          ? item.pendingInteraction
+          : undefined,
+  }
+}
+
+/** `ctx.get(name)`, guarded: a Host without that service answers undefined. */
+function serviceOf(ctx, name) {
+  try {
+    return typeof ctx.get === 'function' ? ctx.get(name) : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * One flat Session summary from a `SessionHeader` (or a live `Session`).
+ *
+ * The header carries `id`, `cwd`, `createdAt`, `parentSession`, `origin` and
+ * `delegationDepth`; running state and projection values are read separately.
+ */
+function summaryOf(source, live) {
+  const header = source !== null && typeof source === 'object' ? source : {}
+  const id = typeof header.id === 'string' ? header.id : typeof header.sessionId === 'string' ? header.sessionId : ''
+  const parent = header.parentSession ?? header.parentId
+  return {
+    sessionId: id,
+    cwd: typeof header.cwd === 'string' ? header.cwd : undefined,
+    title: typeof header.title === 'string' ? header.title : undefined,
+    createdAt: Number(header.createdAt) || undefined,
+    parentId: typeof parent === 'string' ? parent : parent?.id,
+    origin: typeof header.origin === 'string' ? header.origin : 'user',
+    live,
+    running: false,
+    blank: false,
+    // Headers carry no `updatedAt`; `createdAt` is the only clock a header proves, and a
+    // zero here would read as "silently idle since epoch" downstream.
+    updatedAt: Number(header.updatedAt) || Number(header.createdAt) || 0,
+  }
+}
+
+/** The full event log of one Session, through `sessionQuery` or the live store. */
+async function readSessionEvents(ctx, sessionId, signal) {
+  const query = serviceOf(ctx, 'sessionQuery')
+  if (typeof query?.readSession === 'function') {
+    try {
+      const loaded = await query.readSession(sessionId)
+      const events = Array.isArray(loaded?.events) ? loaded.events : []
+      return { events, inherited: Number(loaded?.session?.seedLength ?? 0) }
+    } catch {
+      // Fall through to the live store.
+    }
+  }
+  if (typeof query?.listEvents === 'function') {
+    try {
+      const events = await query.listEvents(sessionId)
+      const list = (Array.isArray(events) ? events : []).map((entry) => entry?.event ?? entry).filter((entry) => entry !== undefined)
+      if (list.length > 0) return { events: list, inherited: 0 }
+    } catch {
+      // Fall through to the live store.
+    }
+  }
+  const store = serviceOf(ctx, 'sessions')
+  const session = typeof store?.get === 'function' ? store.get(sessionId) : undefined
+  return { events: Array.isArray(session?.events) ? session.events : [], inherited: Number(session?.header?.seedLength ?? 0) }
+}
+
+/**
+ * A well-formed snapshot with no data, plus the reason.
+ *
+ * This is what the panel renders when the Host cannot read the catalog or a fold
+ * throws: every module degrades on its own, and the panel can say why.
+ */
+function emptySnapshot(generatedAt, input, error) {
+  const tz = Number(input?.tzOffsetSeconds) || 0
+  const days = Array.from({ length: DAY_WINDOW }, (_, index) => (Number(input?.dayStart) || generatedAt) - index * DAY_MS)
+  return {
+    generatedAt,
+    account: { status: 'unavailable' },
+    usage: { total: emptyUsage(), previousAverageCny: 0, today: emptyUsage() },
+    speed: { current: undefined, models: [], samples: 0, week: emptySpeed(), today: emptySpeed(), recent: [] },
+    worklog: { days: [] },
+    capabilities: { live: 'poll', pollMs: 15000, catalog: 'unavailable', reason: messageOf(error) },
+    freshness: { at: generatedAt, tzOffset: tz, state: 'fresh' },
+    overview: {
+      todayStart: days[0],
+      amount: 0,
+      amountPartial: 0,
+      currency: 'CNY',
+      coverage: 0,
+      unpricedTokens: 0,
+      running: 0,
+      runningByState: 0,
+      failed: 0,
+      ended: 0,
+      attention: 0,
+      attentionByType: {},
+      speedP50: undefined,
+      speedSamples: 0,
+      models: 0,
+      scanned: 0,
+      sessions: 0,
+    },
+    states: { total: 0, running: 0, runningByState: 0, failed: 0, ended: 0, cancelled: 0, unknown: 0, counts: {} },
+    running: [],
+    recent: [],
+    alerts: [],
+    search: { rows: [], total: 0 },
+    tasks_local: [],
+    ledger: { today: undefined, projects: [], trend: [], trendMax: 0, sessions: [], daySessions: [], currency: 'CNY', coverage: 0, days },
+    tasks: { total: 0, running: 0, recent: 0 },
+  }
+}
+
 /** The local task list, whatever the store holds. */
 async function storeTasks(store) {
   const tiles = store === undefined ? undefined : store.tasks
@@ -635,8 +843,8 @@ async function searchRoute(ctx, settings, usageCache, sessionStore, taskStore, r
   const dayStart = localDayStart(generatedAt, tzOffsetSeconds)
   const input = { now: generatedAt, dayStart, tzOffsetSeconds, locale: 'zh', signal: request.signal }
   try {
-    const listed = await ctx.sessionController.list({}, request.signal)
-    const sessions = Array.isArray(listed?.items) ? listed.items.filter(isSummary) : []
+    const catalog = await listSessions(ctx, request.signal)
+    const sessions = catalog.items.filter(isSummary)
     const primary = sessions.filter((item) => item.blank !== true && item.origin !== 'subagent')
     const ordered = [
       ...primary.filter((item) => item.running === true),
@@ -731,8 +939,8 @@ async function requestRoute(ctx, settings, sessionStore, request) {
     return jsonResponse(400, { code: 'INVALID_BODY', error: 'sessionId and a day are required' })
   }
   try {
-    const listed = await ctx.sessionController.list({}, request.signal)
-    const items = Array.isArray(listed?.items) ? listed.items.filter(isSummary) : []
+    const catalog = await listSessions(ctx, request.signal)
+    const items = catalog.items.filter(isSummary)
     const item = items.find((entry) => entry.sessionId === sessionId)
     if (item === undefined || item.blank === true) return jsonResponse(404, { code: 'NOT_FOUND', error: 'unknown Session' })
     const live = sessionStore()
@@ -741,8 +949,8 @@ async function requestRoute(ctx, settings, sessionStore, request) {
     // The committed log completes the live one when both exist.
     let events = liveEvents
     if (liveEvents.length === 0) {
-      const inspected = await ctx.sessionController.inspect?.(sessionId, request.signal)
-      events = Array.isArray(inspected?.events) ? inspected.events : []
+      const loaded = await readSessionEvents(ctx, sessionId, request.signal)
+      events = loaded.events
     }
     const projections = registryOf(ctx)
     let values = {}
@@ -1040,15 +1248,47 @@ async function processSessions(ctx, settings, ordered, input, sessionStore, lega
   let scanned = 0
   let tokensAvailable = true
 
-  const read = (item) => {
+  /**
+   * Sources for one Session: live events and projection values when it is live, and
+   * its committed log otherwise.
+   *
+   * A Session that is not live right now — every finished one, and every Session
+   * after a restart — has no entry in `ctx.sessions`, so reading only that registry
+   * made every non-running Session invisible: no state, no amount, no history. The
+   * persisted log answers those, and the legacy fold already carries its projections.
+   */
+  const read = async (item) => {
     const session = typeof live?.get === 'function' ? live.get(item.sessionId) : undefined
-    const events = Array.isArray(session?.events) ? session.events : []
+    let events = Array.isArray(session?.events) ? session.events : []
     let values = {}
     if (projections !== undefined && session !== undefined) {
       try {
         values = projections.snapshot(session)?.values ?? {}
       } catch {
         values = {}
+      }
+    }
+    if (events.length === 0) {
+      const loaded = await readSessionEvents(ctx, item.sessionId, input.signal)
+      if (events.length === 0) events = loaded.events
+    }
+    if (values.tokenUsage === undefined) {
+      // `sessionProjections` only snapshots live Sessions; a persisted one is described
+      // by the legacy fold, which already read the same log and summed the same buckets.
+      const folded = legacyCache.get(item.sessionId)
+      if (folded !== undefined && folded.failed !== true) {
+        values = {
+          ...values,
+          tokenUsage: {
+            totals: {
+              uncachedInputTokens: Number(folded.total?.inputTokens) || 0,
+              cacheReadTokens: Number(folded.total?.cacheReadTokens) || 0,
+              cacheWriteTokens: 0,
+              outputTokens: Number(folded.total?.outputTokens) || 0,
+            },
+          },
+          modelSelection: folded.target?.model === undefined ? undefined : { lastUsed: { provider: folded.target?.provider, model: folded.target.model } },
+        }
       }
     }
     return { events, values }
@@ -1061,7 +1301,7 @@ async function processSessions(ctx, settings, ordered, input, sessionStore, lega
     if (fresh === undefined || fresh.failed === true || fresh.updatedAt !== item.updatedAt) {
       await foldSession(ctx, settings, legacyCache, item, input.dayStart)
     }
-    const sources = read(item)
+    const sources = await read(item)
     const view = projectSession(sources.events, 0, {
       running: item.running === true,
       updatedAt: Number(item.updatedAt) || 0,
@@ -1507,12 +1747,10 @@ async function foldUsage(ctx, settings, cache, sessions, input) {
 
 /** Read one Session log and fold its usage, title, tools and latest action. */
 async function foldSession(ctx, settings, cache, item, dayStart) {
-  const inspect = typeof ctx.sessionController?.inspect === 'function' ? ctx.sessionController.inspect : undefined
-  if (typeof inspect !== 'function') return
   try {
-    const inspected = await inspect.call(ctx.sessionController, item.sessionId)
-    const inherited = Number(inspected?.inheritedEventCount ?? 0)
-    const events = Array.isArray(inspected?.events) ? inspected.events : []
+    const loaded = await readSessionEvents(ctx, item.sessionId)
+    const inherited = Number(loaded.inherited ?? 0)
+    const events = Array.isArray(loaded.events) ? loaded.events : []
     await foldEvents(cache, item, events, 0, events.length, dayStart, settings, inherited)
   } catch (error) {
     cache.set(item.sessionId, {
@@ -2700,8 +2938,8 @@ async function summarizeDay(ctx, settings, usageCache, summaryCache, summaryStor
   }
 
   try {
-    const listed = await ctx.sessionController.list({}, request.signal)
-    const sessions = Array.isArray(listed?.items) ? listed.items.filter(isSummary) : []
+    const catalog = await listSessions(ctx, request.signal)
+    const sessions = catalog.items.filter(isSummary)
     const folded = await foldUsage(ctx, settings, usageCache, sessions, {
       dayStart: todayStart,
       tzOffsetSeconds,

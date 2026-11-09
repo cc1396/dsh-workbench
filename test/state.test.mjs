@@ -340,7 +340,8 @@ test('pricing: a Session that crossed midnight lands tokens on both days', async
   )
   const body = await status(routes, { now: Date.now() })
   const yesterday = body.ledger.trend.find((point) => point.day === TODAY - 86_400_000)
-  const today = body.ledger.trend[0]
+  const today = body.ledger.trend.find((point) => point.day === TODAY)
+  assert.ok(yesterday !== undefined && today !== undefined, 'both days are inside the trend window')
   // Yesterday: 1000 input + 100 output = 1000 + 1000 = 2000 micro-units.
   assert.ok(Math.abs(yesterday.amount - (1000 * 1 + 100 * 10) / 1_000_000) < 1e-9, JSON.stringify(yesterday))
   // Today keeps the remainder exactly: 3000 input + 300 output.

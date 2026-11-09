@@ -359,6 +359,13 @@ function stateOf({ current, running: summaryRunning, updatedAt, now, pending, ho
   }
 
   if (waiting) return build('waiting', idleFor < IDLE_GRACE_MS ? 'live' : 'idle', true)
+  // The Host runs the Session but its log has not committed a turn yet (chunked logs
+  // appear only once flushed). A live Agent outranks an empty log: report it running
+  // rather than claiming it ended, and keep the idle clock for the stall rule.
+  if (summaryRunning && !current.open) {
+    const stalled = idleFor >= STUCK_AFTER_MS && !backingOff
+    return build(stalled ? 'stuck' : 'running', stalled ? 'stale' : idleFor < IDLE_GRACE_MS ? 'live' : 'idle', true)
+  }
   if (current.open && active) {
     const stalled = idleFor >= STUCK_AFTER_MS && !backingOff
     return build(stalled ? 'stuck' : 'running', stalled ? 'stale' : idleFor < IDLE_GRACE_MS ? 'live' : 'idle', true)

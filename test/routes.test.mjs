@@ -137,3 +137,49 @@ test('F04: a project opts into read-only Git evidence explicitly', async () => {
   const listed = await call(routes, '/api/workbench/tasks')
   assert.equal(listed.status, 200)
 })
+
+test('the panel mounts on the real Host surface (no sessionController)', async () => {
+  // The defect this guards: a declared `inject` on `sessionController` — a service no
+  // installed DSH provides — left the plugin unable to mount, and every panel empty.
+  isolateHome()
+  const { apply } = await import('../index.js')
+  const registered = []
+  const ctx = {
+    effect: (fn) => fn(),
+    get: () => undefined,
+    connection: { fetch: { register: (route) => registered.push(route.path) } },
+  }
+  apply(ctx, {})
+  assert.ok(registered.includes('/api/workbench/status'))
+  assert.equal(JSON.stringify(ctx).includes('sessionController'), false)
+})
+
+test('a catalog whose records are SessionHeaders still yields states, amounts and history', async () => {
+  isolateHome()
+  const { apply } = await import('../index.js')
+  const now = Date.now()
+  const id = 'session-live'
+  const header = { version: 4, id, cwd: '/work/demo', createdAt: now - 3600_000, origin: 'user', seedLength: 0 }
+  const log = [
+    { type: 'session/title', time: now - 600_000, data: { title: '真实形状' } },
+    { type: 'turn/start', time: now - 300_000, data: { turn: 1 } },
+    { type: 'assistant/message', time: now - 120_000, data: { turn: 1, step: 1, usage: { inputTokens: 1000, outputTokens: 100 }, message: { source: { provider: 'p', model: 'real-model' } } } },
+    { type: 'turn/end', time: now - 60_000, data: { turn: 1, reason: { kind: 'stop' } } },
+  ]
+  const routes = []
+  const ctx = {
+    effect: (fn) => fn(),
+    get: (name) => (name === 'sessionQuery'
+      ? { listSessions: async () => [{ header, live: false, persisted: true }], readSession: async () => ({ session: header, events: log }) }
+      : undefined),
+    connection: { fetch: { register: (route) => routes.push(route) } },
+  }
+  apply(ctx, { prices: { models: { 'real-model': { input: 1, output: 10 } } } })
+  const body = await status(routes, { now })
+  // Nothing about this Session is live: it must still be classified, priced and listed.
+  assert.equal(body.recent.length, 1)
+  assert.equal(body.recent[0].title, '真实形状')
+  assert.equal(body.overview.sessions, 1)
+  assert.ok(body.overview.amount > 0, JSON.stringify(body.overview))
+  assert.equal(body.search.rows.length, 1)
+})

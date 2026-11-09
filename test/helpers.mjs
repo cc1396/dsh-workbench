@@ -70,18 +70,46 @@ export function makeHarness({ sessions, llm, account, settings } = {}) {
         : name === 'deepseekAccount'
           ? account
           : name === 'sessions'
-            ? { get: (id) => live.get(id), list: () => [...live.values()] }
+            ? { get: (id) => live.get(id), list: () => Array.from(live.values()) }
             : name === 'sessionProjections'
               ? { snapshot: (session) => ({ asOfSeq: 0, values: session?.projectionValues ?? {} }) }
               : undefined,
     connection: { fetch: { register: (route) => routes.push(route) } },
-    sessionController: {
-      list: async () => ({ items }),
-      // The catalog's inspect returns the committed log; a Session that never wrote
-      // one is absent, not a Session with an empty log.
-      inspect: async (sessionId) => (inspectEvents.has(sessionId) ? { inheritedEventCount: 0, events: inspectEvents.get(sessionId) } : undefined),
+    // The real catalog service: `sessionQuery.listSessions(signal?)` returns cloned
+    // `{ header, live, persisted }` records, and `readSession(id)` returns its log.
+    sessionQuery: {
+      listSessions: async (_signal) => items.map((item) => ({
+        header: {
+          version: 4,
+          id: item.sessionId,
+          cwd: item.cwd,
+          createdAt: item.createdAt ?? item.updatedAt,
+          parentSession: item.parentId,
+          origin: item.origin,
+          seedLength: 0,
+        },
+        live: item.running === true,
+        persisted: true,
+        // Test-only: the projection values and running bit the real Host reads elsewhere.
+        running: item.running === true,
+        pendingInteraction: item.pendingInteraction,
+        updatedAt: item.updatedAt,
+      })),
+      readSession: async (sessionId) => {
+        if (!inspectEvents.has(sessionId)) throw new Error('SESSION_QUERY_NOT_FOUND')
+        return { session: { id: sessionId, seedLength: 0 }, events: inspectEvents.get(sessionId) }
+      },
+    },
+    // Live agents carry the running state of a Session in the real Host. The wait kind
+    // is a client-side SessionSummary field there, so the harness publishes it on the
+    // record too and the adapter reads `pendingInteraction` from either place.
+    agents: {
+      list: () => items.filter((item) => item.running === true).map((item) => ({ id: item.sessionId, status: 'running', pendingInteraction: item.pendingInteraction })),
     },
   }
+  // The catalog above is a service on `ctx`; `get` must resolve it by name.
+  const get = ctx.get
+  ctx.get = (name) => (name === 'sessionQuery' || name === 'agents' ? ctx[name] : get(name))
   apply(ctx, settings ?? {})
   return { routes }
 }

@@ -61,7 +61,8 @@ Git 与测试证据默认关闭，在「项目工作进展 → 某项目 → 启
 ## 开发
 
 ```bash
-node --test test/*.test.mjs                 # 36 个单测：状态、去重、计价、搜索、日报、路由
+node --test test/*.test.mjs                 # 40 个单测：状态、去重、计价、搜索、日报、路由、客户端回归
+node qa/interact.mjs                        # 浏览器交互验证：确认、编辑、⌘K、焦点、320px 溢出
 node qa/mocksnapshot.mjs > qa/scenarios/home.json
 node qa/shot.mjs --snap home --out qa/out/home.png --width 1440 --theme light
 node qa/shot-cdp.mjs --snap home --out qa/out/360.png --width 360 --theme light

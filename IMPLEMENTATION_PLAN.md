@@ -155,3 +155,52 @@
 - 同一 `file://` 文件只改 hash **不会**重新加载，`qa/interact.mjs` 每次切换视图前先导航到 `about:blank`；否则断言会跑在上一页上。
 
 最终状态：`node --test` **40/40**；`node qa/interact.mjs` **17/17**（确认落库与计数、编辑焦点与保存、⌘K 打开/筛选/方向键/Esc、320px 无横向溢出）。
+
+---
+
+## 6. 根因修复：面板全空（2026-11-09）
+
+现象：所有面板（概览、消耗归因、项目、日报、关注）一个数据都没有，重启 DSH 后依旧。
+诊断结论：**数据在磁盘上（7 个 Session 日志、50 份投影），但 Host 读不到它们**，快照本身是空的。
+
+### 根因（三处叠加，都是"服务名凭证"问题）
+
+1. **`inject` 声明了不存在的服务**。`inject: ['connection', 'sessionController']`，而本机 DSH
+   （CLI `0.1.0-rc.6`）的真实服务是 `ctx.sessionQuery` / `ctx.sessions` / `ctx.agents` /
+   `ctx.sessionProjections`，**没有任何包注册 `sessionController`**。这个服务名从 1.3.1 基线就存在，
+   我一直照抄而没有向宿主核实——这是本次事故的根。现在 `inject` 只声明真实存在的 `connection`，
+   其余服务在调用时按名解析，缺失即降级为空数据而不是挂载失败。
+
+2. **读取用了错误的签名**。`sessionController.list({}, signal)` 是虚构的；真实契约是
+   `sessionQuery.listSessions(signal)` → `[{ header:{id,cwd,createdAt}, live, persisted }]`，
+   `readSession(id)` → `{ session, events }`。新增 `listSessions` / `readSessionEvents` 适配层，
+   同时兼容 `sessions.list()` / `sessions.get()`。
+
+3. **非 live 会话完全不可见**。`read()` 只读 `ctx.sessions.get()`，而 `ctx.sessions` 只持有**当前活着**的
+   Session；所有已结束的、以及重启后的全部会话都不在里面 → 无事件、无投影 → 无法定性、无金额、无历史。
+   现在 `read()` 在 live 缺失时回退到持久化日志（`readSession`），投影值缺失时回退到 fold 已读到的
+   `total` 用量与模型路由。
+
+### 顺带修复
+
+- **运行中但日志未落盘的会话被判成 `ended`**。DSH 的 `session.v4.jsonl.zstd` 是分块追加，新会话在
+  flush 前没有 committed 事件；`projectSession([])` 因此判成"已结束"。现在 live Agent 的存在优先于空日志，
+  显示「执行中」（静默超过阈值仍进 `stuck`）。
+- **`updatedAt` 为 0**：真实 `SessionHeader` 没有 `updatedAt`，退化为 0 会让所有会话按"远古时间"排序。
+  改为回退 `createdAt`。
+- **快照失败不再返回 500**：路由捕获异常后返回结构完整的空快照 + 原因，面板显示自己的空态而不是白屏。
+
+### 验证
+
+- `node --test` **42/42**，其中两条是本次根因的回归：
+  「插件在没有 `sessionController` 的真实宿主上能挂载」、
+  「catalog 只给 SessionHeader 时仍能产出状态/金额/历史」。
+- 测试 harness 从虚构的 `sessionController` 换成真实的 `sessionQuery` + `agents` 契约。
+- 用真实 Header 形状做端到端：`running: 2（执行中）/ recent: 1 / 计价覆盖 100% / 今日 ¥0.01`，
+  并渲染成截图核对（`qa/scenarios/real.json`）。
+- 健康会话（10 秒前有活动）判为「执行中」而非「可能卡住」；有已落盘用量的运行中会话能正确计价。
+
+### 教训
+
+之前所有验证都跑在**我自己造的假服务**上，所以三次自查都没碰到这条链。这次把假服务换成
+真实文档契约，第一次运行就 40 条测试全红——那正是线上现象。

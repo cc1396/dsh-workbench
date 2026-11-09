@@ -196,8 +196,12 @@ function allotMap(input) {
   const rows = []
   if (totalOf(rest) > 0) {
     const touched = [...lastByDay.keys()]
-    if (touched.length <= 1) {
-      rows.push({ day: lastDay ?? touched[0], tokens: rest })
+    // No usable timeline (a live Session whose log has not committed a turn, or a
+    // read that returned no events): the projected totals are still real money, so
+    // they belong to the day requested rather than to no day at all. This used to
+    // drop the whole amount, which made every such Session look unpriced.
+    if (touched.length === 0) {
+      rows.push({ day: lastDay ?? input.dayStart, tokens: rest })
     } else {
       const turns = Array.isArray(input.turns) ? input.turns : []
       const shares = touched

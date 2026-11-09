@@ -204,3 +204,20 @@
 
 之前所有验证都跑在**我自己造的假服务**上，所以三次自查都没碰到这条链。这次把假服务换成
 真实文档契约，第一次运行就 40 条测试全红——那正是线上现象。
+
+---
+
+## 7. 金额与配色修正（2026-11-09，2.0.2）
+
+截图反馈的四个问题，逐条定位并修复：
+
+| 现象 | 根因 | 修复 |
+|---|---|---|
+| 所有金额 `¥0.00`、覆盖 0%、「不可估算」 | **`tokensOf()` 只认 `*Tokens` 后缀**，而调用方传的是已规范化的内部字段名（`uncachedInput`/`cacheReadInput`/`output`），二次规范化把它们全部清零 → 账本恒为空 | `tokensOf()` 同时接受两种命名（内部名放最后，避免 `outputTokens: 0` 遮住内部 `output`） |
+| 同上（运行中/新会话也无法计价） | **`allotDays()` 在没有事件时丢弃全部 Token**；`session.v4.jsonl.zstd` 分块追加，新会话在 flush 前没有 committed 事件 → 当天无金额 | 无时间线时把投影里的 Token 归到请求的那一天，而不是丢掉 |
+| 模型不在价目表 → 整行不可估算 | `priceFor()` 对未列出的模型返回 `undefined`，没有回退到 `prices.default`（PRD F05 规定默认价表兜底） | `priceFor()` 回退到 `defaultPrice`；机器上真实模型（`codearts/…`、`deepseek-flash`、`workbuddy-ai/…`）已补入价目表 |
+| **按钮底色**：`计价覆盖 0%` 却是绿色实心 + ✓ | 徽标用不透明 `state-success-secondary` 底色，且覆盖率**不设阈值**一律按成功渲染 | 徽标改为 `color-mix` 半透明描边底；新增 `CoveragePill`：100% 才绿，<100% 琥珀警示，无样本灰色 |
+| 金额显示 `$` / `USD` | 插件自带 patch 写了 `currency: USD`，live profile 条目没有 `config` 却吃到了该值 | 代码默认锁 `CNY`，`currencySymbol()`/`formatMoney()` 不再接受币种参数；界面文案统一「人民币／¥ · 元」；两份 `cordis.patch.yml` 都写死 `currency: CNY` |
+
+新增回归：`tokensOf` 两种形状、`allotDays` 无事件、默认价表兜底、无 `$` 残留、覆盖率徽标阈值。
+最终 `node --test` **45/45**，`qa/interact.mjs` 全通过；真实投影数据算出 **¥117.61 / 覆盖 100%**。

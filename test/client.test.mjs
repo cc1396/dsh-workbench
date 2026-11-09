@@ -79,3 +79,16 @@ test('no page nests an interactive control inside a button', () => {
   const report = source.slice(source.indexOf('function ReportItemRow('), source.indexOf('function ReportEvidence('))
   assert.equal(/h\('button',[\s\S]*h\('input'/.test(report), false)
 })
+
+test('every amount renders as RMB, whatever currency a stale snapshot carries', () => {
+  // The workbench is RMB-only: a snapshot from an earlier config must never print "$".
+  assert.equal(source.includes("currency === 'USD' ? '$' : '¥'"), false)
+  assert.match(source, /function currencySymbol\(\) \{\s*\n\s*return '¥'/u)
+  assert.equal(/formatMoney\([^)]*,\s*(currency|overview\.currency)/u.test(source), false)
+})
+
+test('a coverage badge is only a success at full coverage', () => {
+  // 0%/75% used to render as a green ✓ badge, which read as "healthy".
+  assert.match(source, /const tone = percent >= 100 \? 'ok' : 'warn'/u)
+  assert.equal(source.includes("tone: 'ok', glyph: 'check', label: t('cost.coverage'"), false)
+})

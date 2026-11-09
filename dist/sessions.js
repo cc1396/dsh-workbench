@@ -525,12 +525,30 @@ export function shortText(value, limit) {
  *   or a message `usage` object (`inputTokens`/`cacheReadTokens`/`outputTokens`).
  * @returns mutually exclusive counts.
  */
+/**
+ * Normalize a billed bucket set into the four exclusive internal fields.
+ *
+ * Accepts both names in use: the Host projection's `*Tokens` fields and the internal
+ * `uncachedInput`/`cacheReadInput`/`cacheWriteInput`/`output` names. A normalizer that
+ * only knew the first form silently zeroed every total it was handed in the second —
+ * which made the whole ledger report 0 forever — so both are accepted here, and the
+ * internal names must be checked last so a real `outputTokens: 0` never hides
+ * an internal `output`.
+ */
 export function tokensOf(totals) {
-  const uncached = count(totals?.uncachedInputTokens ?? totals?.inputTokens)
-  const cacheRead = count(totals?.cacheReadTokens ?? totals?.cacheReadInputTokens)
-  const cacheWrite = count(totals?.cacheWriteTokens ?? totals?.cacheWriteInputTokens)
-  const output = count(totals?.outputTokens)
-  return { uncachedInput: uncached, cacheReadInput: cacheRead, cacheWriteInput: cacheWrite, output }
+  const pick = (...values) => {
+    for (const value of values) {
+      const number = count(value)
+      if (number > 0) return number
+    }
+    return 0
+  }
+  return {
+    uncachedInput: pick(totals?.uncachedInputTokens, totals?.uncachedInput, totals?.inputTokens, totals?.input),
+    cacheReadInput: pick(totals?.cacheReadTokens, totals?.cacheReadInputTokens, totals?.cacheReadInput),
+    cacheWriteInput: pick(totals?.cacheWriteTokens, totals?.cacheWriteInputTokens, totals?.cacheWriteInput),
+    output: pick(totals?.outputTokens, totals?.output),
+  }
 }
 
 function count(value) {

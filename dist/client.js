@@ -302,9 +302,9 @@ window.__ModuleLoader__.load({
       'search.noIndex': '索引不可用，请重建',
       'search.moreCount': '还有 {count} 条',
       'cost.title': '消耗归因',
-      'cost.subtitle': '{date} · {currency} · {zone}',
+      'cost.subtitle': '{date} · 人民币 · {zone}',
       'cost.today': '今日估算费用',
-      'cost.known': '已知估算 · {currency}',
+      'cost.known': '已知估算 · 人民币',
       'cost.coverage': '计价覆盖 {percent}%',
       'cost.projects': '按项目汇总',
       'cost.projectSessions': '{count} 个 Session',
@@ -338,7 +338,7 @@ window.__ModuleLoader__.load({
       'cost.sessions': 'Session',
       'cost.amount': '今日估算',
       'cost.day': '日期',
-      'cost.currency': '币种',
+      'cost.currency': '币种（人民币）',
       'cost.terminal': '{count} 条终态',
       'cost.provider': '提供方',
       'cost.none': '不可获取',
@@ -681,9 +681,9 @@ window.__ModuleLoader__.load({
       'search.noIndex': 'Index unavailable; rebuild it',
       'search.moreCount': '{count} more',
       'cost.title': 'Cost attribution',
-      'cost.subtitle': '{date} · {currency} · {zone}',
+      'cost.subtitle': '{date} · CNY · {zone}',
       'cost.today': 'Today\'s estimated cost',
-      'cost.known': 'Known estimate · {currency}',
+      'cost.known': 'Known estimate · CNY',
       'cost.coverage': 'Priced {percent}%',
       'cost.projects': 'By project',
       'cost.projectSessions': '{count} sessions',
@@ -717,7 +717,7 @@ window.__ModuleLoader__.load({
       'cost.sessions': 'Session',
       'cost.amount': 'Today\'s est.',
       'cost.day': 'Date',
-      'cost.currency': 'Currency',
+      'cost.currency': 'Currency (CNY)',
       'cost.terminal': '{count} final',
       'cost.provider': 'Provider',
       'cost.none': 'Unavailable',
@@ -905,13 +905,14 @@ window.__ModuleLoader__.load({
       }
     }
 
-    function currencySymbol(currency) {
-      return currency === 'USD' ? '$' : '¥'
+    /** The workbench is RMB-only: every amount prints with ￥. */
+    function currencySymbol() {
+      return '¥'
     }
 
-    function formatMoney(amount, currency) {
+    function formatMoney(amount) {
       const value = Number(amount)
-      const symbol = currencySymbol(currency)
+      const symbol = currencySymbol()
       if (!Number.isFinite(value)) return `${symbol}0.00`
       if (value > 0 && value < 0.01) return `<${symbol}0.01`
       let text
@@ -958,10 +959,17 @@ window.__ModuleLoader__.load({
     }
 
     /** Money as the ledger reports it; the zero renders as a plain zero. */
-    function moneyOf(amount, currency) {
+    /**
+     * Every amount in the workbench is a local estimate in RMB.
+     *
+     * The `currency` argument is accepted for call sites that still pass one, but it
+     * is ignored on purpose: a snapshot left over from an earlier configuration must
+     * never print `$` next to a yuan figure.
+     */
+    function moneyOf(amount) {
       const value = Number(amount)
       if (!Number.isFinite(value)) return '—'
-      return formatMoney(value, currency ?? 'CNY')
+      return formatMoney(value, 'CNY')
     }
 
     function formatCost(amount, usage) {
@@ -2155,7 +2163,7 @@ window.__ModuleLoader__.load({
           'button',
           { type: 'button', className: 'dswb-kpi', onClick: () => onSelect('cost'), 'aria-label': t('kpi.cost') },
           h('span', { className: 'dswb-kpi-label' }, t('kpi.cost')),
-          h('span', { className: 'dswb-kpi-value', 'data-tone': amount > 0 ? 'default' : 'muted' }, formatMoney(amount, overview.currency ?? 'CNY')),
+          h('span', { className: 'dswb-kpi-value', 'data-tone': amount > 0 ? 'default' : 'muted' }, formatMoney(amount)),
           h(
             'span',
             { className: 'dswb-kpi-detail' },
@@ -3592,8 +3600,8 @@ window.__ModuleLoader__.load({
           t,
           crumbs,
           title: t('cost.title'),
-          subtitle: t('cost.subtitle', { date: dayLabel, currency, zone: utcOffsetLabel() }),
-          actions: h(StatusPill, { tone: 'ok', glyph: 'check', label: t('cost.coverage', { percent: String(Math.round((Number(ledger.coverage) || 0) * 100)) }) }),
+          subtitle: t('cost.subtitle', { date: dayLabel, zone: utcOffsetLabel() }),
+          actions: h(CoveragePill, { coverage: ledger.coverage, t }),
         }),
         h(
           'div',
@@ -3601,12 +3609,12 @@ window.__ModuleLoader__.load({
           h(
             'section',
             { className: 'dswb-big' },
-            h('div', { className: 'dswb-big-head' }, h('h2', { className: 'dswb-big-title' }, t('cost.today')), h('span', { className: 'dswb-spacer' }), h('span', { className: 'dswb-big-hint' }, currency)),
+            h('div', { className: 'dswb-big-head' }, h('h2', { className: 'dswb-big-title' }, t('cost.today')), h('span', { className: 'dswb-spacer' }), h('span', { className: 'dswb-big-hint' }, '¥ / 元')),
             h(
               'div',
               { className: 'dswb-p1-cost-total' },
               h('span', { className: 'dswb-p1-cost-value' }, moneyOf(data?.overview?.amount, currency)),
-              h('span', { className: 'dswb-p1-cost-note' }, t('cost.known', { currency })),
+              h('span', { className: 'dswb-p1-cost-note' }, t('cost.known')),
             ),
             projects.length === 0
               ? h(EmptyState, { text: t('cost.empty'), t })
@@ -3656,7 +3664,7 @@ window.__ModuleLoader__.load({
       return h(
         React.Fragment,
         null,
-        h(PageHeader, { t, crumbs, title: detail.name || t('cost.title'), subtitle: `${t('cost.projectSessions', { count: String(rows.length) })} · ${currency} · ${dateLabel(Number(day) + 12 * 3600_000, dateParts())}` }),
+        h(PageHeader, { t, crumbs, title: detail.name || t('cost.title'), subtitle: `${t('cost.projectSessions', { count: String(rows.length) })} · 人民币 · ${dateLabel(Number(day) + 12 * 3600_000, dateParts())}` }),
         h(
           'section',
           { className: 'dswb-big' },
@@ -3751,7 +3759,7 @@ window.__ModuleLoader__.load({
           t,
           crumbs,
           title: t('cost.sessionTitle'),
-          subtitle: `${detail.sessionId} · ${currency} · ${utcOffsetLabel()}`,
+          subtitle: `${detail.sessionId} · 人民币 · ${utcOffsetLabel()}`,
           actions: h(RefreshButton, { t, onClick: refresh, status: state.status }),
         }),
         state.status === 'loading' && result === undefined
@@ -3776,8 +3784,8 @@ window.__ModuleLoader__.load({
                     'div',
                     { className: 'dswb-p1-cost-total' },
                     h('span', { className: 'dswb-p1-cost-value' }, moneyOf(result?.total, currency)),
-                    h('span', { className: 'dswb-p1-cost-note' }, t('cost.known', { currency })),
-                    h(StatusPill, { tone: (Number(result?.coverage) || 0) >= 1 ? 'ok' : 'warn', glyph: (Number(result?.coverage) || 0) >= 1 ? 'check' : 'alert', label: t('cost.coverage', { percent: String(Math.round((Number(result?.coverage) || 0) * 100)) }) }),
+                    h('span', { className: 'dswb-p1-cost-note' }, t('cost.known')),
+                    h(CoveragePill, { coverage: result?.coverage, t }),
                   ),
                   h('p', { className: 'dswb-p1-cost-foot' }, t('cost.pricedRow', { priced: String(pricedCount), unpriced: String(rows.length - pricedCount) }), h('span', { className: 'dswb-spacer' }), t('cost.estimateNote')),
                 ),
@@ -3812,6 +3820,21 @@ window.__ModuleLoader__.load({
               h(RequestDetail, { row: selected, result, t, onOpen: () => openSession(detail.sessionId) }),
             ),
       )
+    }
+
+    /**
+     * The pricing-coverage badge (PRD F05).
+     *
+     * Full coverage is the only success case; a partial day is a warning and an empty
+     * day has no sample at all. Rendering every figure — including 0% — as a green
+     * "✓" made an unpriced day look healthy, which is what a reader complained about.
+     */
+    function CoveragePill({ coverage, t }) {
+      const known = coverage !== undefined && coverage !== null && Number.isFinite(Number(coverage))
+      if (!known) return h(StatusPill, { tone: 'idle', glyph: 'clock', label: t('kpi.noSample') })
+      const percent = Math.round(Number(coverage) * 100)
+      const tone = percent >= 100 ? 'ok' : 'warn'
+      return h(StatusPill, { tone, glyph: percent >= 100 ? 'check' : 'alert', label: t('cost.coverage', { percent: String(percent) }) })
     }
 
     function RefreshButton({ t, onClick, status }) {
@@ -4791,13 +4814,13 @@ window.__ModuleLoader__.load({
       '.dswb-search-group-label{width:44px;flex:none;color:var(--dsw-alias-label-tertiary);font-size:11px}',
       '.dswb-search-chips{display:flex;flex-wrap:wrap;gap:6px}',
       '.dswb-search-chip{height:26px;padding:0 10px;border-radius:13px;border:.5px solid var(--dsw-alias-border-l1);background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11.5px;cursor:pointer}',
-      '.dswb-search-chip[aria-pressed=true]{border-color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-brand);color:var(--dsw-alias-brand-text);font-weight:600}',
+      '.dswb-search-chip[aria-pressed=true]{border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 55%,transparent);background:color-mix(in srgb,var(--dsw-alias-brand-primary) 14%,transparent);color:var(--dsw-alias-brand-text);font-weight:600}',
       '.dswb-search-chip:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
       '.dswb-search-summary{display:flex;align-items:center;gap:8px;padding:9px 16px;color:var(--dsw-alias-label-secondary);font-size:12px;border-bottom:.5px solid var(--dsw-alias-border-l1)}',
       '.dswb-search-index{color:var(--dsw-alias-label-quaternary);font-size:11px;white-space:nowrap}',
       '.dswb-search-results{list-style:none;margin:0;padding:6px;overflow:auto;min-height:60px}',
       '.dswb-search-result{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;border-radius:9px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}',
-      '.dswb-search-result[data-selected=true]{background:var(--dsw-alias-bg-brand)}',
+      '.dswb-search-result[data-selected=true]{background:color-mix(in srgb,var(--dsw-alias-brand-primary) 13%,transparent)}',
       '.dswb-search-result-glyph{display:grid;place-items:center;width:28px;height:28px;flex:none;border-radius:8px;background:var(--dsw-alias-bg-fill);color:var(--dsw-alias-label-secondary)}',
       '.dswb-search-result-main{display:flex;flex-direction:column;min-width:0;flex:1}',
       '.dswb-search-result-title{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
@@ -4825,15 +4848,17 @@ window.__ModuleLoader__.load({
       '.dswb-p1-nav{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 14px;padding:3px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}',
       '.dswb-p1-nav-item{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12.5px;cursor:pointer}',
       '.dswb-p1-nav-item:hover{background:var(--dsw-alias-bg-fill);color:var(--dsw-alias-label-primary)}',
-      '.dswb-p1-nav-item[aria-current=page]{background:var(--dsw-alias-bg-brand);color:var(--dsw-alias-brand-text);font-weight:600}',
+      '.dswb-p1-nav-item[aria-current=page]{background:color-mix(in srgb,var(--dsw-alias-brand-primary) 15%,transparent);color:var(--dsw-alias-brand-text);font-weight:600;box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--dsw-alias-brand-primary) 32%,transparent)}',
       '.dswb-p1-nav-item:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:-2px}',
       '.dswb-p1-nav-badge{width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-state-error-primary)}',
-      '.dswb-p1-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:11px;font-size:11px;line-height:18px;white-space:nowrap;border:.5px solid transparent;background:var(--dsw-alias-bg-fill);color:var(--dsw-alias-label-secondary)}',
-      '.dswb-p1-pill[data-tone=ok]{background:var(--dsw-alias-state-success-secondary);color:var(--dsw-alias-state-success-primary)}',
-      '.dswb-p1-pill[data-tone=warn]{background:var(--dsw-alias-state-warning-secondary);color:var(--dsw-alias-state-warning-primary)}',
-      '.dswb-p1-pill[data-tone=error]{background:var(--dsw-alias-state-error-secondary);color:var(--dsw-alias-state-error-primary)}',
-      '.dswb-p1-pill[data-tone=info]{background:var(--dsw-alias-bg-brand);color:var(--dsw-alias-brand-text)}',
-      '.dswb-p1-pill[data-tone=idle]{background:var(--dsw-alias-bg-fill);color:var(--dsw-alias-label-tertiary)}',
+      // Badges are tints over the card, never opaque blocks: an opaque `*-secondary`
+      // token looked like a filled button and carried the wrong emphasis in dark mode.
+      '.dswb-p1-pill{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:11px;font-size:11px;line-height:18px;white-space:nowrap;border:.5px solid transparent;background:color-mix(in srgb,var(--dsw-alias-label-primary) 7%,transparent);color:var(--dsw-alias-label-secondary)}',
+      '.dswb-p1-pill[data-tone=ok]{background:color-mix(in srgb,var(--dsw-alias-state-success-primary) 13%,transparent);border-color:color-mix(in srgb,var(--dsw-alias-state-success-primary) 26%,transparent);color:var(--dsw-alias-state-success-primary)}',
+      '.dswb-p1-pill[data-tone=warn]{background:color-mix(in srgb,var(--dsw-alias-state-warning-primary) 14%,transparent);border-color:color-mix(in srgb,var(--dsw-alias-state-warning-primary) 28%,transparent);color:var(--dsw-alias-state-warning-primary)}',
+      '.dswb-p1-pill[data-tone=error]{background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 13%,transparent);border-color:color-mix(in srgb,var(--dsw-alias-state-error-primary) 26%,transparent);color:var(--dsw-alias-state-error-primary)}',
+      '.dswb-p1-pill[data-tone=info]{background:color-mix(in srgb,var(--dsw-alias-brand-primary) 13%,transparent);border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 26%,transparent);color:var(--dsw-alias-brand-text)}',
+      '.dswb-p1-pill[data-tone=idle]{background:color-mix(in srgb,var(--dsw-alias-label-primary) 6%,transparent);color:var(--dsw-alias-label-tertiary)}',
       '.dswb-p1-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr);gap:12px;align-items:start}',
       '.dswb-p1-stack{display:flex;flex-direction:column;gap:12px}',
       '.dswb-p1-notes{padding:16px}',
@@ -4849,7 +4874,7 @@ window.__ModuleLoader__.load({
       '.dswb-p1-project{flex-direction:column;align-items:stretch;gap:7px}',
       '.dswb-p1-project:hover,.dswb-p1-session:hover,.dswb-p1-request:hover,.dswb-p1-tl-main:hover,.dswb-p1-report-main:hover{background:var(--dsw-alias-bg-fill)}',
       '.dswb-p1-project:focus-visible,.dswb-p1-session:focus-visible,.dswb-p1-request:focus-visible,.dswb-p1-tl-main:focus-visible,.dswb-p1-report-main:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:-2px}',
-      '.dswb-p1-request[data-selected=true]{background:var(--dsw-alias-bg-brand)}',
+      '.dswb-p1-request[data-selected=true]{background:color-mix(in srgb,var(--dsw-alias-brand-primary) 12%,transparent)}',
       '.dswb-p1-project-top{display:flex;align-items:center;justify-content:space-between;gap:10px}',
       '.dswb-p1-project-name{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600}',
       '.dswb-p1-project-amount{font-family:var(--wb-mono);font-size:14px;font-weight:600}',
@@ -4880,7 +4905,7 @@ window.__ModuleLoader__.load({
       '.dswb-p1-fact dd{margin:0;text-align:right;font-weight:600;overflow-wrap:anywhere}',
       '.dswb-p1-mono{font-family:var(--wb-mono);font-variant-numeric:tabular-nums}',
       '.dswb-p1-price-note,.dswb-p1-warn,.dswb-p1-detail-note{display:flex;align-items:flex-start;gap:6px;margin:0;padding:10px 16px;font-size:11px;line-height:17px;color:var(--dsw-alias-label-tertiary);border-top:.5px solid var(--dsw-alias-border-l1)}',
-      '.dswb-p1-warn{color:var(--dsw-alias-state-warning-primary);background:var(--dsw-alias-state-warning-secondary)}',
+      '.dswb-p1-warn{color:var(--dsw-alias-state-warning-primary);background:color-mix(in srgb,var(--dsw-alias-state-warning-primary) 10%,transparent)}',
       '.dswb-p1-detail .dswb-primary{margin:0 16px 14px;display:inline-flex;align-items:center;gap:6px}',
       '.dswb-p1-detail-actions{display:flex;flex-wrap:wrap;gap:8px;padding:10px 16px}',
       '.dswb-p1-proj-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}',
@@ -4896,17 +4921,17 @@ window.__ModuleLoader__.load({
       '.dswb-p1-proj-git{font-size:10.5px;color:var(--dsw-alias-label-quaternary)}',
       '.dswb-p1-filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}',
       '.dswb-p1-tl-row{display:flex;align-items:center;border-bottom:.5px solid var(--dsw-alias-border-l1)}',
-      '.dswb-p1-tl-row[data-selected=true]{background:var(--dsw-alias-bg-brand)}',
+      '.dswb-p1-tl-row[data-selected=true]{background:color-mix(in srgb,var(--dsw-alias-brand-primary) 12%,transparent)}',
       '.dswb-p1-tl-main{flex:1;border:0}',
-      '.dswb-p1-tl-glyph[data-kind=commit]{background:var(--dsw-alias-bg-brand);color:var(--dsw-alias-brand-text)}',
-      '.dswb-p1-tl-glyph[data-kind=test]{background:var(--dsw-alias-state-success-secondary);color:var(--dsw-alias-state-success-primary)}',
+      '.dswb-p1-tl-glyph[data-kind=commit]{background:color-mix(in srgb,var(--dsw-alias-brand-primary) 14%,transparent);color:var(--dsw-alias-brand-text)}',
+      '.dswb-p1-tl-glyph[data-kind=test]{background:color-mix(in srgb,var(--dsw-alias-state-success-primary) 14%,transparent);color:var(--dsw-alias-state-success-primary)}',
       '.dswb-p1-tl-files{font-size:11px;color:var(--dsw-alias-label-tertiary);white-space:nowrap}',
       '.dswb-p1-status-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}',
       '.dswb-p1-report-group{border-bottom:.5px solid var(--dsw-alias-border-l1)}',
       '.dswb-p1-report-group-name{margin:0;padding:12px 16px 4px;font-size:13px;font-weight:600}',
       '.dswb-p1-report-section-title{margin:0;padding:6px 16px;font-size:11px;font-weight:600;color:var(--dsw-alias-label-tertiary)}',
       '.dswb-p1-report-row{display:flex;align-items:center;border-bottom:.5px solid var(--dsw-alias-border-l1)}',
-      '.dswb-p1-report-row[data-selected=true]{background:var(--dsw-alias-bg-brand)}',
+      '.dswb-p1-report-row[data-selected=true]{background:color-mix(in srgb,var(--dsw-alias-brand-primary) 12%,transparent)}',
       '.dswb-p1-report-main{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;flex:1;padding:10px 8px 10px 16px}',
       '.dswb-p1-report-title-btn{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0;max-width:100%;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:6px}',
       '.dswb-p1-report-title-btn:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',

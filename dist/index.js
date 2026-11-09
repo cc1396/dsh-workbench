@@ -2041,9 +2041,12 @@ function resolveSettings(config) {
     scanBudgetMs: integer(source.scanBudgetMs, 4000, 250, 20_000),
     balanceTtlMs: integer(source.balanceTtlMs, 60_000, 5_000, 3_600_000),
     clientVersion: typeof source.clientVersion === 'string' && source.clientVersion !== '' ? source.clientVersion : '1.0.0',
-    currency: typeof source.currency === 'string' && /^[A-Z]{3}$/.test(source.currency) ? source.currency : 'CNY',
+    // Amounts are local estimates in RMB; a non-RMB setting is not a supported mode.
+    currency: 'CNY',
     // The price table version the amounts were computed with (PRD F05 priceRef).
     priceRef: typeof prices.ref === 'string' && prices.ref !== '' ? prices.ref.slice(0, 60) : 'configured',
+    // `prices.default` is the row every unlisted model uses; the built-in table is the
+    // floor so an empty or malformed config still yields a comparable estimate.
     defaultPrice: normalizePrice(prices.default) ?? FALLBACK_PRICE,
     modelPrices,
     rules: {
@@ -2056,9 +2059,18 @@ function resolveSettings(config) {
 }
 
 /** The price row of one model, or undefined when the model is unpriced. */
+/**
+ * The price row for one model route.
+ *
+ * A route with no entry uses `prices.default`, the same table the ledger already
+ * applies to unnamed models; returning undefined here instead made every Session on
+ * a model the config had never seen report "not estimable" at 0% coverage, which
+ * reads as a bug rather than as a missing price. The response carries the row and its
+ * version, so an amount never claims more precision than the table it came from.
+ */
 function priceFor(settings, model) {
-  if (typeof model !== 'string' || model === '') return undefined
-  return settings.modelPrices.get(model)
+  if (typeof model !== 'string' || model === '') return settings.defaultPrice
+  return settings.modelPrices.get(model) ?? settings.defaultPrice
 }
 
 function normalizePrice(value) {

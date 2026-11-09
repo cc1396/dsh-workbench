@@ -1,1196 +1,1196 @@
 {
-  "generatedAt": 1793950089000,
-  "account": {
-    "status": "unavailable"
+ "generatedAt": 1793950089000,
+ "account": {
+  "status": "unavailable"
+ },
+ "usage": {
+  "total": {
+   "inputTokens": 1800000,
+   "outputTokens": 240000,
+   "cacheReadTokens": 2100000,
+   "tokens": 4140000,
+   "costCny": 8.42
   },
-  "usage": {
-    "total": {
-      "inputTokens": 1800000,
-      "outputTokens": 240000,
-      "cacheReadTokens": 2100000,
-      "tokens": 4140000,
-      "costCny": 8.42
-    },
-    "previousAverageCny": 5.1,
-    "today": {
-      "inputTokens": 1800000,
-      "outputTokens": 240000,
-      "cacheReadTokens": 2100000,
-      "tokens": 4140000,
-      "costCny": 8.42
-    }
+  "previousAverageCny": 5.1,
+  "today": {
+   "inputTokens": 1800000,
+   "outputTokens": 240000,
+   "cacheReadTokens": 2100000,
+   "tokens": 4140000,
+   "costCny": 8.42
+  }
+ },
+ "speed": {
+  "current": {
+   "time": 1793950071000,
+   "model": "deepseek-v4-flash",
+   "tokensPerSecond": 74
   },
-  "speed": {
-    "current": {
-      "time": 1793950071000,
-      "model": "deepseek-v4-flash",
-      "tokensPerSecond": 74
-    },
-    "models": [
-      {
-        "model": "deepseek-v4-flash",
-        "requests": 138,
-        "outputTokens": 96000,
-        "durationMs": 1300000,
-        "tokensPerSecond": 73.8,
-        "p50TokensPerSecond": 74,
-        "p90TokensPerSecond": 112,
-        "samples": 138
-      }
-    ],
-    "samples": 138,
-    "week": {
-      "requests": 138,
-      "outputTokens": 96000,
-      "durationMs": 1300000,
-      "models": []
-    },
-    "today": {
-      "requests": 3,
-      "outputTokens": 2000,
-      "durationMs": 30000,
-      "models": []
-    },
-    "recent": []
-  },
-  "worklog": {
-    "days": []
-  },
-  "capabilities": {
-    "live": "poll",
-    "pollMs": 15000,
-    "alertsWait": "ready",
-    "alertsInfer": "ready",
-    "rules": "ready",
-    "states": "ready",
-    "ledger": "ready",
-    "performance": "ready",
-    "account": "unavailable",
-    "openSession": "host"
-  },
-  "freshness": {
-    "at": 1793950089000,
-    "tzOffset": 28800,
-    "state": "fresh"
-  },
-  "overview": {
-    "todayStart": 1793894400000,
-    "amount": 8.42,
-    "amountPartial": 9.1,
-    "currency": "USD",
-    "coverage": 0.96,
-    "unpricedTokens": 12000,
-    "running": 3,
-    "runningByState": 1,
-    "failed": 1,
-    "ended": 1,
-    "attention": 2,
-    "attentionByType": {
-      "failure": 1,
-      "waiting": 1
-    },
-    "speedP50": 74,
-    "speedSamples": 138,
-    "models": 1,
-    "scanned": 12,
-    "sessions": 12
-  },
-  "states": {
-    "total": 12,
-    "running": 3,
-    "runningByState": 1,
-    "failed": 1,
-    "ended": 6,
-    "cancelled": 1,
-    "unknown": 1,
-    "counts": {}
-  },
-  "running": [
-    {
-      "sessionId": "s_7c2f",
-      "title": "修复登录回调重试",
-      "projectId": "/work/api-gateway",
-      "projectName": "api-gateway",
-      "state": "waiting",
-      "running": true,
-      "turnStartedAt": 1793949329000,
-      "lastAt": 1793949969000,
-      "endedAt": 0,
-      "lastAction": {
-        "name": "bash",
-        "at": 1793949969000
-      },
-      "waiting": [
-        {
-          "kind": "approval",
-          "detail": "bash",
-          "at": 1793949969000
-        }
-      ],
-      "model": "deepseek-v4-flash",
-      "provider": "deepseek",
-      "toolCalls": 18,
-      "turn": 3,
-      "tokens": {
-        "uncachedInput": 412000,
-        "cacheReadInput": 1204000,
-        "cacheWriteInput": 0,
-        "output": 84000
-      },
-      "usage": {
-        "amount": 1.84,
-        "quality": "partial",
-        "coverage": 0.75,
-        "day": "2026-11-06"
-      },
-      "alerts": [
-        {
-          "key": "k2",
-          "type": "waiting",
-          "state": "open",
-          "severity": "medium"
-        }
-      ],
-      "evidence": [
-        {
-          "kind": "pending",
-          "at": 1793949969000
-        },
-        {
-          "kind": "turn",
-          "at": 1793949369000
-        }
-      ]
-    },
-    {
-      "sessionId": "s_17f0",
-      "title": "整理发布流程脚本",
-      "projectId": "/work/devtools",
-      "projectName": "devtools",
-      "state": "running",
-      "running": true,
-      "turnStartedAt": 1793949711000,
-      "lastAt": 1793950047000,
-      "endedAt": 0,
-      "lastAction": {
-        "name": "bash",
-        "at": 1793950047000
-      },
-      "model": "deepseek-v4-flash",
-      "provider": "deepseek",
-      "toolCalls": 9,
-      "turn": 2,
-      "tokens": {
-        "uncachedInput": 180000,
-        "cacheReadInput": 900000,
-        "cacheWriteInput": 0,
-        "output": 41000
-      },
-      "usage": {
-        "amount": 0.92,
-        "quality": "priced",
-        "coverage": 1,
-        "day": "2026-11-06"
-      },
-      "alerts": []
-    },
-    {
-      "sessionId": "s_55a1",
-      "title": "补齐订单筛选测试",
-      "projectId": "/work/storefront",
-      "projectName": "storefront",
-      "state": "running",
-      "running": true,
-      "turnStartedAt": 1793949840000,
-      "lastAt": 1793950071000,
-      "endedAt": 0,
-      "lastAction": {
-        "name": "read",
-        "at": 1793950071000
-      },
-      "model": "deepseek-v4-flash",
-      "provider": "deepseek",
-      "toolCalls": 6,
-      "turn": 1,
-      "children": 1,
-      "usage": {
-        "amount": 0.61,
-        "quality": "priced",
-        "coverage": 1,
-        "day": "2026-11-06"
-      },
-      "alerts": []
-    }
+  "models": [
+   {
+    "model": "deepseek-v4-flash",
+    "requests": 138,
+    "outputTokens": 96000,
+    "durationMs": 1300000,
+    "tokensPerSecond": 73.8,
+    "p50TokensPerSecond": 74,
+    "p90TokensPerSecond": 112,
+    "samples": 138
+   }
   ],
-  "recent": [
+  "samples": 138,
+  "week": {
+   "requests": 138,
+   "outputTokens": 96000,
+   "durationMs": 1300000,
+   "models": []
+  },
+  "today": {
+   "requests": 3,
+   "outputTokens": 2000,
+   "durationMs": 30000,
+   "models": []
+  },
+  "recent": []
+ },
+ "worklog": {
+  "days": []
+ },
+ "capabilities": {
+  "live": "poll",
+  "pollMs": 15000,
+  "alertsWait": "ready",
+  "alertsInfer": "ready",
+  "rules": "ready",
+  "states": "ready",
+  "ledger": "ready",
+  "performance": "ready",
+  "account": "unavailable",
+  "openSession": "host"
+ },
+ "freshness": {
+  "at": 1793950089000,
+  "tzOffset": 28800,
+  "state": "fresh"
+ },
+ "overview": {
+  "todayStart": 1793894400000,
+  "amount": 113.18,
+  "amountPartial": 9.1,
+  "currency": "CNY",
+  "coverage": 0.75,
+  "unpricedTokens": 12000,
+  "running": 3,
+  "runningByState": 1,
+  "failed": 1,
+  "ended": 1,
+  "attention": 2,
+  "attentionByType": {
+   "failure": 1,
+   "waiting": 1
+  },
+  "speedP50": 74,
+  "speedSamples": 138,
+  "models": 1,
+  "scanned": 12,
+  "sessions": 12
+ },
+ "states": {
+  "total": 12,
+  "running": 3,
+  "runningByState": 1,
+  "failed": 1,
+  "ended": 6,
+  "cancelled": 1,
+  "unknown": 1,
+  "counts": {}
+ },
+ "running": [
+  {
+   "sessionId": "s_7c2f",
+   "title": "修复登录回调重试",
+   "projectId": "/work/api-gateway",
+   "projectName": "api-gateway",
+   "state": "waiting",
+   "running": true,
+   "turnStartedAt": 1793949329000,
+   "lastAt": 1793949969000,
+   "endedAt": 0,
+   "lastAction": {
+    "name": "bash",
+    "at": 1793949969000
+   },
+   "waiting": [
     {
-      "sessionId": "s_2b90",
-      "title": "重建预览环境镜像",
-      "projectId": "/work/devtools",
-      "projectName": "devtools",
-      "state": "failed",
-      "running": false,
-      "endedAt": 1793949849000,
-      "lastAt": 1793949849000,
-      "turnStartedAt": 1793948829000,
-      "lastEnd": {
-        "turn": 1,
-        "startedAt": 1793948829000,
-        "endedAt": 1793949849000,
-        "reason": "error",
-        "message": "镜像构建退出码 1",
-        "failed": true
-      },
-      "model": "deepseek-v4-flash",
-      "usage": {
-        "amount": 0.3,
-        "quality": "priced",
-        "coverage": 1
-      },
-      "alerts": []
+     "kind": "approval",
+     "detail": "bash",
+     "at": 1793949969000
+    }
+   ],
+   "model": "deepseek-v4-flash",
+   "provider": "deepseek",
+   "toolCalls": 18,
+   "turn": 3,
+   "tokens": {
+    "uncachedInput": 412000,
+    "cacheReadInput": 1204000,
+    "cacheWriteInput": 0,
+    "output": 84000
+   },
+   "usage": {
+    "amount": 1.84,
+    "quality": "partial",
+    "coverage": 0.75,
+    "day": "2026-11-06"
+   },
+   "alerts": [
+    {
+     "key": "k2",
+     "type": "waiting",
+     "state": "open",
+     "severity": "medium"
+    }
+   ],
+   "evidence": [
+    {
+     "kind": "pending",
+     "at": 1793949969000
     },
     {
+     "kind": "turn",
+     "at": 1793949369000
+    }
+   ]
+  },
+  {
+   "sessionId": "s_17f0",
+   "title": "整理发布流程脚本",
+   "projectId": "/work/devtools",
+   "projectName": "devtools",
+   "state": "running",
+   "running": true,
+   "turnStartedAt": 1793949711000,
+   "lastAt": 1793950047000,
+   "endedAt": 0,
+   "lastAction": {
+    "name": "bash",
+    "at": 1793950047000
+   },
+   "model": "deepseek-v4-flash",
+   "provider": "deepseek",
+   "toolCalls": 9,
+   "turn": 2,
+   "tokens": {
+    "uncachedInput": 180000,
+    "cacheReadInput": 900000,
+    "cacheWriteInput": 0,
+    "output": 41000
+   },
+   "usage": {
+    "amount": 0.92,
+    "quality": "priced",
+    "coverage": 1,
+    "day": "2026-11-06"
+   },
+   "alerts": []
+  },
+  {
+   "sessionId": "s_55a1",
+   "title": "补齐订单筛选测试",
+   "projectId": "/work/storefront",
+   "projectName": "storefront",
+   "state": "running",
+   "running": true,
+   "turnStartedAt": 1793949840000,
+   "lastAt": 1793950071000,
+   "endedAt": 0,
+   "lastAction": {
+    "name": "read",
+    "at": 1793950071000
+   },
+   "model": "deepseek-v4-flash",
+   "provider": "deepseek",
+   "toolCalls": 6,
+   "turn": 1,
+   "children": 1,
+   "usage": {
+    "amount": 0.61,
+    "quality": "priced",
+    "coverage": 1,
+    "day": "2026-11-06"
+   },
+   "alerts": []
+  }
+ ],
+ "recent": [
+  {
+   "sessionId": "s_2b90",
+   "title": "重建预览环境镜像",
+   "projectId": "/work/devtools",
+   "projectName": "devtools",
+   "state": "failed",
+   "running": false,
+   "endedAt": 1793949849000,
+   "lastAt": 1793949849000,
+   "turnStartedAt": 1793948829000,
+   "lastEnd": {
+    "turn": 1,
+    "startedAt": 1793948829000,
+    "endedAt": 1793949849000,
+    "reason": "error",
+    "message": "镜像构建退出码 1",
+    "failed": true
+   },
+   "model": "deepseek-v4-flash",
+   "usage": {
+    "amount": 0.3,
+    "quality": "priced",
+    "coverage": 1
+   },
+   "alerts": []
+  },
+  {
+   "sessionId": "s_91cd",
+   "title": "验证订单筛选条件",
+   "projectId": "/work/storefront",
+   "projectName": "storefront",
+   "state": "ended",
+   "running": false,
+   "endedAt": 1793947329000,
+   "lastAt": 1793947329000,
+   "turnStartedAt": 1793946609000,
+   "lastEnd": {
+    "turn": 1,
+    "startedAt": 1793946609000,
+    "endedAt": 1793947329000,
+    "reason": "restart",
+    "message": "",
+    "failed": false
+   },
+   "model": "deepseek-v4-flash",
+   "usage": {
+    "amount": 0.44,
+    "quality": "priced",
+    "coverage": 1
+   },
+   "alerts": []
+  }
+ ],
+ "alerts": [
+  {
+   "key": "local|s_2b90|failure|1:1793949849000",
+   "type": "failure",
+   "state": "open",
+   "severity": "high",
+   "sessionId": "s_2b90",
+   "projectId": "/work/devtools",
+   "projectName": "devtools",
+   "title": "重建预览环境镜像",
+   "reason": "镜像构建退出码 1",
+   "triggeredAt": 1793949849000,
+   "currentState": "failed",
+   "updatedAt": 1793949849000
+  },
+  {
+   "key": "local|s_7c2f|waiting|1793949969000",
+   "type": "waiting",
+   "state": "open",
+   "severity": "medium",
+   "sessionId": "s_7c2f",
+   "projectId": "/work/api-gateway",
+   "projectName": "api-gateway",
+   "title": "修复登录回调重试",
+   "reason": "bash",
+   "triggeredAt": 1793949969000,
+   "currentState": "waiting",
+   "updatedAt": 1793949969000
+  }
+ ],
+ "ledger": {
+  "today": {
+   "sessionId": "s_total",
+   "projectId": "/work/api-gateway",
+   "projectName": "api-gateway",
+   "title": "今日合计",
+   "amount": 8.42,
+   "parts": [],
+   "quality": "partial",
+   "coverage": 0.96
+  },
+  "projects": [
+   {
+    "projectId": "/work/api-gateway",
+    "name": "api-gateway",
+    "sessions": 2,
+    "amount": 65.61,
+    "todayAmount": 4.86,
+    "coverage": 0.75,
+    "unpricedTokens": 8000
+   },
+   {
+    "projectId": "/work/storefront",
+    "name": "storefront",
+    "sessions": 2,
+    "amount": 31.19,
+    "todayAmount": 2.31,
+    "coverage": 1,
+    "unpricedTokens": 0
+   },
+   {
+    "projectId": "/work/devtools",
+    "name": "devtools",
+    "sessions": 2,
+    "amount": 16.88,
+    "todayAmount": 1.25,
+    "coverage": 1,
+    "unpricedTokens": 0
+   }
+  ],
+  "trend": [
+   {
+    "day": 1793462400000,
+    "amount": 3.2,
+    "priced": 1
+   },
+   {
+    "day": 1793548800000,
+    "amount": 4.1,
+    "priced": 1
+   },
+   {
+    "day": 1793635200000,
+    "amount": 2.8,
+    "priced": 1
+   },
+   {
+    "day": 1793721600000,
+    "amount": 5.6,
+    "priced": 1
+   },
+   {
+    "day": 1793808000000,
+    "amount": 6.4,
+    "priced": 1
+   },
+   {
+    "day": 1793894400000,
+    "amount": 5.9,
+    "priced": 1
+   },
+   {
+    "day": 1793980800000,
+    "amount": 8.42,
+    "priced": 1
+   }
+  ],
+  "trendMax": 8.42,
+  "sessions": [
+   {
+    "sessionId": "s_7c2f",
+    "projectId": "/work/api-gateway",
+    "projectName": "api-gateway",
+    "title": "修复登录回调重试",
+    "model": "deepseek-v4-flash",
+    "amount": 1.84,
+    "tokens": {
+     "uncachedInput": 412000,
+     "cacheReadInput": 1204000,
+     "cacheWriteInput": 0,
+     "output": 84000
+    },
+    "parts": [],
+    "quality": "partial",
+    "coverage": 0.75
+   },
+   {
+    "sessionId": "s_17f0",
+    "projectId": "/work/devtools",
+    "projectName": "devtools",
+    "title": "整理发布流程脚本",
+    "model": "deepseek-v4-flash",
+    "amount": 0.92,
+    "tokens": {
+     "uncachedInput": 180000,
+     "cacheReadInput": 900000,
+     "cacheWriteInput": 0,
+     "output": 41000
+    },
+    "parts": [],
+    "quality": "priced",
+    "coverage": 1
+   },
+   {
+    "sessionId": "s_55a1",
+    "projectId": "/work/storefront",
+    "projectName": "storefront",
+    "title": "补齐订单筛选测试",
+    "model": "deepseek-v4-flash",
+    "amount": 0.61,
+    "parts": [],
+    "quality": "priced",
+    "coverage": 1
+   },
+   {
+    "sessionId": "s_2b90",
+    "projectId": "/work/devtools",
+    "projectName": "devtools",
+    "title": "重建预览环境镜像",
+    "model": "deepseek-v4-flash",
+    "amount": 0.3,
+    "parts": [],
+    "quality": "priced",
+    "coverage": 1
+   },
+   {
+    "sessionId": "s_91cd",
+    "projectId": "/work/storefront",
+    "projectName": "storefront",
+    "title": "验证订单筛选条件",
+    "model": "deepseek-v4-flash",
+    "amount": 0.44,
+    "parts": [],
+    "quality": "priced",
+    "coverage": 1
+   }
+  ],
+  "daySessions": [],
+  "currency": "CNY",
+  "coverage": 0.75,
+  "days": [
+   1793462400000,
+   1793548800000,
+   1793635200000,
+   1793721600000,
+   1793808000000,
+   1793894400000,
+   1793980800000
+  ],
+  "detail": {
+   "s_7c2f": [
+    {
+     "requestId": "req_7f2a",
+     "at": 1793949903000,
+     "status": "ok",
+     "amount": 0.88,
+     "quality": "priced",
+     "provider": "deepseek",
+     "model": "deepseek-v4-flash",
+     "tokens": {
+      "uncachedInput": 400000,
+      "cacheReadInput": 200000,
+      "cacheWriteInput": 0,
+      "output": 300000
+     },
+     "priceRef": "demo-usd-1106",
+     "attribution": "workspace"
+    },
+    {
+     "requestId": "req_7c41",
+     "at": 1793949639000,
+     "status": "ok",
+     "amount": 0.66,
+     "quality": "priced",
+     "provider": "deepseek",
+     "model": "deepseek-v4-flash",
+     "tokens": {
+      "uncachedInput": 120000,
+      "cacheReadInput": 80000,
+      "cacheWriteInput": 0,
+      "output": 220000
+     },
+     "priceRef": "demo-usd-1106",
+     "attribution": "workspace"
+    },
+    {
+     "requestId": "req_7b26",
+     "at": 1793949538000,
+     "status": "error",
+     "amount": 0.3,
+     "quality": "priced",
+     "provider": "deepseek",
+     "model": "deepseek-v4-flash",
+     "tokens": {
+      "uncachedInput": 60000,
+      "cacheReadInput": 40000,
+      "cacheWriteInput": 0,
+      "output": 90000
+     },
+     "priceRef": "demo-usd-1106",
+     "attribution": "workspace"
+    },
+    {
+     "requestId": "req_7a10",
+     "at": 1793949459000,
+     "status": "error",
+     "quality": "missing-usage",
+     "provider": "deepseek",
+     "model": "deepseek-v4-flash",
+     "tokens": {
+      "uncachedInput": 0,
+      "cacheReadInput": 0,
+      "cacheWriteInput": 0,
+      "output": 0
+     },
+     "priceRef": "demo-usd-1106",
+     "attribution": "workspace"
+    }
+   ]
+  },
+  "prices": {
+   "deepseek-v4-flash": {
+    "model": "deepseek-v4-flash",
+    "ref": "demo-usd-1106",
+    "input": 0.6,
+    "cacheRead": 0.2,
+    "cacheWrite": 0.6,
+    "output": 2
+   }
+  }
+ },
+ "tasks": {
+  "total": 12,
+  "running": 3,
+  "recent": 2
+ },
+ "search": {
+  "rows": [
+   {
+    "sessionId": "s_7c2f",
+    "title": "修复登录回调重试",
+    "projectId": "/work/api-gateway",
+    "projectName": "api-gateway",
+    "model": "deepseek-v4-flash",
+    "provider": "deepseek",
+    "state": "waiting",
+    "lastAt": 1793949969000
+   },
+   {
+    "sessionId": "s_17f0",
+    "title": "整理发布流程脚本",
+    "projectId": "/work/devtools",
+    "projectName": "devtools",
+    "model": "deepseek-v4-flash",
+    "provider": "deepseek",
+    "state": "running",
+    "lastAt": 1793950047000
+   },
+   {
+    "sessionId": "s_55a1",
+    "title": "补齐订单筛选测试",
+    "projectId": "/work/storefront",
+    "projectName": "storefront",
+    "model": "deepseek-v4-flash",
+    "provider": "deepseek",
+    "state": "running",
+    "lastAt": 1793950071000
+   },
+   {
+    "sessionId": "s_2b90",
+    "title": "重建预览环境镜像",
+    "projectId": "/work/devtools",
+    "projectName": "devtools",
+    "model": "deepseek-v4-flash",
+    "state": "failed",
+    "endedAt": 1793949849000,
+    "lastAt": 1793949849000
+   },
+   {
+    "sessionId": "s_91cd",
+    "title": "验证订单筛选条件",
+    "projectId": "/work/storefront",
+    "projectName": "storefront",
+    "model": "deepseek-v4-flash",
+    "state": "ended",
+    "endedAt": 1793947329000,
+    "lastAt": 1793947329000
+   },
+   {
+    "sessionId": "s_40b1",
+    "title": "收敛登录回调日志",
+    "projectId": "/work/api-gateway",
+    "projectName": "api-gateway",
+    "model": "deepseek-v4-flash",
+    "provider": "deepseek",
+    "state": "ended",
+    "endedAt": 1793878089000,
+    "lastAt": 1793878089000
+   },
+   {
+    "sessionId": "s_83de",
+    "title": "验证登录回调异常场景",
+    "projectId": "/work/api-gateway",
+    "projectName": "api-gateway",
+    "model": "deepseek-v4-flash",
+    "provider": "deepseek",
+    "state": "ended",
+    "endedAt": 1793690889000,
+    "lastAt": 1793690889000
+   }
+  ],
+  "total": 7
+ },
+ "__requests": {
+  "s_7c2f": {
+   "rows": [
+    {
+     "requestId": "req_7f2a",
+     "at": 1793949903000,
+     "status": "settled",
+     "provider": "deepseek",
+     "model": "deepseek-v4-flash",
+     "tokens": {
+      "uncachedInput": 400000,
+      "cacheReadInput": 200000,
+      "cacheWriteInput": 0,
+      "output": 300000
+     },
+     "amount": 0.88,
+     "quality": "priced",
+     "priceRef": "demo-usd-1106",
+     "attribution": "workspace"
+    },
+    {
+     "requestId": "req_7c41",
+     "at": 1793949639000,
+     "status": "settled",
+     "provider": "deepseek",
+     "model": "deepseek-v4-flash",
+     "tokens": {
+      "uncachedInput": 120000,
+      "cacheReadInput": 80000,
+      "cacheWriteInput": 0,
+      "output": 220000
+     },
+     "amount": 0.66,
+     "quality": "priced",
+     "priceRef": "demo-usd-1106",
+     "attribution": "workspace"
+    },
+    {
+     "requestId": "req_7b26",
+     "at": 1793949538000,
+     "status": "aggregate",
+     "provider": "deepseek",
+     "model": "deepseek-v4-flash",
+     "tokens": {
+      "uncachedInput": 60000,
+      "cacheReadInput": 40000,
+      "cacheWriteInput": 0,
+      "output": 90000
+     },
+     "amount": 0.3,
+     "quality": "priced",
+     "priceRef": "demo-usd-1106",
+     "attribution": "workspace"
+    },
+    {
+     "requestId": "req_7a10",
+     "at": 1793949459000,
+     "status": "aggregate",
+     "provider": "deepseek",
+     "model": "deepseek-v4-flash",
+     "tokens": {
+      "uncachedInput": 0,
+      "cacheReadInput": 0,
+      "cacheWriteInput": 0,
+      "output": 0
+     },
+     "quality": "unpriced",
+     "priceRef": "demo-usd-1106",
+     "attribution": "workspace"
+    }
+   ],
+   "prices": [
+    {
+     "model": "deepseek-v4-flash",
+     "ref": "demo-usd-1106",
+     "input": 0.6,
+     "cacheRead": 0.2,
+     "cacheWrite": 0.6,
+     "output": 2
+    }
+   ]
+  }
+ },
+ "__report": {
+  "generatedAt": 1793950089000,
+  "day": 1793894400000,
+  "dayLabel": "2026-11-06",
+  "totals": {
+   "done": 1,
+   "active": 1,
+   "blocked": 1,
+   "confirm": 1,
+   "evidence": 9,
+   "projects": 3
+  },
+  "projects": [
+   {
+    "card": {
+     "projectId": "/work/storefront",
+     "name": "storefront",
+     "cwd": "/work/storefront",
+     "root": "/work/storefront",
+     "day": 1793894400000,
+     "sessions": 2,
+     "commits": 1,
+     "files": 2,
+     "tests": 1,
+     "evidence": 4,
+     "counts": {
+      "done": 1,
+      "active": 0,
+      "blocked": 0,
+      "confirm": 0
+     },
+     "unfinished": 0,
+     "lastAction": {
+      "kind": "commit",
+      "at": 1793947449000,
+      "label": "订单筛选条件与边界用例"
+     },
+     "lastAt": 1793947569000
+    },
+    "timeline": [
+     {
+      "kind": "session",
       "sessionId": "s_91cd",
       "title": "验证订单筛选条件",
-      "projectId": "/work/storefront",
-      "projectName": "storefront",
       "state": "ended",
-      "running": false,
-      "endedAt": 1793947329000,
-      "lastAt": 1793947329000,
-      "turnStartedAt": 1793946609000,
-      "lastEnd": {
-        "turn": 1,
-        "startedAt": 1793946609000,
-        "endedAt": 1793947329000,
-        "reason": "restart",
-        "message": "",
-        "failed": false
+      "at": 1793947329000,
+      "attribution": "direct",
+      "reference": {
+       "sourceType": "session",
+       "sourceRef": "s_91cd"
       },
-      "model": "deepseek-v4-flash",
-      "usage": {
-        "amount": 0.44,
-        "quality": "priced",
-        "coverage": 1
-      },
-      "alerts": []
-    }
-  ],
-  "alerts": [
-    {
-      "key": "local|s_2b90|failure|1:1793949849000",
-      "type": "failure",
-      "state": "open",
-      "severity": "high",
-      "sessionId": "s_2b90",
-      "projectId": "/work/devtools",
-      "projectName": "devtools",
-      "title": "重建预览环境镜像",
-      "reason": "镜像构建退出码 1",
-      "triggeredAt": 1793949849000,
-      "currentState": "failed",
-      "updatedAt": 1793949849000
-    },
-    {
-      "key": "local|s_7c2f|waiting|1793949969000",
-      "type": "waiting",
-      "state": "open",
-      "severity": "medium",
-      "sessionId": "s_7c2f",
-      "projectId": "/work/api-gateway",
-      "projectName": "api-gateway",
-      "title": "修复登录回调重试",
-      "reason": "bash",
-      "triggeredAt": 1793949969000,
-      "currentState": "waiting",
-      "updatedAt": 1793949969000
-    }
-  ],
-  "ledger": {
-    "today": {
-      "sessionId": "s_total",
-      "projectId": "/work/api-gateway",
-      "projectName": "api-gateway",
-      "title": "今日合计",
-      "amount": 8.42,
-      "parts": [],
-      "quality": "partial",
-      "coverage": 0.96
-    },
-    "projects": [
-      {
-        "projectId": "/work/api-gateway",
-        "name": "api-gateway",
-        "sessions": 2,
-        "amount": 4.86,
-        "todayAmount": 4.86,
-        "coverage": 0.75,
-        "unpricedTokens": 8000
-      },
-      {
-        "projectId": "/work/storefront",
-        "name": "storefront",
-        "sessions": 2,
-        "amount": 2.31,
-        "todayAmount": 2.31,
-        "coverage": 1,
-        "unpricedTokens": 0
-      },
-      {
-        "projectId": "/work/devtools",
-        "name": "devtools",
-        "sessions": 2,
-        "amount": 1.25,
-        "todayAmount": 1.25,
-        "coverage": 1,
-        "unpricedTokens": 0
+      "status": "done",
+      "confirmation": {
+       "by": "local-user",
+       "at": 1793947389000
       }
-    ],
-    "trend": [
-      {
-        "day": 1793462400000,
-        "amount": 3.2,
-        "priced": 1
+     },
+     {
+      "kind": "commit",
+      "sha": "7b3a29e",
+      "short": "7b3a29e",
+      "fullSha": "7b3a29e000000000000000000000000000000000",
+      "subject": "订单筛选条件与边界用例",
+      "author": "local",
+      "at": 1793947449000,
+      "files": 3,
+      "attribution": "activity",
+      "reference": {
+       "sourceType": "commit",
+       "sourceRef": "/work/storefront:7b3a29e"
       },
-      {
-        "day": 1793548800000,
-        "amount": 4.1,
-        "priced": 1
-      },
-      {
-        "day": 1793635200000,
-        "amount": 2.8,
-        "priced": 1
-      },
-      {
-        "day": 1793721600000,
-        "amount": 5.6,
-        "priced": 1
-      },
-      {
-        "day": 1793808000000,
-        "amount": 6.4,
-        "priced": 1
-      },
-      {
-        "day": 1793894400000,
-        "amount": 5.9,
-        "priced": 1
-      },
-      {
-        "day": 1793980800000,
-        "amount": 8.42,
-        "priced": 1
-      }
-    ],
-    "trendMax": 8.42,
-    "sessions": [
-      {
-        "sessionId": "s_7c2f",
-        "projectId": "/work/api-gateway",
-        "projectName": "api-gateway",
-        "title": "修复登录回调重试",
-        "model": "deepseek-v4-flash",
-        "amount": 1.84,
-        "tokens": {
-          "uncachedInput": 412000,
-          "cacheReadInput": 1204000,
-          "cacheWriteInput": 0,
-          "output": 84000
-        },
-        "parts": [],
-        "quality": "partial",
-        "coverage": 0.75
-      },
-      {
-        "sessionId": "s_17f0",
-        "projectId": "/work/devtools",
-        "projectName": "devtools",
-        "title": "整理发布流程脚本",
-        "model": "deepseek-v4-flash",
-        "amount": 0.92,
-        "tokens": {
-          "uncachedInput": 180000,
-          "cacheReadInput": 900000,
-          "cacheWriteInput": 0,
-          "output": 41000
-        },
-        "parts": [],
-        "quality": "priced",
-        "coverage": 1
-      },
-      {
-        "sessionId": "s_55a1",
-        "projectId": "/work/storefront",
-        "projectName": "storefront",
-        "title": "补齐订单筛选测试",
-        "model": "deepseek-v4-flash",
-        "amount": 0.61,
-        "parts": [],
-        "quality": "priced",
-        "coverage": 1
-      },
-      {
-        "sessionId": "s_2b90",
-        "projectId": "/work/devtools",
-        "projectName": "devtools",
-        "title": "重建预览环境镜像",
-        "model": "deepseek-v4-flash",
-        "amount": 0.3,
-        "parts": [],
-        "quality": "priced",
-        "coverage": 1
-      },
-      {
-        "sessionId": "s_91cd",
-        "projectId": "/work/storefront",
-        "projectName": "storefront",
-        "title": "验证订单筛选条件",
-        "model": "deepseek-v4-flash",
-        "amount": 0.44,
-        "parts": [],
-        "quality": "priced",
-        "coverage": 1
-      }
-    ],
-    "daySessions": [],
-    "currency": "USD",
-    "coverage": 0.96,
-    "days": [
-      1793462400000,
-      1793548800000,
-      1793635200000,
-      1793721600000,
-      1793808000000,
-      1793894400000,
-      1793980800000
-    ],
-    "detail": {
-      "s_7c2f": [
-        {
-          "requestId": "req_7f2a",
-          "at": 1793949903000,
-          "status": "ok",
-          "amount": 0.88,
-          "quality": "priced",
-          "provider": "deepseek",
-          "model": "deepseek-v4-flash",
-          "tokens": {
-            "uncachedInput": 400000,
-            "cacheReadInput": 200000,
-            "cacheWriteInput": 0,
-            "output": 300000
-          },
-          "priceRef": "demo-usd-1106",
-          "attribution": "workspace"
-        },
-        {
-          "requestId": "req_7c41",
-          "at": 1793949639000,
-          "status": "ok",
-          "amount": 0.66,
-          "quality": "priced",
-          "provider": "deepseek",
-          "model": "deepseek-v4-flash",
-          "tokens": {
-            "uncachedInput": 120000,
-            "cacheReadInput": 80000,
-            "cacheWriteInput": 0,
-            "output": 220000
-          },
-          "priceRef": "demo-usd-1106",
-          "attribution": "workspace"
-        },
-        {
-          "requestId": "req_7b26",
-          "at": 1793949538000,
-          "status": "error",
-          "amount": 0.3,
-          "quality": "priced",
-          "provider": "deepseek",
-          "model": "deepseek-v4-flash",
-          "tokens": {
-            "uncachedInput": 60000,
-            "cacheReadInput": 40000,
-            "cacheWriteInput": 0,
-            "output": 90000
-          },
-          "priceRef": "demo-usd-1106",
-          "attribution": "workspace"
-        },
-        {
-          "requestId": "req_7a10",
-          "at": 1793949459000,
-          "status": "error",
-          "quality": "missing-usage",
-          "provider": "deepseek",
-          "model": "deepseek-v4-flash",
-          "tokens": {
-            "uncachedInput": 0,
-            "cacheReadInput": 0,
-            "cacheWriteInput": 0,
-            "output": 0
-          },
-          "priceRef": "demo-usd-1106",
-          "attribution": "workspace"
-        }
+      "touchesSessionFile": true,
+      "relatedSessions": [
+       "s_91cd"
       ]
-    },
-    "prices": {
-      "deepseek-v4-flash": {
-        "model": "deepseek-v4-flash",
-        "ref": "demo-usd-1106",
-        "input": 0.6,
-        "cacheRead": 0.2,
-        "cacheWrite": 0.6,
-        "output": 2
+     },
+     {
+      "kind": "test",
+      "text": "pnpm test",
+      "count": 1,
+      "at": 1793947509000,
+      "sessionId": "s_91cd",
+      "verified": true,
+      "passed": 12,
+      "failed": 0,
+      "exitCode": 0,
+      "attribution": "direct",
+      "reference": {
+       "sourceType": "test",
+       "sourceRef": "s_91cd:pnpm test"
       }
-    }
-  },
-  "tasks": {
-    "total": 12,
-    "running": 3,
-    "recent": 2
-  },
-  "search": {
-    "rows": [
-      {
-        "sessionId": "s_7c2f",
-        "title": "修复登录回调重试",
-        "projectId": "/work/api-gateway",
-        "projectName": "api-gateway",
-        "model": "deepseek-v4-flash",
-        "provider": "deepseek",
-        "state": "waiting",
-        "lastAt": 1793949969000
-      },
-      {
-        "sessionId": "s_17f0",
-        "title": "整理发布流程脚本",
-        "projectId": "/work/devtools",
-        "projectName": "devtools",
-        "model": "deepseek-v4-flash",
-        "provider": "deepseek",
-        "state": "running",
-        "lastAt": 1793950047000
-      },
-      {
-        "sessionId": "s_55a1",
-        "title": "补齐订单筛选测试",
-        "projectId": "/work/storefront",
-        "projectName": "storefront",
-        "model": "deepseek-v4-flash",
-        "provider": "deepseek",
-        "state": "running",
-        "lastAt": 1793950071000
-      },
-      {
-        "sessionId": "s_2b90",
-        "title": "重建预览环境镜像",
-        "projectId": "/work/devtools",
-        "projectName": "devtools",
-        "model": "deepseek-v4-flash",
-        "state": "failed",
-        "endedAt": 1793949849000,
-        "lastAt": 1793949849000
-      },
-      {
-        "sessionId": "s_91cd",
-        "title": "验证订单筛选条件",
-        "projectId": "/work/storefront",
-        "projectName": "storefront",
-        "model": "deepseek-v4-flash",
-        "state": "ended",
-        "endedAt": 1793947329000,
-        "lastAt": 1793947329000
-      },
-      {
-        "sessionId": "s_40b1",
-        "title": "收敛登录回调日志",
-        "projectId": "/work/api-gateway",
-        "projectName": "api-gateway",
-        "model": "deepseek-v4-flash",
-        "provider": "deepseek",
-        "state": "ended",
-        "endedAt": 1793878089000,
-        "lastAt": 1793878089000
-      },
-      {
-        "sessionId": "s_83de",
-        "title": "验证登录回调异常场景",
-        "projectId": "/work/api-gateway",
-        "projectName": "api-gateway",
-        "model": "deepseek-v4-flash",
-        "provider": "deepseek",
-        "state": "ended",
-        "endedAt": 1793690889000,
-        "lastAt": 1793690889000
+     },
+     {
+      "kind": "file",
+      "path": "src/orders/filter.ts",
+      "count": 2,
+      "at": 1793947569000,
+      "sessionId": "s_91cd",
+      "title": "验证订单筛选条件",
+      "attribution": "direct",
+      "reference": {
+       "sourceType": "file",
+       "sourceRef": "s_91cd:src/orders/filter.ts"
       }
-    ],
-    "total": 7
-  },
-  "__requests": {
-    "s_7c2f": {
-      "rows": [
-        {
-          "requestId": "req_7f2a",
-          "at": 1793949903000,
-          "status": "settled",
-          "provider": "deepseek",
-          "model": "deepseek-v4-flash",
-          "tokens": {
-            "uncachedInput": 400000,
-            "cacheReadInput": 200000,
-            "cacheWriteInput": 0,
-            "output": 300000
-          },
-          "amount": 0.88,
-          "quality": "priced",
-          "priceRef": "demo-usd-1106",
-          "attribution": "workspace"
-        },
-        {
-          "requestId": "req_7c41",
-          "at": 1793949639000,
-          "status": "settled",
-          "provider": "deepseek",
-          "model": "deepseek-v4-flash",
-          "tokens": {
-            "uncachedInput": 120000,
-            "cacheReadInput": 80000,
-            "cacheWriteInput": 0,
-            "output": 220000
-          },
-          "amount": 0.66,
-          "quality": "priced",
-          "priceRef": "demo-usd-1106",
-          "attribution": "workspace"
-        },
-        {
-          "requestId": "req_7b26",
-          "at": 1793949538000,
-          "status": "aggregate",
-          "provider": "deepseek",
-          "model": "deepseek-v4-flash",
-          "tokens": {
-            "uncachedInput": 60000,
-            "cacheReadInput": 40000,
-            "cacheWriteInput": 0,
-            "output": 90000
-          },
-          "amount": 0.3,
-          "quality": "priced",
-          "priceRef": "demo-usd-1106",
-          "attribution": "workspace"
-        },
-        {
-          "requestId": "req_7a10",
-          "at": 1793949459000,
-          "status": "aggregate",
-          "provider": "deepseek",
-          "model": "deepseek-v4-flash",
-          "tokens": {
-            "uncachedInput": 0,
-            "cacheReadInput": 0,
-            "cacheWriteInput": 0,
-            "output": 0
-          },
-          "quality": "unpriced",
-          "priceRef": "demo-usd-1106",
-          "attribution": "workspace"
-        }
-      ],
-      "prices": [
-        {
-          "model": "deepseek-v4-flash",
-          "ref": "demo-usd-1106",
-          "input": 0.6,
-          "cacheRead": 0.2,
-          "cacheWrite": 0.6,
-          "output": 2
-        }
-      ]
-    }
-  },
-  "__report": {
-    "generatedAt": 1793950089000,
-    "day": 1793894400000,
-    "dayLabel": "2026-11-06",
-    "totals": {
-      "done": 1,
-      "active": 1,
-      "blocked": 1,
-      "confirm": 1,
-      "evidence": 9,
-      "projects": 3
-    },
-    "projects": [
-      {
-        "card": {
-          "projectId": "/work/storefront",
-          "name": "storefront",
-          "cwd": "/work/storefront",
-          "root": "/work/storefront",
-          "day": 1793894400000,
-          "sessions": 2,
-          "commits": 1,
-          "files": 2,
-          "tests": 1,
-          "evidence": 4,
-          "counts": {
-            "done": 1,
-            "active": 0,
-            "blocked": 0,
-            "confirm": 0
-          },
-          "unfinished": 0,
-          "lastAction": {
-            "kind": "commit",
-            "at": 1793947449000,
-            "label": "订单筛选条件与边界用例"
-          },
-          "lastAt": 1793947569000
-        },
-        "timeline": [
-          {
-            "kind": "session",
-            "sessionId": "s_91cd",
-            "title": "验证订单筛选条件",
-            "state": "ended",
-            "at": 1793947329000,
-            "attribution": "direct",
-            "reference": {
-              "sourceType": "session",
-              "sourceRef": "s_91cd"
-            },
-            "status": "done",
-            "confirmation": {
-              "by": "local-user",
-              "at": 1793947389000
-            }
-          },
-          {
-            "kind": "commit",
-            "sha": "7b3a29e",
-            "short": "7b3a29e",
-            "fullSha": "7b3a29e000000000000000000000000000000000",
-            "subject": "订单筛选条件与边界用例",
-            "author": "local",
-            "at": 1793947449000,
-            "files": 3,
-            "attribution": "activity",
-            "reference": {
-              "sourceType": "commit",
-              "sourceRef": "/work/storefront:7b3a29e"
-            },
-            "touchesSessionFile": true,
-            "relatedSessions": [
-              "s_91cd"
-            ]
-          },
-          {
-            "kind": "test",
-            "text": "pnpm test",
-            "count": 1,
-            "at": 1793947509000,
-            "sessionId": "s_91cd",
-            "verified": true,
-            "passed": 12,
-            "failed": 0,
-            "exitCode": 0,
-            "attribution": "direct",
-            "reference": {
-              "sourceType": "test",
-              "sourceRef": "s_91cd:pnpm test"
-            }
-          },
-          {
-            "kind": "file",
-            "path": "src/orders/filter.ts",
-            "count": 2,
-            "at": 1793947569000,
-            "sessionId": "s_91cd",
-            "title": "验证订单筛选条件",
-            "attribution": "direct",
-            "reference": {
-              "sourceType": "file",
-              "sourceRef": "s_91cd:src/orders/filter.ts"
-            }
-          }
-        ],
-        "report": {
-          "won": [
-            {
-              "kind": "session",
-              "sessionId": "s_91cd",
-              "projectId": "/work/storefront",
-              "title": "验证订单筛选条件",
-              "status": "done",
-              "attribution": "direct",
-              "evidence": [
-                {
-                  "sourceType": "session",
-                  "sourceRef": "s_91cd"
-                }
-              ],
-              "references": [
-                {
-                  "sourceType": "session",
-                  "sourceRef": "s_91cd"
-                }
-              ],
-              "verification": {
-                "kind": "turn-end",
-                "label": "done"
-              },
-              "edited": false,
-              "confirmation": {
-                "by": "local-user",
-                "at": 1793947389000
-              }
-            }
-          ],
-          "doing": [],
-          "blocked": [],
-          "confirm": []
-        },
-        "git": "ready",
-        "root": "/work/storefront"
-      },
-      {
-        "card": {
-          "projectId": "/work/devtools",
-          "name": "devtools",
-          "cwd": "/work/devtools",
-          "root": "/work/devtools",
-          "day": 1793894400000,
-          "sessions": 2,
-          "commits": 0,
-          "files": 1,
-          "tests": 0,
-          "evidence": 2,
-          "counts": {
-            "done": 0,
-            "active": 1,
-            "blocked": 0,
-            "confirm": 1
-          },
-          "unfinished": 2,
-          "lastAction": {
-            "kind": "session",
-            "at": 1793950047000,
-            "label": "整理发布流程脚本"
-          },
-          "lastAt": 1793950047000
-        },
-        "timeline": [
-          {
-            "kind": "session",
-            "sessionId": "s_17f0",
-            "title": "整理发布流程脚本",
-            "state": "running",
-            "at": 1793950047000,
-            "attribution": "direct",
-            "reference": {
-              "sourceType": "session",
-              "sourceRef": "s_17f0"
-            },
-            "status": "active"
-          },
-          {
-            "kind": "session",
-            "sessionId": "s_2b90",
-            "title": "检查镜像构建结果",
-            "state": "ended",
-            "at": 1793949849000,
-            "attribution": "direct",
-            "reference": {
-              "sourceType": "session",
-              "sourceRef": "s_2b90"
-            },
-            "status": "confirm"
-          }
-        ],
-        "report": {
-          "won": [],
-          "doing": [
-            {
-              "kind": "session",
-              "sessionId": "s_17f0",
-              "projectId": "/work/devtools",
-              "title": "整理发布流程脚本",
-              "status": "active",
-              "attribution": "direct",
-              "evidence": [
-                {
-                  "sourceType": "session",
-                  "sourceRef": "s_17f0"
-                }
-              ],
-              "references": [
-                {
-                  "sourceType": "session",
-                  "sourceRef": "s_17f0"
-                }
-              ],
-              "verification": {
-                "kind": "turn-end",
-                "label": "done"
-              },
-              "edited": false
-            }
-          ],
-          "blocked": [],
-          "confirm": [
-            {
-              "kind": "session",
-              "sessionId": "s_2b90",
-              "projectId": "/work/devtools",
-              "title": "检查镜像构建结果",
-              "status": "confirm",
-              "attribution": "direct",
-              "evidence": [
-                {
-                  "sourceType": "session",
-                  "sourceRef": "s_2b90"
-                }
-              ],
-              "references": [
-                {
-                  "sourceType": "session",
-                  "sourceRef": "s_2b90"
-                }
-              ],
-              "verification": {
-                "kind": "turn-end",
-                "label": "done"
-              },
-              "edited": false
-            }
-          ]
-        },
-        "git": "off",
-        "root": "/work/devtools"
-      },
-      {
-        "card": {
-          "projectId": "/work/api-gateway",
-          "name": "api-gateway",
-          "cwd": "/work/api-gateway",
-          "root": "/work/api-gateway",
-          "day": 1793894400000,
-          "sessions": 2,
-          "commits": 0,
-          "files": 1,
-          "tests": 0,
-          "evidence": 2,
-          "counts": {
-            "done": 0,
-            "active": 0,
-            "blocked": 1,
-            "confirm": 0
-          },
-          "unfinished": 1,
-          "lastAction": {
-            "kind": "session",
-            "at": 1793949969000,
-            "label": "修复登录回调重试"
-          },
-          "lastAt": 1793949969000
-        },
-        "timeline": [
-          {
-            "kind": "session",
-            "sessionId": "s_7c2f",
-            "title": "修复登录回调重试",
-            "state": "waiting",
-            "at": 1793949969000,
-            "attribution": "direct",
-            "reference": {
-              "sourceType": "session",
-              "sourceRef": "s_7c2f"
-            },
-            "status": "blocked",
-            "blockedBy": "waiting"
-          }
-        ],
-        "report": {
-          "won": [],
-          "doing": [],
-          "blocked": [
-            {
-              "kind": "session",
-              "sessionId": "s_7c2f",
-              "projectId": "/work/api-gateway",
-              "title": "修复登录回调重试",
-              "status": "blocked",
-              "attribution": "direct",
-              "evidence": [
-                {
-                  "sourceType": "session",
-                  "sourceRef": "s_7c2f"
-                }
-              ],
-              "references": [
-                {
-                  "sourceType": "session",
-                  "sourceRef": "s_7c2f"
-                }
-              ],
-              "verification": {
-                "kind": "turn-end",
-                "label": "done"
-              },
-              "edited": false,
-              "blockedBy": "waiting"
-            }
-          ],
-          "confirm": []
-        },
-        "git": "off",
-        "root": "/work/api-gateway"
-      }
+     }
     ],
     "report": {
-      "markdown": "# 日报 · 11 月 6 日\n\n## storefront\n\n### 已完成\n\n- 验证订单筛选条件\n",
-      "groups": [
+     "won": [
+      {
+       "kind": "session",
+       "sessionId": "s_91cd",
+       "projectId": "/work/storefront",
+       "title": "验证订单筛选条件",
+       "status": "done",
+       "attribution": "direct",
+       "evidence": [
         {
-          "name": "storefront",
-          "won": [
-            {
-              "kind": "session",
-              "sessionId": "s_91cd",
-              "projectId": "/work/storefront",
-              "title": "验证订单筛选条件",
-              "status": "done",
-              "attribution": "direct",
-              "evidence": [
-                {
-                  "sourceType": "session",
-                  "sourceRef": "s_91cd"
-                }
-              ],
-              "references": [
-                {
-                  "sourceType": "session",
-                  "sourceRef": "s_91cd"
-                }
-              ],
-              "verification": {
-                "kind": "turn-end",
-                "label": "done"
-              },
-              "edited": false,
-              "confirmation": {
-                "by": "local-user",
-                "at": 1793947389000
-              }
-            }
-          ],
-          "doing": [],
-          "blocked": [],
-          "confirm": []
-        },
-        {
-          "name": "devtools",
-          "won": [],
-          "doing": [
-            {
-              "kind": "session",
-              "sessionId": "s_17f0",
-              "projectId": "/work/devtools",
-              "title": "整理发布流程脚本",
-              "status": "active",
-              "attribution": "direct",
-              "evidence": [
-                {
-                  "sourceType": "session",
-                  "sourceRef": "s_17f0"
-                }
-              ],
-              "references": [
-                {
-                  "sourceType": "session",
-                  "sourceRef": "s_17f0"
-                }
-              ],
-              "verification": {
-                "kind": "turn-end",
-                "label": "done"
-              },
-              "edited": false
-            }
-          ],
-          "blocked": [],
-          "confirm": [
-            {
-              "kind": "session",
-              "sessionId": "s_2b90",
-              "projectId": "/work/devtools",
-              "title": "检查镜像构建结果",
-              "status": "confirm",
-              "attribution": "direct",
-              "evidence": [
-                {
-                  "sourceType": "session",
-                  "sourceRef": "s_2b90"
-                }
-              ],
-              "references": [
-                {
-                  "sourceType": "session",
-                  "sourceRef": "s_2b90"
-                }
-              ],
-              "verification": {
-                "kind": "turn-end",
-                "label": "done"
-              },
-              "edited": false
-            }
-          ]
-        },
-        {
-          "name": "api-gateway",
-          "won": [],
-          "doing": [],
-          "blocked": [
-            {
-              "kind": "session",
-              "sessionId": "s_7c2f",
-              "projectId": "/work/api-gateway",
-              "title": "修复登录回调重试",
-              "status": "blocked",
-              "attribution": "direct",
-              "evidence": [
-                {
-                  "sourceType": "session",
-                  "sourceRef": "s_7c2f"
-                }
-              ],
-              "references": [
-                {
-                  "sourceType": "session",
-                  "sourceRef": "s_7c2f"
-                }
-              ],
-              "verification": {
-                "kind": "turn-end",
-                "label": "done"
-              },
-              "edited": false,
-              "blockedBy": "waiting"
-            }
-          ],
-          "confirm": []
+         "sourceType": "session",
+         "sourceRef": "s_91cd"
         }
-      ]
+       ],
+       "references": [
+        {
+         "sourceType": "session",
+         "sourceRef": "s_91cd"
+        }
+       ],
+       "verification": {
+        "kind": "turn-end",
+        "label": "done"
+       },
+       "edited": false,
+       "confirmation": {
+        "by": "local-user",
+        "at": 1793947389000
+       }
+      }
+     ],
+     "doing": [],
+     "blocked": [],
+     "confirm": []
     },
-    "capabilities": {
-      "git": "ready",
-      "tests": "ready",
-      "tasks": "local",
-      "verification": "轮次正常结束 + 结构化测试结果"
+    "git": "ready",
+    "root": "/work/storefront"
+   },
+   {
+    "card": {
+     "projectId": "/work/devtools",
+     "name": "devtools",
+     "cwd": "/work/devtools",
+     "root": "/work/devtools",
+     "day": 1793894400000,
+     "sessions": 2,
+     "commits": 0,
+     "files": 1,
+     "tests": 0,
+     "evidence": 2,
+     "counts": {
+      "done": 0,
+      "active": 1,
+      "blocked": 0,
+      "confirm": 1
+     },
+     "unfinished": 2,
+     "lastAction": {
+      "kind": "session",
+      "at": 1793950047000,
+      "label": "整理发布流程脚本"
+     },
+     "lastAt": 1793950047000
+    },
+    "timeline": [
+     {
+      "kind": "session",
+      "sessionId": "s_17f0",
+      "title": "整理发布流程脚本",
+      "state": "running",
+      "at": 1793950047000,
+      "attribution": "direct",
+      "reference": {
+       "sourceType": "session",
+       "sourceRef": "s_17f0"
+      },
+      "status": "active"
+     },
+     {
+      "kind": "session",
+      "sessionId": "s_2b90",
+      "title": "检查镜像构建结果",
+      "state": "ended",
+      "at": 1793949849000,
+      "attribution": "direct",
+      "reference": {
+       "sourceType": "session",
+       "sourceRef": "s_2b90"
+      },
+      "status": "confirm"
+     }
+    ],
+    "report": {
+     "won": [],
+     "doing": [
+      {
+       "kind": "session",
+       "sessionId": "s_17f0",
+       "projectId": "/work/devtools",
+       "title": "整理发布流程脚本",
+       "status": "active",
+       "attribution": "direct",
+       "evidence": [
+        {
+         "sourceType": "session",
+         "sourceRef": "s_17f0"
+        }
+       ],
+       "references": [
+        {
+         "sourceType": "session",
+         "sourceRef": "s_17f0"
+        }
+       ],
+       "verification": {
+        "kind": "turn-end",
+        "label": "done"
+       },
+       "edited": false
+      }
+     ],
+     "blocked": [],
+     "confirm": [
+      {
+       "kind": "session",
+       "sessionId": "s_2b90",
+       "projectId": "/work/devtools",
+       "title": "检查镜像构建结果",
+       "status": "confirm",
+       "attribution": "direct",
+       "evidence": [
+        {
+         "sourceType": "session",
+         "sourceRef": "s_2b90"
+        }
+       ],
+       "references": [
+        {
+         "sourceType": "session",
+         "sourceRef": "s_2b90"
+        }
+       ],
+       "verification": {
+        "kind": "turn-end",
+        "label": "done"
+       },
+       "edited": false
+      }
+     ]
+    },
+    "git": "off",
+    "root": "/work/devtools"
+   },
+   {
+    "card": {
+     "projectId": "/work/api-gateway",
+     "name": "api-gateway",
+     "cwd": "/work/api-gateway",
+     "root": "/work/api-gateway",
+     "day": 1793894400000,
+     "sessions": 2,
+     "commits": 0,
+     "files": 1,
+     "tests": 0,
+     "evidence": 2,
+     "counts": {
+      "done": 0,
+      "active": 0,
+      "blocked": 1,
+      "confirm": 0
+     },
+     "unfinished": 1,
+     "lastAction": {
+      "kind": "session",
+      "at": 1793949969000,
+      "label": "修复登录回调重试"
+     },
+     "lastAt": 1793949969000
+    },
+    "timeline": [
+     {
+      "kind": "session",
+      "sessionId": "s_7c2f",
+      "title": "修复登录回调重试",
+      "state": "waiting",
+      "at": 1793949969000,
+      "attribution": "direct",
+      "reference": {
+       "sourceType": "session",
+       "sourceRef": "s_7c2f"
+      },
+      "status": "blocked",
+      "blockedBy": "waiting"
+     }
+    ],
+    "report": {
+     "won": [],
+     "doing": [],
+     "blocked": [
+      {
+       "kind": "session",
+       "sessionId": "s_7c2f",
+       "projectId": "/work/api-gateway",
+       "title": "修复登录回调重试",
+       "status": "blocked",
+       "attribution": "direct",
+       "evidence": [
+        {
+         "sourceType": "session",
+         "sourceRef": "s_7c2f"
+        }
+       ],
+       "references": [
+        {
+         "sourceType": "session",
+         "sourceRef": "s_7c2f"
+        }
+       ],
+       "verification": {
+        "kind": "turn-end",
+        "label": "done"
+       },
+       "edited": false,
+       "blockedBy": "waiting"
+      }
+     ],
+     "confirm": []
+    },
+    "git": "off",
+    "root": "/work/api-gateway"
+   }
+  ],
+  "report": {
+   "markdown": "# 日报 · 11 月 6 日\n\n## storefront\n\n### 已完成\n\n- 验证订单筛选条件\n",
+   "groups": [
+    {
+     "name": "storefront",
+     "won": [
+      {
+       "kind": "session",
+       "sessionId": "s_91cd",
+       "projectId": "/work/storefront",
+       "title": "验证订单筛选条件",
+       "status": "done",
+       "attribution": "direct",
+       "evidence": [
+        {
+         "sourceType": "session",
+         "sourceRef": "s_91cd"
+        }
+       ],
+       "references": [
+        {
+         "sourceType": "session",
+         "sourceRef": "s_91cd"
+        }
+       ],
+       "verification": {
+        "kind": "turn-end",
+        "label": "done"
+       },
+       "edited": false,
+       "confirmation": {
+        "by": "local-user",
+        "at": 1793947389000
+       }
+      }
+     ],
+     "doing": [],
+     "blocked": [],
+     "confirm": []
+    },
+    {
+     "name": "devtools",
+     "won": [],
+     "doing": [
+      {
+       "kind": "session",
+       "sessionId": "s_17f0",
+       "projectId": "/work/devtools",
+       "title": "整理发布流程脚本",
+       "status": "active",
+       "attribution": "direct",
+       "evidence": [
+        {
+         "sourceType": "session",
+         "sourceRef": "s_17f0"
+        }
+       ],
+       "references": [
+        {
+         "sourceType": "session",
+         "sourceRef": "s_17f0"
+        }
+       ],
+       "verification": {
+        "kind": "turn-end",
+        "label": "done"
+       },
+       "edited": false
+      }
+     ],
+     "blocked": [],
+     "confirm": [
+      {
+       "kind": "session",
+       "sessionId": "s_2b90",
+       "projectId": "/work/devtools",
+       "title": "检查镜像构建结果",
+       "status": "confirm",
+       "attribution": "direct",
+       "evidence": [
+        {
+         "sourceType": "session",
+         "sourceRef": "s_2b90"
+        }
+       ],
+       "references": [
+        {
+         "sourceType": "session",
+         "sourceRef": "s_2b90"
+        }
+       ],
+       "verification": {
+        "kind": "turn-end",
+        "label": "done"
+       },
+       "edited": false
+      }
+     ]
+    },
+    {
+     "name": "api-gateway",
+     "won": [],
+     "doing": [],
+     "blocked": [
+      {
+       "kind": "session",
+       "sessionId": "s_7c2f",
+       "projectId": "/work/api-gateway",
+       "title": "修复登录回调重试",
+       "status": "blocked",
+       "attribution": "direct",
+       "evidence": [
+        {
+         "sourceType": "session",
+         "sourceRef": "s_7c2f"
+        }
+       ],
+       "references": [
+        {
+         "sourceType": "session",
+         "sourceRef": "s_7c2f"
+        }
+       ],
+       "verification": {
+        "kind": "turn-end",
+        "label": "done"
+       },
+       "edited": false,
+       "blockedBy": "waiting"
+      }
+     ],
+     "confirm": []
     }
+   ]
+  },
+  "capabilities": {
+   "git": "ready",
+   "tests": "ready",
+   "tasks": "local",
+   "verification": "轮次正常结束 + 结构化测试结果"
   }
+ }
 }

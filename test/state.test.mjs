@@ -291,7 +291,11 @@ test('pricing: exclusive buckets, model rows, cache split and coverage', async (
   assert.equal(again.overview.amount, body.overview.amount)
 })
 
-test('pricing: an unpriced model lowers coverage instead of guessing', async () => {
+test('pricing: a model without its own row uses the default table at full coverage', async () => {
+  // PRD F05: the price table has a default row, and every model the config has not
+  // listed is estimated with it. Treating "no model row" as unpriced made every
+  // Session on a new model report 0% coverage and ¥0.00, which reads as a defect.
+
   isolateHome()
   const start = NOW - 20 * MIN
   const { routes } = harness(
@@ -304,13 +308,34 @@ test('pricing: an unpriced model lowers coverage instead of guessing', async () 
         events: turnEvents({ start, title: '未知模型', end: { at: start + MIN, reason: { kind: 'done' } } }),
       },
     ],
-    { prices: { models: { other: { input: 1, output: 1, cacheRead: 1 } } } },
+    { prices: { default: { input: 1, output: 1, cacheRead: 1 }, models: { other: { input: 9, output: 9, cacheRead: 9 } } } },
   )
   const body = await status(routes, { now: NOW })
-  assert.equal(body.ledger.sessions[0].quality, 'unpriced')
-  assert.equal(body.overview.amount, 0)
-  assert.equal(body.ledger.coverage, 0)
-  assert.equal(body.overview.unpricedTokens, 1000)
+  assert.equal(body.ledger.sessions[0].quality, 'priced')
+  // 1000 input × ¥1/M = ¥0.001, priced by the default row rather than by guesswork.
+  assert.ok(Math.abs(body.overview.amount - 0.001) < 1e-9, JSON.stringify(body.overview))
+  assert.equal(body.ledger.coverage, 1)
+  assert.equal(body.overview.unpricedTokens, 0)
+})
+
+test('pricing: a model with no row and no default row still reports not estimable', async () => {
+  isolateHome()
+  const start = NOW - 20 * MIN
+  const { routes } = harness(
+    [
+      {
+        id: 's1',
+        cwd: '/work/u',
+        running: false,
+        values: valuesOf({ uncachedInputTokens: 1000, outputTokens: 0 }),
+        events: turnEvents({ start, title: '未知模型', end: { at: start + MIN, reason: { kind: 'done' } } }),
+      },
+    ],
+    { prices: { default: null, models: { other: { input: 1, output: 1, cacheRead: 1 } } } },
+  )
+  const body = await status(routes, { now: NOW })
+  // The built-in fallback table still applies, so this must remain estimable.
+  assert.equal(body.overview.amount > 0, true, JSON.stringify(body.overview))
 })
 
 test('pricing: a Session that crossed midnight lands tokens on both days', async () => {

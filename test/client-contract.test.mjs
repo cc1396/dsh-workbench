@@ -80,7 +80,12 @@ test('an executing row has a motion indicator with a static reduced-motion fallb
   assert.match(client, /state === 'running' \? h\(RunningDots\)/u)
   assert.match(client, /data-state=running/u)
   assert.match(client, /@keyframes wb-pulse/u)
-  assert.match(client, /@keyframes wb-flow/u)
+  // The leading edge is a static marker: no travelling light animation.
+  assert.equal(client.includes('@keyframes wb-flow'), false)
+  assert.match(client, /\.wb-row\[data-state=running\]::before\{content:'';position:absolute;left:0;top:6px/u)
+  assert.equal(/\.wb-row\[data-state=running\]::before[^}]*animation:/u.test(client), false)
+  // ~2px more room between task rows.
+  assert.match(client, /\.wb-row-main\{[^}]*padding:10px 4px/u)
   // The indicator is decorative: the word 执行中 is still rendered by StateBadge.
   assert.match(client, /'aria-hidden': 'true'/u)
   assert.match(client, /t\(`state\.\$\{state\}`\)/u)

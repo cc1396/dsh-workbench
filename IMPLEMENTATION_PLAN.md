@@ -392,3 +392,19 @@
 验证：`node --test` **29/29**；`qa/interact.mjs` **11/11**；
 CDP 实测 2 个执行中行各有 `wb-pulse` + `wb-flow`，关闭动效后 `animationName: none`
 且点 `opacity: 1`、文字仍在，无页面异常。
+
+---
+
+## 15. 动画收敛与行距（2026-11-11，3.0.3）
+
+反馈：行首流光不需要，静态就好；任务之间的间隙加大 2px 左右。
+
+- 去掉 `@keyframes wb-flow` 与渐变往返，行首改为**静态绿色细线**（2px，`--wb-ok`，
+  opacity .6，上下各留 6px），不再有任何移动。
+- 执行中的动画只保留徽标里的**三点脉冲**与极轻的徽标呼吸。
+- `.wb-row-main` 上下 padding 9px → 10px，相邻任务行之间净增约 2px 间隙。
+- reduced-motion 下三点仍实心可见，静态细线本就无动画，无需额外覆盖。
+
+CDP 实测：`leadingBarAnimation: none`、三点仍 `wb-pulse`、`rowPadding: 10px`、
+其他状态动画数 0、关闭动效后点 opacity 1，无页面异常。
+`node --test` **29/29**，`qa/interact.mjs` **11/11**。

@@ -782,11 +782,10 @@ window.__ModuleLoader__.load({
     .wb-rows,.wb-alerts{list-style:none;margin:0;padding:0}
     .wb-row{border-bottom:.5px solid var(--dsw-alias-border-l1)}
     .wb-row:last-child{border-bottom:0}
-    /* Only a running row moves: a soft light travelling down its leading edge. */
-    .wb-row[data-state=running]{position:relative;overflow:hidden}
-    .wb-row[data-state=running]::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;border-radius:2px;background:linear-gradient(180deg,transparent 0%,var(--wb-ok) 45%,var(--wb-ok) 55%,transparent 100%);background-size:100% 220%;animation:wb-flow 2.2s linear infinite;opacity:.85}
-    @keyframes wb-flow{0%{background-position:0 220%}100%{background-position:0 -220%}}
-    .wb-row-main{display:flex;align-items:center;gap:10px;width:100%;padding:9px 4px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+    /* A quiet static marker on the leading edge: no motion here. */
+    .wb-row[data-state=running]{position:relative}
+    .wb-row[data-state=running]::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:2px;background:var(--wb-ok);opacity:.6}
+    .wb-row-main{display:flex;align-items:center;gap:10px;width:100%;padding:10px 4px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
     .wb-row-main:hover{background:color-mix(in srgb,var(--dsw-alias-label-primary) 4%,transparent)}
     .wb-row-body{display:flex;flex-direction:column;flex:1;min-width:0;gap:1px}
     .wb-row-title{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -836,7 +835,6 @@ window.__ModuleLoader__.load({
     @media (prefers-reduced-motion:reduce){
       *{animation:none!important;transition:none!important}
       .wb-pulse i{opacity:1;transform:none}
-      .wb-row[data-state=running]::before{background:var(--wb-ok);opacity:.6}
       .wb-badge[data-state=running]{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--wb-ok) 26%,transparent)}
     }
     `

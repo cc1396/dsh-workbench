@@ -340,3 +340,34 @@
 
 搜索、消耗归因、项目进展、证据日报四个 P1 页面及其路由一并移除（`/search`、`/requests`、`/report`、`/tasks`）。
 宿主侧代码仍在 git 历史中（`2.0.6`），需要时可在新分层上重新实现，而不是恢复旧的耦合实现。
+
+---
+
+## 13. 启动失败修复与「关闭」语义（2026-11-11，3.0.1）
+
+### 启动失败的根因
+
+上一版把浏览器端拆成 `client/` 下 9 个 ESM 文件，入口用
+`await import('./client/main.js')` 加载。但宿主的客户端加载器是 **CJS 工厂模型**：
+`window.__ModuleLoader__.load({ id, factory })`，把 `client.js` 当作单文件经典脚本求值，
+`require` 只解析已注册的插件 id，**相对 ESM 导入不在该模块图里**，于是
+`apply()` 抛 "Failed to fetch dynamically imported module"，整个插件不可用。
+
+修复：`client.js` 重新自包含（factory 闭包内分段，1044 行），`client/` 目录整目录删除，
+不再有任何 `import` / `export`。用 `new Function('window', clientSource)` 模拟宿主加载器验证：
+注册 → `factory(require)` → `apply(ctx)` → 两个 slot → 面板渲染，全链路通过。
+`test/client-contract.test.mjs` 现在会**断言入口里没有 ESM 语法**，防止再次拆坏。
+
+顺带修好 QA 脚手架：它把 `window.fetch` 整体替换成 mock，导致 `fetch('../client.js')`
+拿回 `{"ok":true}`（11 字节）并报 `Unexpected token ':'`。现在只对 `/api/workbench/*` 打桩，
+其余请求委托真实 fetch，并且用经典 `<script src="../client.js">` 注册工厂，与宿主一致。
+
+### 「取消」改为「关闭」
+
+按反馈，关注项第三个按钮改为 **关闭**（Close / 关闭），定义明确为
+**该条后续不再提醒**：按钮的无障碍名称、详情页的说明都写清这一点；
+只有之后出现**新的**失败或等待（新的稳定键）才会重新出现。
+后端仍走 `action: 'solve'`，对该键写入 `dismissedAt` 并保持 `solved`，语义一致。
+
+验证：`node --test` **28/28**；`qa/interact.mjs` **11/11**（含「关闭」按钮点击后条目立即消失）；
+真实语料今日 **¥90.93 / 覆盖 100%**；dist 经典脚本可解析、Host 端两条路由可挂载。

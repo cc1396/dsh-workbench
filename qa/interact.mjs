@@ -49,13 +49,13 @@ try {
   const dismissed = JSON.parse(await client.evaluate(`(async () => {
     const before = document.querySelectorAll('.wb-alert').length
     const node = [...document.querySelectorAll('.wb-alert')][0]
-    const button = [...node.querySelectorAll('.wb-mini')].find((entry) => entry.textContent === '取消')
-    if (!button) return JSON.stringify({ error: 'no dismiss button' })
+    const button = [...node.querySelectorAll('.wb-mini')].find((entry) => entry.textContent === '关闭')
+    if (!button) return JSON.stringify({ error: 'no close button' })
     button.click()
     await new Promise((done) => setTimeout(done, 600))
     return JSON.stringify({ before, after: document.querySelectorAll('.wb-alert').length })
   })()`))
-  check('dismissing removes the item at once', dismissed.after === dismissed.before - 1, dismissed)
+  check('closing removes the item at once', dismissed.after === dismissed.before - 1, dismissed)
 
   // Keyboard: every action is a real button, reachable by Tab.
   const keyboard = JSON.parse(await client.evaluate(`JSON.stringify({

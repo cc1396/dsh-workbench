@@ -6,7 +6,7 @@
 
 - **今日概览** —— 今日估算费用（人民币）与计价覆盖率、运行中的会话数、待处理事项数、生成速度。
 - **运行中的 Session** —— 等待用户 / 执行中 / 可能卡住，按需要处理的优先级排序。
-- **需要关注** —— 明确等待（审批、提问）与终止失败，可确认、暂缓或取消；取消后不再打扰，直到出现新的失败或等待。
+- **需要关注** —— 明确等待（审批、提问）与终止失败，可确认、暂缓或**关闭**；关闭表示该条后续不再提醒，只有之后出现新的失败或等待才会重新出现。
 - **最近结束** —— 近 7 天结束的会话。
 - **宿主能力** —— 面板底部列出宿主实际能提供的能力；缺哪一项就显示「不可用」，而不是静默显示 0。
 
@@ -21,9 +21,9 @@ src/
   facts.js         从投影推导会话事实，不重放日志
   pricing.js       价目表与金额，人民币，缺省行兜底
   ledger.js        按天拆分用量，契约明确且总和恒等于会话总量
-  alerts.js        关注项规则、稳定键、去重与取消
+  alerts.js        关注项规则、稳定键、去重与关闭
   snapshot.js      唯一的快照形状（schema 3），所有视图读同一份事实
-  actions.js       唯一的写操作：确认 / 暂缓 / 取消关注项
+  actions.js       唯一的写操作：确认 / 暂缓 / 关闭关注项
   store.js         本地 JSON 存储（原子写入）
 client.js          模块加载器适配，转发到 client/
 client/
@@ -57,7 +57,7 @@ client/
 
 ```bash
 node --test test/*.test.mjs     # Host 契约、纯函数、客户端契约
-node qa/interact.mjs            # 浏览器交互：渲染、取消、键盘、360px 布局
+node qa/interact.mjs            # 浏览器交互：渲染、关闭、键盘、360px 布局
 node qa/shot.mjs --snap v3 --out qa/out/panel.png --width 1440 --theme dark
 node publish/prepare.mjs --name cc1396-dsh-workbench --version 3.0.0 --out dist
 ```
@@ -66,5 +66,5 @@ node publish/prepare.mjs --name cc1396-dsh-workbench --version 3.0.0 --out dist
 
 ## 隐私
 
-数据全部来自本地宿主，按 profile 隔离；关注项的确认/暂缓/取消保存在 `$DSH_HOME/workbench/alerts.json`。
+数据全部来自本地宿主，按 profile 隔离；关注项的确认/暂缓/关闭保存在 `$DSH_HOME/workbench/alerts.json`。
 不保存对话原文、工具入参输出、绝对路径或代码片段。

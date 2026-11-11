@@ -52,10 +52,9 @@ rmSync(out, { recursive: true, force: true })
 mkdirSync(out, { recursive: true })
 for (const file of files) cpSync(join(source, file), join(out, file))
 cpSync(join(source, 'locale'), join(out, 'locale'), { recursive: true })
-// Every Host module under src/ ships beside the entry that re-exports it, and the
-// browser half ships with its own module graph under client/.
+// Every Host module under src/ ships beside the entry that re-exports it; the browser
+// half is a single self-contained client.js (the Host loader is a CJS factory model).
 cpSync(join(source, 'src'), join(out, 'src'), { recursive: true })
-cpSync(join(source, 'client'), join(out, 'client'), { recursive: true })
 
 overwrite('client.js', LIVE_NAME, name)
 overwrite('cordis.patch.yml', `'${LIVE_NAME}'`, `'${name}'`)

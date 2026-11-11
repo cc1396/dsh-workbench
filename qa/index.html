@@ -41,23 +41,28 @@
 </head>
 <body>
 <div id="root"></div>
+<script>
+  /* The Host's loader is a classic-script CJS factory: define the registry shim first. */
+  window.__ModuleLoader__ = { load(definition) { window.__dswbRegistration = definition } }
+</script>
+<script src="../client.js"></script>
 <script type="module">
-  /* Boot: fixture, transport shim, module loader, mount. */
-  const { zh } = await import('../client/text.js')
-  window.__DSWB_SNAPSHOT__ = JSON.parse(await (await fetch('./.snapshot.json')).text())
+  /* Boot: keep the real fetch for local assets, shim only the plugin's API routes. */
+  const realFetch = window.fetch.bind(window)
+  const snapshot = JSON.parse(await (await realFetch('./.snapshot.json')).text())
 
   window.fetch = async (input, init) => {
     const url = String(input && input.url ? input.url : input)
     if (url.startsWith('/api/workbench/status')) {
-      return new Response(JSON.stringify(window.__DSWB_SNAPSHOT__), { status: 200, headers: { 'content-type': 'application/json' } })
+      return new Response(JSON.stringify(snapshot), { status: 200, headers: { 'content-type': 'application/json' } })
     }
     if (url.startsWith('/api/workbench/alerts')) {
       return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } })
     }
-    return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } })
+    return realFetch(input, init)
   }
 
-  const dictionary = Object.assign({}, zh)
+  const dictionary = {}
   window.__slots = []
   window.__ctx = {
     effect: (fn) => fn(),
@@ -75,8 +80,7 @@
     slots: { inject: (_name, fn) => fn(), register: (definition, component) => window.__slots.push({ ...definition, component }) },
   }
 
-  window.__ModuleLoader__ = { load(registration) { window.__dswbRegistration = registration } }
-  await import('../client.js')
+  // The factory was registered by the classic script above; materialise it with require.
   const client = window.__dswbRegistration.factory((name) => (name === 'react' ? window.React : undefined))
   await client.apply(window.__ctx)
   const page = window.__slots.find((slot) => slot.name === 'main').component

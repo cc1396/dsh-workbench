@@ -7,4 +7,5 @@ publish/dist/
 qa/out/
 qa/.chrome-*/
 qa/.page*.html
+qa/.snapshot.json
 qa/try.html

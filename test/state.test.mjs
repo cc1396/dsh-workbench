@@ -374,3 +374,31 @@ test('pricing: a Session that crossed midnight lands tokens on both days', async
   const sum = body.ledger.trend.reduce((total, point) => total + point.amount, 0)
   assert.ok(Math.abs(sum - (4000 * 1 + 400 * 10) / 1_000_000) < 1e-9)
 })
+test('dismissing an item clears it from pending for good, and a new failure reopens it', async () => {
+  isolateHome()
+  const start = NOW - 20 * MIN
+  const failed = (at) => [
+    ...turnEvents({ start: at, title: '构建失败' }),
+    { type: 'turn/end', time: at + 5 * MIN, data: { turn: 1, reason: { kind: 'error', error: { message: '退出码 1' } } } },
+  ]
+  const { routes } = harness([{ id: 'f', cwd: '/work/build', running: false, events: failed(start) }])
+  const before = await status(routes, { now: NOW })
+  assert.equal(before.alerts.length, 1)
+  assert.equal(before.overview.attention, 1)
+
+  const dismissed = await alertAction(routes, { key: before.alerts[0].key, action: 'solve', triggeredAt: before.alerts[0].triggeredAt, state: 'failed' }, { now: NOW })
+  assert.equal(dismissed.status, 200)
+
+  // Same condition, later poll: it stays dismissed instead of returning as pending.
+  const after = await status(routes, { now: NOW + MIN })
+  assert.equal(after.alerts.length, 1)
+  assert.equal(after.alerts[0].state, 'solved')
+  assert.equal(after.overview.attention, 0)
+
+  // A new failing turn is a new item, raised again.
+  const reopened = await harness([
+    { id: 'f', cwd: '/work/build', running: false, events: [...failed(start), { type: 'turn/start', time: NOW + 5 * MIN, data: { turn: 2 } }, ...failed(NOW + 5 * MIN).slice(2)] },
+  ])
+  const next = await status(reopened.routes, { now: NOW + 20 * MIN })
+  assert.equal(next.alerts.some((alert) => alert.state === 'open' && alert.type === 'failure'), true)
+})

@@ -105,3 +105,10 @@ test('the speed table lists only each model and its rate', () => {
     assert.equal(card.includes(removed), false, `${removed} must not be rendered`)
   }
 })
+
+test('an attention item offers a dismiss action that clears it locally', () => {
+  assert.match(source, /onAction\(alert, 'dismiss'\)/u)
+  assert.match(source, /t\('alert\.dismiss'\)/u)
+  // A dismissal is a solved state, so the item leaves "pending" immediately.
+  assert.match(source, /action === 'dismiss' \? 'solved'/u)
+})

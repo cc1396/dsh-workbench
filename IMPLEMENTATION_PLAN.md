@@ -232,3 +232,19 @@
 **两列表格：模型 / 速率**（P50，`samples` 为 0 时显示「暂无样本」）。同一改动清掉了随之失效的
 11 个字典键 × 2 语言（22 条）与 22 条 CSS 规则，避免留下渲染不到的代码。
 `node --test` **46/46**，新增一条回归断言码表只渲染 model/rate。
+
+---
+
+## 9. 关注项可取消（2026-11-11，2.0.4）
+
+反馈：关注卡片上需要一个「取消」。原有按钮只有确认 / 暂缓 30 分钟 / 查看证据 / 打开原 Session。
+
+- `POST /api/workbench/alerts` 早已接受 `action: 'solve'`，但 `alertStateOf()` 读的是 `solvedAt` 与
+  `dismissedAt` 都没参与判定，等于**取消无效**。现在 `solve` 同时写 `solvedAt` 与 `dismissedAt`，
+  且 `dismissedAt >= triggeredAt` 时直接判为 `solved`：取消是用户的决定，条件未变时不再回到列表。
+- 只有出现**新状态**（新一轮失败、新的等待）或规则以新键重新触发时才再次出现。
+- 客户端新增「取消」按钮，点击后立刻标记为 `solved`（本地徽标与列表同一视图更新），再落库。
+
+回归：`dismissing an item clears it from pending for good, and a new failure reopens it`
+（取消后下一轮轮询仍为 `solved`、pending 计数归零；出现新一轮失败时重新打开）。
+浏览器实测：2 条关注 → 点「取消」→ 1 条、导航徽标变 1。`node --test` **48/48**。

@@ -58,6 +58,8 @@ window.__ModuleLoader__.load({
       'alert.stuckReason': '已 {minutes} 分钟没有新的活动证据',
       'alert.toolFailureReason': '{tool} 连续失败',
       'alert.ack': '确认',
+      'alert.dismiss': '取消',
+      'alert.dismissAria': '取消这条提醒',
       'alert.snooze': '暂缓 30 分钟',
       'alert.evidence': '查看证据',
       'alert.open': '打开原 Session',
@@ -426,6 +428,8 @@ window.__ModuleLoader__.load({
       'alert.stuckReason': 'No new activity for {minutes} minutes',
       'alert.toolFailureReason': '{tool} failed repeatedly',
       'alert.ack': 'Acknowledge',
+      'alert.dismiss': 'Dismiss',
+      'alert.dismissAria': 'Dismiss this item',
       'alert.snooze': 'Snooze 30 min',
       'alert.evidence': 'Evidence',
       'alert.open': 'Open session',
@@ -2094,6 +2098,7 @@ window.__ModuleLoader__.load({
                 h('button', { type: 'button', className: 'dswb-mini', onClick: () => onAction(alert, 'ack') }, t('alert.ack')),
                 h('button', { type: 'button', className: 'dswb-mini', onClick: () => onAction(alert, 'snooze') }, t('alert.snooze')),
                 h('button', { type: 'button', className: 'dswb-mini', onClick: () => onAction(alert, 'evidence') }, t('alert.evidence')),
+                h('button', { type: 'button', className: 'dswb-mini', onClick: () => onAction(alert, 'dismiss'), 'aria-label': t('alert.dismissAria') }, t('alert.dismiss')),
                 h('button', { type: 'button', className: 'dswb-mini dswb-mini-primary', onClick: () => openSession(alert.sessionId) }, t('alert.open')),
               ),
         ),
@@ -2698,7 +2703,9 @@ window.__ModuleLoader__.load({
           home.setDetail({ kind: 'alert', key: alert.key })
           return
         }
-        home.mark(alert.key, action === 'ack' ? { state: 'acknowledged' } : { state: 'snoozed' })
+        // Dismissal leaves the list for good; the Host records it so a reload agrees.
+        const state = action === 'ack' ? 'acknowledged' : action === 'dismiss' ? 'solved' : 'snoozed'
+        home.mark(alert.key, { state })
         try {
           await fetch(ALERT_ROUTE, {
             method: 'POST',

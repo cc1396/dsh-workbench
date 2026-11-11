@@ -1189,6 +1189,10 @@ function alertStateOf(pointer, view, now) {
   const name = view.state?.state ?? 'unknown'
   if (!['waiting', 'running', 'stuck', 'failed', 'unknown'].includes(name)) return 'solved'
   if (name !== pointer.stateAt) return 'open'
+  // A dismissal is the reader's own decision and outlives the underlying condition:
+  // PRD F03 keeps it closed until the item would have been raised again — a new state
+  // (above) or a re-triggered rule, which carries a new key.
+  if (pointer.dismissedAt !== undefined && pointer.dismissedAt >= pointer.triggeredAt) return 'solved'
   if (pointer.acknowledgedAt !== undefined && pointer.acknowledgedAt >= pointer.triggeredAt) return 'acknowledged'
   if (pointer.snoozedUntil !== undefined && pointer.snoozedUntil > now) return 'snoozed'
   return 'open'
@@ -2914,7 +2918,11 @@ async function updateAlert(ctx, request, alertStorePromise) {
   const stateAt = typeof body?.state === 'string' ? body.state : previous.stateAt
   const pointer = { ...previous, triggeredAt, stateAt }
   if (action === 'ack') pointer.acknowledgedAt = now
-  if (action === 'solve') pointer.solvedAt = now
+  if (action === 'solve') {
+    // Dismissed by the reader: it stops counting as pending and leaves the list.
+    pointer.solvedAt = now
+    pointer.dismissedAt = now
+  }
   if (action === 'snooze') {
     const until = Number(body?.snoozedUntil)
     const minutes = Number(body?.minutes)

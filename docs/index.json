@@ -59,12 +59,12 @@
       },
       "versions": [
         {
-          "version": "2.0.5",
-          "publishTimestamp": 1794367725,
+          "version": "2.0.6",
+          "publishTimestamp": 1794376738,
           "source": {
             "type": "git",
             "url": "https://github.com/cc1396/dsh-workbench",
-            "commit": "59aac96ada9e31dce9f9c1ac9b905dab4d13a63b",
+            "commit": "607efafd39f46987d205d7f34f8ed6e1bb73042d",
             "path": "dist"
           },
           "engines": {

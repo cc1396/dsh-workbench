@@ -64,7 +64,7 @@
           "source": {
             "type": "git",
             "url": "https://github.com/cc1396/dsh-workbench",
-            "commit": "58290090016cbb701312dd5e2ced8e88952bfe99",
+            "commit": "d7ff43e14ecc42c5fefda2b058ecf2e9cb26df80",
             "path": "dist"
           },
           "engines": {

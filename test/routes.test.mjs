@@ -199,3 +199,16 @@ test('the fold cache survives a restart: a warm start reuses it and agrees with 
   assert.equal(warm.overview.coverage, cold.overview.coverage)
   assert.equal(warm.recent.length, cold.recent.length)
 })
+
+test('ledger.today is the day summary the cost page reads, not an undefined field', async () => {
+  isolateHome()
+  const { events, values } = material()
+  const { routes } = makeHarness({ sessions: [{ id: 's1', cwd: '/work/storefront', events, values }] })
+  const body = await status(routes, { now: NOW })
+  assert.notEqual(body.ledger.today, undefined)
+  assert.equal(body.ledger.today.day, '2026-11-05')
+  assert.equal(typeof body.ledger.today.amount, 'number')
+  // The overview carries the same explanation surface as capabilities.today.
+  assert.equal(typeof body.overview.today, 'object')
+  assert.equal(typeof body.overview.today.activeToday, 'number')
+})

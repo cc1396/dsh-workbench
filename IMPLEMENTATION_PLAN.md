@@ -274,3 +274,29 @@
 
 回归：`the fold cache survives a restart…`（热重启与冷启动结果一致）、
 `a revisit paints the last snapshot…`。`node --test` **49/49**，浏览器交互全通过。
+
+---
+
+## 11. 今日估算费用为 0 的排查（2026-11-11，2.0.6）
+
+先确认数据存在：今天的日志里有 **83 条带用量的 assistant 消息、241 万 Token**，
+用真实投影跑同一条链路，金额应为 **¥12~13**。
+
+修复与加固：
+
+1. **`ledger.today` 读的是不存在的字段**。`buildLedger()` 返回的是 `sessions` / `amount`，
+   而快照写了 `today: ledger.today` —— 恒为 `undefined`。改为显式组装当天摘要
+   （金额、覆盖率、日键、会话数、Token 数）。
+2. **零金额不再静默**。快照新增 `overview.today` 与 `capabilities.today`：
+   `{ source: {projection|fold: n}, withTokens, activeToday, eventsRead, eventsEmpty, tokens }`。
+   今日金额为 0 但有活动时，指标卡直接显示原因，例如
+   「今日 2 个会话有活动但未计入费用 · 无用量来源 · 0 tok」，而不是干巴巴的 `¥0.00`。
+   这样下一次能一眼判断是「用量来源缺失」还是「真的没有用量」。
+3. 回归：`ledger.today is the day summary the cost page reads…`。
+
+**说明**：本机 GUI 需 `dsh web` 打印的带令牌 URL 才能访问，我拿不到你的真实响应，
+因此这一版的重点是**把不可见的原因变可见**。请在重启后看指标卡的副标题：
+- 若显示「无用量来源」→ 投影与日志都没给出 Token（我会改读投影行）；
+- 若显示具体来源与 tok 数但仍 ¥0.00 → 价目表未生效（我会改为内置默认价表兜底）。
+
+`node --test` **51/51**，浏览器交互全通过。

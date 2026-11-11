@@ -39,6 +39,8 @@ window.__ModuleLoader__.load({
       'kpi.coverage': '计价覆盖 {percent}%',
       'kpi.noSample': '暂无样本',
       'kpi.unpriced': ' · 含未计价',
+      'kpi.zeroExplained': '今日 {active} 个会话有活动但未计入费用 · {source} · {tokens} tok',
+      'kpi.noSource': '无用量来源',
       'kpi.running': '运行中',
       'kpi.runningDetail': '{waiting} 项等待',
       'kpi.attention': '待处理',
@@ -409,6 +411,8 @@ window.__ModuleLoader__.load({
       'kpi.coverage': 'Priced {percent}%',
       'kpi.noSample': 'No sample',
       'kpi.unpriced': ' · includes unpriced',
+      'kpi.zeroExplained': '{active} active sessions today were not priced · {source} · {tokens} tok',
+      'kpi.noSource': 'no usage source',
       'kpi.running': 'Running',
       'kpi.runningDetail': '{waiting} waiting',
       'kpi.attention': 'To handle',
@@ -2050,6 +2054,16 @@ window.__ModuleLoader__.load({
     function KpiRow({ overview, onSelect, canSwitch, t }) {
       const amount = Number(overview.amount) || 0
       const coverage = overview.coverage === undefined ? undefined : Number(overview.coverage)
+      // A zero today-amount with activity is a data question, not a quiet day: say so.
+      const todayProbe = overview.today ?? {}
+      const zeroReason =
+        amount === 0 && Number(todayProbe.activeToday) > 0
+          ? t('kpi.zeroExplained', {
+              active: String(todayProbe.activeToday ?? 0),
+              tokens: formatCompactTokens(todayProbe.tokens ?? 0),
+              source: Object.keys(todayProbe.source ?? {}).join('+') || t('kpi.noSource'),
+            })
+          : undefined
       const waiting = overview.runningByState === undefined ? 0 : Number(overview.runningByState) || 0
       const byState = overview.attentionByType !== null && typeof overview.attentionByType === 'object' ? overview.attentionByType : {}
       const failed = Number(byState.failure) || 0
@@ -2067,8 +2081,8 @@ window.__ModuleLoader__.load({
           h(
             'span',
             { className: 'dswb-kpi-detail' },
-            coverageText,
-            overview.unpricedTokens > 0 ? h('em', null, t('kpi.unpriced')) : null,
+            zeroReason === undefined ? coverageText : zeroReason,
+            zeroReason === undefined && overview.unpricedTokens > 0 ? h('em', null, t('kpi.unpriced')) : null,
           ),
         ),
         h(

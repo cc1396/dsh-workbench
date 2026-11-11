@@ -340,6 +340,16 @@ async function buildSnapshot(ctx, settings, usageCache, walletBox, input, genera
       performance: speed.samples >= 20 ? 'ready' : 'insufficient',
       account: account.status === 'ready' ? 'ready' : 'unavailable',
       openSession: 'host',
+      // Why today's amount is what it is: which source supplied the totals, and how
+      // many Sessions the log read answered for.
+      today: {
+        source: processed.probe?.usageFrom ?? {},
+        withTokens: processed.probe?.withTokens ?? 0,
+        activeToday: processed.probe?.activeToday ?? 0,
+        eventsRead: processed.probe?.eventsRead ?? 0,
+        eventsEmpty: processed.probe?.eventsEmpty ?? 0,
+        tokens: ledger.today?.tokens ?? undefined,
+      },
     },
     freshness: {
       at: generatedAt,
@@ -367,6 +377,15 @@ async function buildSnapshot(ctx, settings, usageCache, walletBox, input, genera
       models: speed.models.length,
       scanned: processed.scan.scanned,
       sessions: processed.scan.total,
+      // Mirrors `capabilities.today` so the overview card can explain a zero.
+      today: {
+        source: processed.probe?.usageFrom ?? {},
+        withTokens: processed.probe?.withTokens ?? 0,
+        activeToday: processed.probe?.activeToday ?? 0,
+        eventsRead: processed.probe?.eventsRead ?? 0,
+        eventsEmpty: processed.probe?.eventsEmpty ?? 0,
+        tokens: [...ledger.sessions].reduce((sum, row) => sum + totalOf(row.tokens), 0),
+      },
     },
     states: {
       total: views.length,
@@ -386,7 +405,18 @@ async function buildSnapshot(ctx, settings, usageCache, walletBox, input, genera
     // Local tasks (PRD F04): created by the user, never inferred from a single run.
     tasks_local: tasks,
     ledger: {
-      today: ledger.today,
+      // `buildLedger` exposes the day's rows as `sessions`; a `today` key never existed,
+      // so this sent `undefined`. It is what the cost page's headline reads.
+      today: {
+        amount: ledger.amount,
+        amountPartial: ledger.amountPartial,
+        currency: ledger.currency,
+        coverage: ledger.coverage,
+        unpricedTokens: ledger.unpricedTokens,
+        day: todayText,
+        sessions: ledger.sessions.length,
+        tokens: [...ledger.sessions].reduce((sum, row) => sum + totalOf(row.tokens), 0),
+      },
       projects: ledger.projects,
       trend: ledger.trend,
       trendMax: ledger.trendMax,
@@ -1072,7 +1102,9 @@ async function requestRoute(ctx, settings, sessionStore, request) {
     let values = {}
     if (projections !== undefined && session !== undefined) {
       try {
-        values = projections.snapshot(session)?.values ?? {}
+        const snapshot = projections.snapshot(session)?.values
+        values = snapshot === undefined || snapshot === null ? {} : snapshot
+        if (values.tokenUsage !== undefined) values.tokenUsage = { ...values.tokenUsage, source: 'projection' }
       } catch {
         values = {}
       }
@@ -1379,9 +1411,12 @@ async function processSessions(ctx, settings, ordered, input, sessionStore, lega
    */
   /** One log read per Session per cut: the fold and the projection share it. */
   const loadedLogs = new Map()
+  const sourcesProbe = { usageFrom: {}, withTokens: 0, activeToday: 0, eventsRead: 0, eventsEmpty: 0 }
   const logOf = async (item) => {
     if (loadedLogs.has(item.sessionId)) return loadedLogs.get(item.sessionId)
     const loaded = await readSessionEvents(ctx, item.sessionId, input.signal)
+    if (loaded.events.length > 0) sourcesProbe.eventsRead += 1
+    else sourcesProbe.eventsEmpty += 1
     loadedLogs.set(item.sessionId, loaded)
     return loaded
   }
@@ -1409,6 +1444,7 @@ async function processSessions(ctx, settings, ordered, input, sessionStore, lega
         values = {
           ...values,
           tokenUsage: {
+            source: 'fold',
             totals: {
               uncachedInputTokens: Number(folded.total?.inputTokens) || 0,
               cacheReadTokens: Number(folded.total?.cacheReadTokens) || 0,
@@ -1443,6 +1479,11 @@ async function processSessions(ctx, settings, ordered, input, sessionStore, lega
     }
     const tokens = tokensOf(sources.values.tokenUsage?.totals)
     if (sources.values.tokenUsage === undefined) tokensAvailable = false
+    // Diagnostics: which source supplied the totals, and whether this Session was
+    // active today at all. A zero today-amount is then explainable instead of silent.
+    if (sources.values.tokenUsage?.source !== undefined) sourcesProbe.usageFrom[sources.values.tokenUsage.source] = (sourcesProbe.usageFrom[sources.values.tokenUsage.source] ?? 0) + 1
+    if (totalOf(tokens) > 0) sourcesProbe.withTokens += 1
+    if (totalOf(tokens) > 0 && (Number(view.lastAt) || 0) >= input.dayStart) sourcesProbe.activeToday += 1
     const projectId = normalizeProject(item.cwd)
     const legacy = legacyCache.get(item.sessionId)
     const title =
@@ -1520,6 +1561,7 @@ async function processSessions(ctx, settings, ordered, input, sessionStore, lega
   return {
     views,
     recent,
+    probe: sourcesProbe,
     ledgerSessions: [...entries.values()],
     tokensAvailable,
     waitsFromHost: ordered.some((item) => typeof item.pendingInteraction === 'string'),

@@ -112,3 +112,13 @@ test('an attention item offers a dismiss action that clears it locally', () => {
   // A dismissal is a solved state, so the item leaves "pending" immediately.
   assert.match(source, /action === 'dismiss' \? 'solved'/u)
 })
+
+test('a revisit paints the last snapshot before the live one arrives', () => {
+  // Entering the workbench always showed an empty panel until the Host answered.
+  assert.match(source, /function readCachedSnapshot\(\)/u)
+  assert.match(source, /sessionStorage\.setItem\(CACHED_KEY/u)
+  // A cached paint must not be presented as an outage.
+  assert.match(source, /state\.status === 'stale' && state\.cached !== true/u)
+  // Freshness is measured from when the browser cached it.
+  assert.match(source, /Date\.now\(\) - Number\(cached\.at\)/u)
+})

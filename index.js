@@ -64,8 +64,21 @@ export const inject = ['connection']
  */
 export function apply(ctx, config) {
   const settings = resolveSettings(config)
-  /** Per-Session fold cache, invalidated by `SessionSummary.updatedAt`. */
+  /**
+   * Per-Session fold cache, invalidated by `SessionSummary.updatedAt`.
+   *
+   * It is seeded from disk: without that, every restart (and every reload that
+   * remounts the Host) re-decoded every Session log, which is why entering the
+   * workbench always took a long wait. Entries now survive until the log changes.
+   */
   const usageCache = new Map()
+  const foldStore = openStore('folds.json', emptyFolds())
+  const foldStoreReady = foldStore
+    .read()
+    .then((store) => seedFoldCache(usageCache, store, settings))
+    .catch(() => {})
+  /** Persist at most once per interval, and only the entries this cut touched. */
+  const foldFlush = { at: 0, pending: new Set() }
   /** Wallet reads are cached: the Platform is queried at most once a minute. */
   const walletCache = { at: 0, value: undefined }
   /** Generated day summaries, keyed by day + material hash. */
@@ -92,7 +105,7 @@ export function apply(ctx, config) {
         path: ROUTE_PATH,
         methods: ['GET'],
         requestBody: 'buffered',
-        fetch: (request) => snapshot(ctx, settings, usageCache, walletCache, alertStore, sessionStore, request),
+        fetch: (request) => snapshot(ctx, settings, usageCache, foldStoreReady, foldStore, foldFlush, walletCache, alertStore, sessionStore, request),
       }),
     'dsh-workbench: /api/workbench/status',
   )
@@ -173,7 +186,7 @@ export function apply(ctx, config) {
  * @param request - incoming Fetch request.
  * @returns JSON response with the Workbench snapshot.
  */
-async function snapshot(ctx, settings, usageCache, walletCache, alertStore, sessionStore, request) {
+async function snapshot(ctx, settings, usageCache, foldStoreReady, foldStore, foldFlush, walletCache, alertStore, sessionStore, request) {
   const url = new URL(request.url)
   const tzOffsetSeconds = clampInteger(url.searchParams.get('tzOffset'), -86_400, 86_400, 0)
   const locale = normalizeLocale(url.searchParams.get('locale'))
@@ -183,7 +196,12 @@ async function snapshot(ctx, settings, usageCache, walletCache, alertStore, sess
   const dayStart = localDayStart(generatedAt, tzOffsetSeconds)
   const input = { now, dayStart, tzOffsetSeconds, locale, signal: request.signal }
   try {
-    const body = await buildSnapshot(ctx, settings, usageCache, walletCache, input, generatedAt, alertStore, sessionStore)
+    // Seed before the first read: a warm cache is the whole point of the wait.
+    await foldStoreReady
+    const body = await buildSnapshot(ctx, settings, usageCache, walletCache, input, generatedAt, alertStore, sessionStore, {
+      store: foldStore,
+      flush: foldFlush,
+    })
     return jsonResponse(200, body)
   } catch (error) {
     // A failed read must still answer a well-formed snapshot: the panel then shows its
@@ -210,7 +228,7 @@ async function snapshot(ctx, settings, usageCache, walletCache, alertStore, sess
  * @param sessionStore - accessor of the live Session store.
  * @returns the snapshot body.
  */
-async function buildSnapshot(ctx, settings, usageCache, walletBox, input, generatedAt, alertStore, sessionStore) {
+async function buildSnapshot(ctx, settings, usageCache, walletBox, input, generatedAt, alertStore, sessionStore, persist) {
   const catalog = await listSessions(ctx, input.signal)
   const sessions = catalog.items.filter(isSummary)
   const usable = sessions.filter((item) => item.blank !== true).sort(byActivity)
@@ -224,7 +242,7 @@ async function buildSnapshot(ctx, settings, usageCache, walletBox, input, genera
     ...primary.filter((item) => item.running !== true),
   ]
   const [processed, account, store] = await Promise.all([
-    processSessions(ctx, settings, ordered, input, sessionStore, usageCache),
+    processSessions(ctx, settings, ordered, input, sessionStore, usageCache, persist),
     readAccount(ctx, settings, walletBox, input, generatedAt),
     alertStore,
   ])
@@ -809,6 +827,104 @@ function emptySnapshot(generatedAt, input, error) {
   }
 }
 
+/**
+ * The persisted fold cache (`$DSH_HOME/workbench/folds.json`).
+ *
+ * Each entry is keyed by Session id and carries the `updatedAt` and the day it was
+ * folded for, so an entry is reused only while the Host's summary stamp is unchanged;
+ * a day rollover invalidates the `today` buckets. Entries also expire so a stale file
+ * cannot outlive its purpose.
+ */
+const FOLD_STORE_VERSION = 1
+const FOLD_TTL_MS = 45 * 86_400_000
+const FOLD_FLUSH_MS = 10_000
+
+function emptyFolds() {
+  return { version: FOLD_STORE_VERSION, updatedAt: 0, sessions: {} }
+}
+
+/** Only the fields the readers need, so the file stays small. */
+function foldEntryOf(entry) {
+  if (entry === null || typeof entry !== 'object') return undefined
+  return {
+    updatedAt: Number(entry.updatedAt) || 0,
+    dayStart: Number(entry.dayStart) || 0,
+    title: typeof entry.title === 'string' ? entry.title : undefined,
+    total: entry.total ?? emptyUsage(),
+    today: entry.today ?? emptyUsage(),
+    days: Array.isArray(entry.days) ? entry.days : emptyDays(),
+    speedSamples: Array.isArray(entry.speedSamples) ? entry.speedSamples.slice(-MAX_SPEED_SAMPLES) : [],
+    turns: Array.isArray(entry.turns) ? entry.turns : [],
+    writes: Array.isArray(entry.writes) ? entry.writes : [],
+    commands: Array.isArray(entry.commands) ? entry.commands : [],
+    tests: Array.isArray(entry.tests) ? entry.tests : [],
+    target: entry.target,
+    tools: Number(entry.tools) || 0,
+    lastAction: entry.lastAction,
+    failed: entry.failed === true,
+    cacheError: entry.cacheError,
+  }
+}
+
+/**
+ * Seed the in-memory cache from disk.
+ *
+ * Entries folded for another local day still seed `total`, titles and history; only
+ * `today`/`days` depend on the day, so those entries are marked for refolding instead
+ * of being dropped outright.
+ */
+function seedFoldCache(cache, store, settings) {
+  if (store === undefined || store.sessions === null || typeof store.sessions !== 'object') return 0
+  const cutoff = Date.now() - FOLD_TTL_MS
+  let seeded = 0
+  for (const [sessionId, raw] of Object.entries(store.sessions)) {
+    const entry = foldEntryOf(raw)
+    if (entry === undefined) continue
+    if (entry.updatedAt > 0 && entry.updatedAt < cutoff) continue
+    cache.set(sessionId, entry)
+    seeded += 1
+  }
+  return seeded
+}
+
+/**
+ * Persist the entries folded by this cut.
+ *
+ * Writes are throttled (`FOLD_FLUSH_MS`) and bounded, and they never block the
+ * response: the snapshot already answered from memory.
+ */
+function saveFolds(store, flush, cache) {
+  if (flush.writing === true) return
+  const now = Date.now()
+  if (now - flush.at < FOLD_FLUSH_MS) return
+  flush.at = now
+  const ids = [...flush.pending]
+  flush.pending.clear()
+  if (ids.length === 0) return
+  flush.writing = true
+  const entries = {}
+  for (const id of ids) {
+    const entry = foldEntryOf(cache.get(id))
+    if (entry !== undefined) entries[id] = entry
+  }
+  flush.writing = false
+  // Keep only the most recent few hundred entries so the file cannot grow unbounded.
+  store
+    .update((state) => {
+      if (state.sessions === null || typeof state.sessions !== 'object') state.sessions = {}
+      Object.assign(state.sessions, entries)
+      const keys = Object.keys(state.sessions)
+      if (keys.length > 600) {
+        const keep = keys
+          .sort((left, right) => (Number(state.sessions[right]?.updatedAt) || 0) - (Number(state.sessions[left]?.updatedAt) || 0))
+          .slice(0, 400)
+        state.sessions = Object.fromEntries(keep.map((key) => [key, state.sessions[key]]))
+      }
+      state.version = FOLD_STORE_VERSION
+    })
+    .catch(() => {})
+}
+
 /** The local task list, whatever the store holds. */
 async function storeTasks(store) {
   const tiles = store === undefined ? undefined : store.tasks
@@ -1241,7 +1357,7 @@ function stateSummary(views) {
  * @param legacyCache - per-Session legacy fold cache.
  * @returns `{ views, recent, ledgerSessions, tokensAvailable, p1Ready, usage, worklog, speed* }`.
  */
-async function processSessions(ctx, settings, ordered, input, sessionStore, legacyCache) {
+async function processSessions(ctx, settings, ordered, input, sessionStore, legacyCache, persist) {
   const live = sessionStore()
   const projections = registryOf(ctx)
   const deadline = Date.now() + settings.scanBudgetMs
@@ -1261,6 +1377,15 @@ async function processSessions(ctx, settings, ordered, input, sessionStore, lega
    * made every non-running Session invisible: no state, no amount, no history. The
    * persisted log answers those, and the legacy fold already carries its projections.
    */
+  /** One log read per Session per cut: the fold and the projection share it. */
+  const loadedLogs = new Map()
+  const logOf = async (item) => {
+    if (loadedLogs.has(item.sessionId)) return loadedLogs.get(item.sessionId)
+    const loaded = await readSessionEvents(ctx, item.sessionId, input.signal)
+    loadedLogs.set(item.sessionId, loaded)
+    return loaded
+  }
+
   const read = async (item) => {
     const session = typeof live?.get === 'function' ? live.get(item.sessionId) : undefined
     let events = Array.isArray(session?.events) ? session.events : []
@@ -1273,7 +1398,7 @@ async function processSessions(ctx, settings, ordered, input, sessionStore, lega
       }
     }
     if (events.length === 0) {
-      const loaded = await readSessionEvents(ctx, item.sessionId, input.signal)
+      const loaded = await logOf(item)
       if (events.length === 0) events = loaded.events
     }
     if (values.tokenUsage === undefined) {
@@ -1299,11 +1424,12 @@ async function processSessions(ctx, settings, ordered, input, sessionStore, lega
   }
 
   const one = async (item) => {
-    // Fold first: the fold reads the committed log through inspect, which may be the
-    // only source when the live Session registry is not composed.
+    // Fold first: the fold reads the committed log, which may be the only source when
+    // the live Session registry is not composed. The log is decoded once and shared.
     const fresh = legacyCache.get(item.sessionId)
     if (fresh === undefined || fresh.failed === true || fresh.updatedAt !== item.updatedAt) {
-      await foldSession(ctx, settings, legacyCache, item, input.dayStart)
+      await foldSession(ctx, settings, legacyCache, item, input.dayStart, () => logOf(item))
+      if (persist !== undefined && persist.flush?.pending !== undefined) persist.flush.pending.add(item.sessionId)
     }
     const sources = await read(item)
     const view = projectSession(sources.events, 0, {
@@ -1375,6 +1501,10 @@ async function processSessions(ctx, settings, ordered, input, sessionStore, lega
     }
   }
   await Promise.all([worker(), worker(), worker(), worker()])
+
+  if (persist?.store !== undefined && persist.flush !== undefined && persist.flush.pending.size > 0) {
+    void saveFolds(persist.store, persist.flush, legacyCache)
+  }
 
   const recent = [...new Map(views.map((view) => [view.sessionId, view])).values()]
     .filter((view) => view.state?.running !== true && view.endedAt > 0)
@@ -1750,9 +1880,10 @@ async function foldUsage(ctx, settings, cache, sessions, input) {
 }
 
 /** Read one Session log and fold its usage, title, tools and latest action. */
-async function foldSession(ctx, settings, cache, item, dayStart) {
+async function foldSession(ctx, settings, cache, item, dayStart, load) {
   try {
-    const loaded = await readSessionEvents(ctx, item.sessionId)
+    // `load` supplies the log already read for this cut; without it, read it here.
+    const loaded = await (typeof load === 'function' ? load() : readSessionEvents(ctx, item.sessionId))
     const inherited = Number(loaded.inherited ?? 0)
     const events = Array.isArray(loaded.events) ? loaded.events : []
     await foldEvents(cache, item, events, 0, events.length, dayStart, settings, inherited)

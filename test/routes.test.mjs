@@ -183,3 +183,19 @@ test('a catalog whose records are SessionHeaders still yields states, amounts an
   assert.ok(body.overview.amount > 0, JSON.stringify(body.overview))
   assert.equal(body.search.rows.length, 1)
 })
+
+test('the fold cache survives a restart: a warm start reuses it and agrees with the cold one', async () => {
+  isolateHome()
+  const { events, values } = material()
+  const sessions = [{ id: 's1', cwd: '/work/storefront', events, values }]
+  const hot = makeHarness({ sessions })
+  const cold = await status(hot.routes, { now: NOW })
+  // The write is throttled and non-blocking; give it a moment to land.
+  await new Promise((resolve) => setTimeout(resolve, 250))
+  const again = makeHarness({ sessions })
+  const warm = await status(again.routes, { now: NOW })
+  assert.equal(warm.overview.sessions, cold.overview.sessions)
+  assert.equal(warm.overview.amount, cold.overview.amount)
+  assert.equal(warm.overview.coverage, cold.overview.coverage)
+  assert.equal(warm.recent.length, cold.recent.length)
+})

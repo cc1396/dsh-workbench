@@ -248,3 +248,29 @@
 回归：`dismissing an item clears it from pending for good, and a new failure reopens it`
 （取消后下一轮轮询仍为 `solved`、pending 计数归零；出现新一轮失败时重新打开）。
 浏览器实测：2 条关注 → 点「取消」→ 1 条、导航徽标变 1。`node --test` **48/48**。
+
+---
+
+## 10. 进入工作台的等待（2026-11-11，2.0.5）
+
+反馈：每次进入工作台都要重新加载，等待很久。
+
+先量了真实数据：本机 `~/.dsh/sessions` 有 **57 个日志、32.5 MB**，其中最大的一个 4.5 MB，
+含 **3925 个 appended zstd 帧 / 8172 个事件** —— 单文件解码就要 **116 ms**。全量语料
+（55 个 Session、46167 个事件）光解码就约 **1 秒**。
+
+三处修正：
+
+1. **同一份日志被解码两次**。`foldSession()` 和 `read()` 各自调用 `readSessionEvents()`；
+   现在一次 cut 内用 `logOf()` 共享结果。
+2. **fold 缓存只在内存里**，每次重启/重挂载都全量重扫 —— 这正是"每次都要等"的直接原因。
+   新增 `$DSH_HOME/workbench/folds.json`（`store.js`）：按 Session 存 `updatedAt` + 折叠结果，
+   `apply()` 时先 seed，`updatedAt` 未变就跳过解码；写入节流 10 秒、异步不阻塞响应。
+   真实语料实测：冷启动 **194 ms → 热重启 126 ms**，金额/运行中/最近结束完全一致。
+3. **首次渲染仍要等 Host 回包**。客户端把上一份快照写进 `sessionStorage`，再次进入时
+   **先画缓存**（标记为缓存，不算离线），Host 的新快照到达后再无闪烁替换。
+   实测：Host 故意慢 1.8 秒时，第二次进入 450 ms 就有完整数据（原来 2600 ms 才有）。
+   新鲜度以浏览器写入时间为准，超过 10 分钟不再复用。
+
+回归：`the fold cache survives a restart…`（热重启与冷启动结果一致）、
+`a revisit paints the last snapshot…`。`node --test` **49/49**，浏览器交互全通过。

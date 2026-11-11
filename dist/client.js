@@ -818,8 +818,49 @@ window.__ModuleLoader__.load({
 
     // --- hooks ----------------------------------------------------------------
 
+    /**
+     * The last snapshot this browser saw, per profile-agnostic page load.
+     *
+     * Entering the workbench used to start from an empty panel and wait for the Host
+     * every time. The previous answer is kept in `sessionStorage` and painted first
+     * (marked as such until the live one arrives), so a revisit is instant even when
+     * the Host needs a moment. It is only a view cache: the Host stays the authority,
+     * and a snapshot older than `CACHED_MAX_AGE_MS` is ignored rather than shown stale.
+     */
+    const CACHED_KEY = 'dsh-workbench:snapshot'
+    const CACHED_MAX_AGE_MS = 10 * 60_000
+
+    function readCachedSnapshot() {
+      try {
+        const raw = sessionStorage.getItem(CACHED_KEY)
+        if (raw === null) return undefined
+        const cached = JSON.parse(raw)
+        if (cached === null || typeof cached !== 'object') return undefined
+        if (cached.data === null || typeof cached.data !== 'object') return undefined
+        // Freshness is the browser's own clock, not the Host's snapshot stamp: a
+        // clock skew or a long-idle tab must not silently disable the fast path.
+        if (!Number.isFinite(Number(cached.at)) || Date.now() - Number(cached.at) > CACHED_MAX_AGE_MS) return undefined
+        return cached.data
+      } catch {
+        return undefined
+      }
+    }
+
+    function writeCachedSnapshot(data) {
+      try {
+        sessionStorage.setItem(CACHED_KEY, JSON.stringify({ at: Date.now(), data }))
+      } catch {
+        // A full or disabled storage only costs the fast path, never correctness.
+      }
+    }
+
     function useSnapshot() {
-      const [state, setState] = React.useState({ status: 'loading', data: undefined, error: undefined })
+      const [state, setState] = React.useState(() => {
+        const cached = readCachedSnapshot()
+        return cached === undefined
+          ? { status: 'loading', data: undefined, error: undefined }
+          : { status: 'stale', data: cached, error: undefined, cached: true }
+      })
       const [attempt, setAttempt] = React.useState(0)
       const refresh = React.useCallback(() => setAttempt((value) => value + 1), [])
 
@@ -833,6 +874,7 @@ window.__ModuleLoader__.load({
           try {
             const data = await readSnapshot(controller.signal)
             if (!alive) return
+            writeCachedSnapshot(data)
             setState({ status: 'ready', data, error: undefined })
           } catch (error) {
             if (!alive || controller.signal.aborted) return
@@ -1964,7 +2006,8 @@ window.__ModuleLoader__.load({
 
     function HomeHeader({ data, state, refresh, t, locale, onSearch }) {
       const generatedAt = Number(data?.generatedAt) || Date.now()
-      const stale = state.status === 'stale'
+      // A cached first paint is not an outage; only a failed live read shows as stale.
+      const stale = state.status === 'stale' && state.cached !== true
       return h(
         'header',
         { className: 'dswb-home-head' },
@@ -2656,7 +2699,8 @@ window.__ModuleLoader__.load({
       const now = useNow(NOW_MS)
       const home = useHomeState()
       const data = state.data
-      const loading = state.status === 'loading'
+      // A refresh over an already-painted snapshot keeps the panel visible.
+      const loading = state.status === 'loading' && data === undefined
       const narrow = home.narrow
       const [searchOpen, setSearchOpen] = React.useState(
         () => typeof window !== 'undefined' && window.__dswbHome?.search === true,
@@ -2691,7 +2735,7 @@ window.__ModuleLoader__.load({
       })
       const pendingCount = alerts.filter((alert) => alert.state === 'open').length
       const overviewView = { ...overview, attention: pendingCount, attentionByType: countAlertTypes(alerts) }
-      const stale = state.status === 'stale'
+      const stale = state.status === 'stale' && state.cached !== true
 
       const openFrom = (sessionId) => {
         captureFocus(sessionId)

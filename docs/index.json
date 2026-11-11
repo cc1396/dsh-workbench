@@ -34,8 +34,8 @@
         "zh": "工作台"
       },
       "description": {
-        "en": "Developer workbench: session states and attention items, project-to-request cost attribution, metadata search, project progress and an editable evidence daily report.",
-        "zh": "开发者工作台：Session 状态与关注项、项目到请求的成本归因、元数据检索、项目进展与可编辑的证据日报。"
+        "en": "Developer workbench: today’s estimated spend in RMB with pricing coverage, running and waiting sessions, and attention items.",
+        "zh": "开发者工作台：今日估算费用（人民币）与计价覆盖、运行中与等待中的会话、需要处理的事项。"
       },
       "icon": "icon.svg",
       "author": "cc1396",
@@ -59,12 +59,12 @@
       },
       "versions": [
         {
-          "version": "2.0.6",
-          "publishTimestamp": 1794376738,
+          "version": "3.0.0",
+          "publishTimestamp": 1794383454,
           "source": {
             "type": "git",
             "url": "https://github.com/cc1396/dsh-workbench",
-            "commit": "607efafd39f46987d205d7f34f8ed6e1bb73042d",
+            "commit": "0c580b473c358033f8c697d105be8ee6c14656c2",
             "path": "dist"
           },
           "engines": {

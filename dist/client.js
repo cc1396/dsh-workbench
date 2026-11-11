@@ -573,12 +573,27 @@ window.__ModuleLoader__.load({
       return 'muted'
     }
 
+    /**
+     * A running indicator: three dots pulsing in sequence.
+     *
+     * Motion is the only signal that something is *actively* happening; a static icon
+     * reads the same as "ended". It stays a decoration (`aria-hidden`) — the badge still
+     * carries the word 执行中, so colour and motion are never the only cues.
+     */
+    function RunningDots() {
+      return h(
+        'span',
+        { className: 'wb-pulse', 'aria-hidden': 'true' },
+        h('i'), h('i'), h('i'),
+      )
+    }
+
     /** Icon + colour + word, never colour alone. */
     function StateBadge({ t, state }) {
       return h(
         'span',
-        { className: 'wb-badge', 'data-tone': toneOf(state) },
-        h(Glyph, { name: state, size: 12 }),
+        { className: 'wb-badge', 'data-tone': toneOf(state), 'data-state': state },
+        state === 'running' ? h(RunningDots) : h(Glyph, { name: state, size: 12 }),
         h('span', null, t(`state.${state}`)),
       )
     }
@@ -629,7 +644,7 @@ window.__ModuleLoader__.load({
       const detail = detailOf(t, row, now)
       return h(
         'li',
-        { className: 'wb-row', 'data-tone': toneOf(state) },
+        { className: 'wb-row', 'data-tone': toneOf(state), 'data-state': state },
         h(
           'button',
           { type: 'button', className: 'wb-row-main', onClick: () => onOpen(row.sessionId), 'aria-label': `${title} · ${t(`state.${state}`)}` },
@@ -767,6 +782,10 @@ window.__ModuleLoader__.load({
     .wb-rows,.wb-alerts{list-style:none;margin:0;padding:0}
     .wb-row{border-bottom:.5px solid var(--dsw-alias-border-l1)}
     .wb-row:last-child{border-bottom:0}
+    /* Only a running row moves: a soft light travelling down its leading edge. */
+    .wb-row[data-state=running]{position:relative;overflow:hidden}
+    .wb-row[data-state=running]::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;border-radius:2px;background:linear-gradient(180deg,transparent 0%,var(--wb-ok) 45%,var(--wb-ok) 55%,transparent 100%);background-size:100% 220%;animation:wb-flow 2.2s linear infinite;opacity:.85}
+    @keyframes wb-flow{0%{background-position:0 220%}100%{background-position:0 -220%}}
     .wb-row-main{display:flex;align-items:center;gap:10px;width:100%;padding:9px 4px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
     .wb-row-main:hover{background:color-mix(in srgb,var(--dsw-alias-label-primary) 4%,transparent)}
     .wb-row-body{display:flex;flex-direction:column;flex:1;min-width:0;gap:1px}
@@ -779,6 +798,13 @@ window.__ModuleLoader__.load({
     .wb-badge[data-tone=ok]{background:color-mix(in srgb,var(--wb-ok) 13%,transparent);color:var(--wb-ok)}
     .wb-badge[data-tone=warn]{background:color-mix(in srgb,var(--wb-warn) 14%,transparent);color:var(--wb-warn)}
     .wb-badge[data-tone=error]{background:color-mix(in srgb,var(--wb-err) 13%,transparent);color:var(--wb-err)}
+    .wb-pulse{display:inline-flex;align-items:center;justify-content:center;gap:2px;width:14px;height:12px;flex:none}
+    .wb-pulse i{display:block;width:3px;height:3px;border-radius:50%;background:currentColor;animation:wb-pulse 1.15s ease-in-out infinite}
+    .wb-pulse i:nth-child(2){animation-delay:.16s}
+    .wb-pulse i:nth-child(3){animation-delay:.32s}
+    @keyframes wb-pulse{0%,55%,100%{opacity:.32;transform:scale(.8)}28%{opacity:1;transform:scale(1.4)}}
+    .wb-badge[data-state=running]{animation:wb-breathe 2.6s ease-in-out infinite}
+    @keyframes wb-breathe{0%,100%{box-shadow:inset 0 0 0 0 color-mix(in srgb,var(--wb-ok) 0%,transparent)}50%{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--wb-ok) 26%,transparent)}}
     .wb-alert{display:flex;flex-direction:column;gap:6px;padding:9px 10px;margin-bottom:6px;border-radius:8px;border:.5px solid var(--dsw-alias-border-l1);background:color-mix(in srgb,var(--wb-warn) 6%,transparent)}
     .wb-alert[data-tone=error]{background:color-mix(in srgb,var(--wb-err) 6%,transparent)}
     .wb-alert-body{display:flex;flex-direction:column;gap:1px;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;padding:0}
@@ -805,7 +831,14 @@ window.__ModuleLoader__.load({
     @media (width<=1199px){.wb-grid{grid-template-columns:minmax(0,1fr)}}
     @media (width<=767px){.wb-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.wb-content{padding:20px 14px 16px}.wb-h1{font-size:22px;line-height:30px}}
     @media (width<=419px){.wb-metric{padding:10px 12px}.wb-metric-value{font-size:19px;line-height:26px}}
-    @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+    /* Without motion the running state still reads as running: a solid dot row and a
+       solid leading bar, never a blank or blinking placeholder. */
+    @media (prefers-reduced-motion:reduce){
+      *{animation:none!important;transition:none!important}
+      .wb-pulse i{opacity:1;transform:none}
+      .wb-row[data-state=running]::before{background:var(--wb-ok);opacity:.6}
+      .wb-badge[data-state=running]{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--wb-ok) 26%,transparent)}
+    }
     `
 
 

@@ -73,3 +73,18 @@ test('closing an item means no further reminders', () => {
   // The action still maps to the Host's `solve`, which is terminal for that key.
   assert.match(client, /action === 'dismiss' \? 'solve'/u)
 })
+
+test('an executing row has a motion indicator with a static reduced-motion fallback', () => {
+  // Motion is scoped to `running`; no other state blinks.
+  assert.match(client, /function RunningDots\(\)/u)
+  assert.match(client, /state === 'running' \? h\(RunningDots\)/u)
+  assert.match(client, /data-state=running/u)
+  assert.match(client, /@keyframes wb-pulse/u)
+  assert.match(client, /@keyframes wb-flow/u)
+  // The indicator is decorative: the word 执行中 is still rendered by StateBadge.
+  assert.match(client, /'aria-hidden': 'true'/u)
+  assert.match(client, /t\(`state\.\$\{state\}`\)/u)
+  // Motion off must leave a visible static cue rather than nothing.
+  assert.match(client, /prefers-reduced-motion:reduce/u)
+  assert.match(client, /\.wb-pulse i\{opacity:1;transform:none\}/u)
+})

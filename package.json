@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-workbench",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "private": true,
   "description": "Developer workbench: session states and attention items, project-to-request cost attribution, metadata search, project progress and an editable evidence daily report",
   "type": "module",

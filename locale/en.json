@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Workbench",
-    "description": "One panel for the account balance and used share, today's spend against the 6-day average, a model speed table, a month calendar of AI-summarized work per workspace with a copyable report, and the running and recently finished tasks."
+    "description": "One panel for today's estimated cost and pricing coverage, running and pending sessions, the generation rate of each model, plus project progress, cost attribution and a copyable daily report."
   }
 }

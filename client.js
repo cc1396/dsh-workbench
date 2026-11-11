@@ -163,24 +163,13 @@ window.__ModuleLoader__.load({
       'card.todaySame': '与日均持平',
       'card.baselineTitle': '前 6 天日均 {amount}',
       'speed.title': '码表',
-      'speed.median': '中位',
-      'speed.aggregate': '合计',
-      'speed.current': '当前速度',
-      'speed.noCurrent': '暂无生成记录',
-      'speed.currentMeta': '{title} · {time} · {tokens} tok / {duration}',
-      'speed.p90': 'P90',
-      'speed.requests': '请求',
-      'speed.output': '输出',
       'speed.model': '模型',
       'speed.rate': '速率',
-      'speed.recent': '最近请求',
       'speed.empty': '近 7 天没有有效生成记录',
       'speed.unit': 'tok/s',
       'speed.week': '近 7 天',
-      'speed.today': '今日',
       'speed.note': '已剔除低于 1 tok/s 的超时样本',
       'speed.unknownModel': '未知模型',
-      'speed.recentMeta': '{tokens} tok · {duration} · {rate} tok/s',
       'stats.total': '任务总数',
       'log.title': '工作记录',
       'log.subtitle': 'AI 归纳 · 近 31 天',
@@ -542,24 +531,13 @@ window.__ModuleLoader__.load({
       'card.todaySame': 'In line with the 6-day average',
       'card.baselineTitle': 'Previous 6-day average {amount}',
       'speed.title': 'Speed table',
-      'speed.median': 'median',
-      'speed.aggregate': 'aggregate',
-      'speed.current': 'Current speed',
-      'speed.noCurrent': 'No generation yet',
-      'speed.currentMeta': '{title} · {time} · {tokens} tok / {duration}',
-      'speed.p90': 'P90',
-      'speed.requests': 'requests',
-      'speed.output': 'output',
       'speed.model': 'Model',
       'speed.rate': 'rate',
-      'speed.recent': 'Recent requests',
       'speed.empty': 'No valid generations in the last 7 days',
       'speed.unit': 'tok/s',
       'speed.week': 'Last 7 days',
-      'speed.today': 'Today',
       'speed.note': 'Timeout samples below 1 tok/s are excluded',
       'speed.unknownModel': 'Unknown model',
-      'speed.recentMeta': '{tokens} tok · {duration} · {rate} tok/s',
       'stats.total': 'Tasks',
       'log.title': 'Work log',
       'log.subtitle': 'AI summary · last 31 days',
@@ -1362,76 +1340,21 @@ window.__ModuleLoader__.load({
      * Throughput table: median / P90 decode speed per model plus the latest
      * requests. Samples below 1 tok/s are dropped upstream (timeouts/retries).
      */
-    function SpeedCard({ speed, t, now, openSession }) {
+    /**
+     * The speed table: one row per model with its generation rate.
+     *
+     * Only the rate per model is shown. The previous card also carried a "current
+     * speed" headline, weekly aggregates (median/aggregate/P90), output and request
+     * totals and a list of recent requests; the reader asked for the per-model rate
+     * alone, so everything else is gone rather than hidden.
+     */
+    function SpeedCard({ speed, t }) {
       if (speed === null || typeof speed !== 'object') return null
       const week = speed.week !== null && typeof speed.week === 'object' ? speed.week : {}
-      const today = speed.today !== null && typeof speed.today === 'object' ? speed.today : {}
-      const models = Array.isArray(week.models) ? week.models.slice(0, 5) : []
-      const recent = Array.isArray(speed.recent) ? speed.recent : []
-      const requests = Number(week.requests) || 0
-      const hasWeek = requests > 0
-      const todayRequests = Number(today.requests) || 0
-      const current = speed.current !== null && typeof speed.current === 'object' ? speed.current : undefined
-      const currentTitle =
-        current !== undefined && typeof current.title === 'string' && current.title !== ''
-          ? current.title
-          : t('row.untitled')
-      const currentMeta =
-        current === undefined
-          ? t('speed.noCurrent')
-          : t('speed.currentMeta', {
-              title: currentTitle,
-              time: relativeTime(t, current.time, now),
-              tokens: formatCompactTokens(current.outputTokens),
-              duration: formatDuration(current.durationMs),
-            })
-
-      const stats = [
-        h(
-          'span',
-          { className: 'dswb-speed-stat', key: 'median' },
-          h('b', null, formatRate(week.medianTokensPerSecond)),
-          h('span', null, ` ${t('speed.unit')} ${t('speed.median')}`),
-        ),
-        h(
-          'span',
-          { className: 'dswb-speed-stat', key: 'aggregate' },
-          h('b', null, formatRate(week.tokensPerSecond)),
-          h('span', null, ` ${t('speed.unit')} ${t('speed.aggregate')}`),
-        ),
-        h(
-          'span',
-          { className: 'dswb-speed-stat', key: 'p90' },
-          h('b', null, formatRate(week.p90TokensPerSecond)),
-          h('span', null, ` ${t('speed.unit')} ${t('speed.p90')}`),
-        ),
-        h(
-          'span',
-          { className: 'dswb-speed-stat', key: 'output' },
-          h('b', null, formatCompactTokens(week.outputTokens)),
-          h('span', null, ` ${t('speed.output')}`),
-        ),
-        h(
-          'span',
-          { className: 'dswb-speed-stat', key: 'requests' },
-          h('b', null, formatTokens(requests)),
-          h('span', null, ` ${t('speed.requests')}`),
-        ),
-      ]
-      if (todayRequests > 0) {
-        stats.push(
-          h(
-            'span',
-            { className: 'dswb-speed-stat', key: 'today' },
-            h('b', null, formatRate(today.medianTokensPerSecond)),
-            h('span', null, ` ${t('speed.unit')} ${t('speed.today')}`),
-          ),
-        )
-      }
-
+      const models = Array.isArray(week.models) ? week.models.slice(0, 8) : []
       return h(
         'article',
-        { className: 'dswb-speed' },
+        { className: 'dswb-speed', 'aria-label': t('speed.title') },
         h(
           'div',
           { className: 'dswb-speed-head' },
@@ -1446,110 +1369,40 @@ window.__ModuleLoader__.load({
               h('span', { className: 'dswb-speed-window' }, t('speed.week')),
             ),
           ),
-          h(
-            'div',
-            { className: 'dswb-speed-current' },
-            h('span', { className: 'dswb-speed-current-label' }, t('speed.current')),
-            h(
-              'div',
-              { className: 'dswb-speed-current-line' },
-              h(
-                'span',
-                {
-                  className: 'dswb-speed-current-value',
-                  'data-empty': current === undefined ? 'true' : 'false',
-                },
-                current === undefined ? '—' : formatRate(current.tokensPerSecond),
-              ),
-              h('span', { className: 'dswb-speed-current-unit' }, t('speed.unit')),
-            ),
-            h('span', { className: 'dswb-speed-current-meta', title: currentMeta }, currentMeta),
-          ),
         ),
-        h('div', { className: 'dswb-speed-stats' }, ...stats),
-        hasWeek
-          ? h(
-              'div',
-              { className: 'dswb-speed-body' },
+        models.length === 0
+          ? h('p', { className: 'dswb-speed-empty' }, t('speed.empty'))
+          : h(
+              'table',
+              { className: 'dswb-speed-table' },
               h(
-                'div',
-                { className: 'dswb-speed-pane' },
-                h(
-                'table',
-                { className: 'dswb-speed-table' },
-                h(
-                  'thead',
-                  null,
+                'thead',
+                null,
+                h('tr', null, h('th', { scope: 'col' }, t('speed.model')), h('th', { scope: 'col', className: 'dswb-speed-num' }, t('speed.rate'))),
+              ),
+              h(
+                'tbody',
+                null,
+                ...models.map((row) =>
                   h(
                     'tr',
-                    null,
-                    h('th', null, t('speed.model')),
-                    h('th', { className: 'dswb-speed-num' }, t('speed.rate')),
-                  ),
-                ),
-                h(
-                  'tbody',
-                  null,
-                  models.map((row) =>
+                    { key: row.model },
                     h(
-                      'tr',
-                      { key: row.model },
-                      h(
-                        'td',
-                        {
-                          className: 'dswb-speed-model',
-                          title: row.model === 'unknown' ? t('speed.unknownModel') : row.model,
-                        },
-                        row.model === 'unknown' ? t('speed.unknownModel') : row.model,
-                      ),
-                      h('td', { className: 'dswb-speed-num' }, `${formatRate(row.tokensPerSecond)} ${t('speed.unit')}`),
+                      'td',
+                      { className: 'dswb-speed-model', title: row.model === 'unknown' ? t('speed.unknownModel') : row.model },
+                      row.model === 'unknown' ? t('speed.unknownModel') : row.model,
+                    ),
+                    h(
+                      'td',
+                      { className: 'dswb-speed-num' },
+                      row.samples > 0 && row.p50TokensPerSecond > 0
+                        ? `${formatRate(row.p50TokensPerSecond)} ${t('speed.unit')}`
+                        : t('kpi.noSample'),
                     ),
                   ),
                 ),
               ),
-              ),
-              h(
-                'div',
-                { className: 'dswb-speed-pane dswb-speed-recent' },
-                h('span', { className: 'dswb-eyebrow' }, t('speed.recent')),
-                recent.length === 0
-                  ? h('p', { className: 'dswb-speed-empty' }, t('speed.empty'))
-                  : h(
-                      'ul',
-                      { className: 'dswb-speed-recent-list' },
-                      recent.map((entry) => {
-                        const title =
-                          typeof entry.title === 'string' && entry.title !== '' ? entry.title : t('row.untitled')
-                        return h(
-                          'li',
-                          { key: `${entry.sessionId}-${entry.time}` },
-                          h(
-                            'button',
-                            {
-                              type: 'button',
-                              className: 'dswb-speed-recent-row',
-                              'aria-label': t('row.open', { title }),
-                              title: entry.model,
-                              onClick: () => openSession(entry.sessionId),
-                            },
-                            h('span', { className: 'dswb-speed-time' }, clockOf(entry.time)),
-                            h('span', { className: 'dswb-speed-recent-title' }, title),
-                            h(
-                              'span',
-                              { className: 'dswb-speed-recent-meta' },
-                              t('speed.recentMeta', {
-                                tokens: formatCompactTokens(entry.outputTokens),
-                                duration: formatDuration(entry.durationMs),
-                                rate: formatRate(entry.tokensPerSecond),
-                              }),
-                            ),
-                          ),
-                        )
-                      }),
-                    ),
-              ),
-            )
-          : h('p', { className: 'dswb-speed-empty' }, t('speed.empty')),
+            ),
         h('p', { className: 'dswb-speed-note' }, t('speed.note')),
       )
     }
@@ -2919,7 +2772,7 @@ window.__ModuleLoader__.load({
               'aside',
               { className: 'dswb-home-aside' },
               h(AttentionPanel, { alerts, t, now, openSession: openFrom, onAction: alertAction, onShowAll: () => home.setDetail({ kind: 'attention' }), limit: 3 }),
-              h(SpeedCard, { speed: data.speed, t, now, openSession: openFrom }),
+              h(SpeedCard, { speed: data.speed, t }),
             ),
           ),
         )
@@ -3009,7 +2862,7 @@ window.__ModuleLoader__.load({
           React.Fragment,
           null,
           h(BalanceHero, { account: data.account, usage: data.usage, t }),
-          h(SpeedCard, { speed: data.speed, t, now, openSession: openFrom }),
+          h(SpeedCard, { speed: data.speed, t }),
           h(WorkLogCard, { worklog: data.worklog, t, onWorkItems: setTodayWorkItems }),
         )
       }
@@ -4487,17 +4340,6 @@ window.__ModuleLoader__.load({
       '.dswb-speed-title-row{display:flex;align-items:baseline;gap:8px;min-width:0}',
       '.dswb-speed-title{margin:0;font-size:16px;font-weight:500;line-height:24px;letter-spacing:-.01em}',
       '.dswb-speed-window{color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10px;line-height:18px;letter-spacing:.04em}',
-      '.dswb-speed-stats{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;padding:2px 0 12px;border-bottom:.5px solid var(--dsw-alias-border-l1);margin-bottom:12px}',
-      '.dswb-speed-stat{display:inline-flex;align-items:baseline;gap:4px;color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10.5px;line-height:18px;font-variant-numeric:tabular-nums}',
-      '.dswb-speed-stat b{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500}',
-      '.dswb-speed-current{display:flex;flex-direction:column;align-items:flex-end;gap:1px;min-width:0;text-align:right}',
-      '.dswb-speed-current-label{color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:9.5px;line-height:14px;letter-spacing:.14em;text-transform:uppercase}',
-      '.dswb-speed-current-line{display:flex;align-items:baseline;gap:6px}',
-      '.dswb-speed-current-value{font-family:var(--wb-mono);font-size:28px;font-weight:500;line-height:34px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}',
-      '.dswb-speed-current-value[data-empty=true]{color:var(--dsw-alias-label-tertiary);font-size:22px}',
-      '.dswb-speed-current-unit{color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:11px;line-height:18px}',
-      '.dswb-speed-current-meta{max-width:320px;overflow:hidden;color:var(--dsw-alias-label-tertiary);font-size:10px;line-height:15px;text-overflow:ellipsis;white-space:nowrap}',
-      '.dswb-speed-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 24px;align-items:start}',
       '.dswb-speed-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11.5px}',
       '.dswb-speed-table th{padding:0 8px 6px 0;border-bottom:.5px solid var(--dsw-alias-border-l1);color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:9.5px;font-weight:400;letter-spacing:.06em;text-align:left;text-transform:uppercase}',
       '.dswb-speed-table th:first-child{width:58%}',
@@ -4507,16 +4349,6 @@ window.__ModuleLoader__.load({
       '.dswb-speed-model{overflow:hidden;color:var(--dsw-alias-label-secondary);font-family:var(--wb-mono);font-size:11px;text-overflow:ellipsis;white-space:nowrap}',
       '.dswb-speed-num{text-align:right;font-family:var(--wb-mono);font-variant-numeric:tabular-nums;white-space:nowrap}',
       '.dswb-speed-table th.dswb-speed-num{text-align:right;letter-spacing:0}',
-      '.dswb-speed-pane{display:flex;flex-direction:column;gap:5px;min-width:0}',
-      '.dswb-speed-recent{padding-left:20px;border-left:.5px solid var(--dsw-alias-border-l1)}',
-      '@media (width<=720px){.dswb-speed-body{grid-template-columns:minmax(0,1fr)}.dswb-speed-recent{padding-left:0;padding-top:12px;border-left:0;border-top:.5px solid var(--dsw-alias-border-l1)}}',
-      '.dswb-speed-recent-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}',
-      '.dswb-speed-recent-row{display:flex;align-items:center;gap:8px;width:100%;min-width:0;padding:5px 4px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background .15s}',
-      '.dswb-speed-recent-row:hover{background:color-mix(in srgb,var(--dsw-alias-label-primary) 4%,transparent)}',
-      '.dswb-speed-recent-row:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:-2px}',
-      '.dswb-speed-time{flex:none;color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10px;line-height:16px;font-variant-numeric:tabular-nums}',
-      '.dswb-speed-recent-title{flex:1;min-width:0;overflow:hidden;font-size:12px;line-height:18px;text-overflow:ellipsis;white-space:nowrap}',
-      '.dswb-speed-recent-meta{flex:none;color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10px;line-height:16px;white-space:nowrap}',
       '.dswb-speed-empty{margin:0;padding:12px 0;color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px}',
       '.dswb-speed-note{margin:10px 0 0;color:var(--dsw-alias-label-tertiary);font-size:10px;line-height:15px;opacity:.8}',
 
@@ -4637,7 +4469,6 @@ window.__ModuleLoader__.load({
       '@keyframes dswb-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}',
 
       // --- responsive -------------------------------------------------------
-      '@media (width<=720px){.dswb-panels{grid-template-columns:minmax(0,1fr)}.dswb-hero-side{flex-basis:100%}.dswb-speed-current{align-items:flex-start;text-align:left}.dswb-speed-current-meta{max-width:100%}}',
       '@media (width<=560px){.dswb-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.dswb-card-total{grid-column:1/-1}}',
       '@media (width<=540px){.dswb-head h1{font-size:26px;line-height:34px}.dswb-monogram{width:40px;height:40px;font-size:16px}.dswb-hero-value{font-size:30px;line-height:38px}}',
       // --- overview home: tokens, header, metrics ---------------------------

@@ -43,7 +43,41 @@
    "requests": 138,
    "outputTokens": 96000,
    "durationMs": 1300000,
-   "models": []
+   "medianTokensPerSecond": 74,
+   "tokensPerSecond": 73.8,
+   "p90TokensPerSecond": 112,
+   "models": [
+    {
+     "model": "codearts/deepseek-v4.1-flash-1017",
+     "requests": 92,
+     "outputTokens": 61200,
+     "durationMs": 820000,
+     "tokensPerSecond": 74.6,
+     "p50TokensPerSecond": 74,
+     "p90TokensPerSecond": 112,
+     "samples": 92
+    },
+    {
+     "model": "deepseek-flash",
+     "requests": 31,
+     "outputTokens": 24800,
+     "durationMs": 390000,
+     "tokensPerSecond": 63.6,
+     "p50TokensPerSecond": 63,
+     "p90TokensPerSecond": 98,
+     "samples": 31
+    },
+    {
+     "model": "workbuddy-ai/deepseek-v4.1-flash",
+     "requests": 15,
+     "outputTokens": 10000,
+     "durationMs": 90000,
+     "tokensPerSecond": 111.1,
+     "p50TokensPerSecond": 111,
+     "p90TokensPerSecond": 140,
+     "samples": 15
+    }
+   ]
   },
   "today": {
    "requests": 3,

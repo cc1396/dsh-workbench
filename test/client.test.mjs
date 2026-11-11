@@ -92,3 +92,16 @@ test('a coverage badge is only a success at full coverage', () => {
   assert.match(source, /const tone = percent >= 100 \? 'ok' : 'warn'/u)
   assert.equal(source.includes("tone: 'ok', glyph: 'check', label: t('cost.coverage'"), false)
 })
+
+test('the speed table lists only each model and its rate', () => {
+  // The reader asked for per-model rates alone; aggregates and the recent-request
+  // list were removed rather than hidden.
+  const start = source.indexOf('function SpeedCard(')
+  const end = source.indexOf('function WorkLogCard(')
+  const card = source.slice(start, end)
+  assert.match(card, /t\('speed\.model'\)/u)
+  assert.match(card, /t\('speed\.rate'\)/u)
+  for (const removed of ['speed.median', 'speed.p90', 'speed.requests', 'speed.recent', 'speed.current']) {
+    assert.equal(card.includes(removed), false, `${removed} must not be rendered`)
+  }
+})

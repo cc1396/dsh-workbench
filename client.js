@@ -118,6 +118,25 @@ window.__ModuleLoader__.load({
       'tabs.overview': '概览',
       'tabs.attention': '提醒',
       'tabs.capability': '状态',
+
+      'detail.back': '返回概览',
+      'cost.title': '消耗归因',
+      'cost.subtitle': '{date} · 人民币 · 估算',
+      'cost.today': '今日估算费用',
+      'cost.tokens': '今日 Token',
+      'cost.sessions': '{count} 个会话',
+      'cost.unpriced': '未计价 Token',
+      'cost.unpricedHint': '这些用量缺少价目，覆盖率已降低',
+      'cost.allPriced': '全部用量均可计价',
+      'cost.byProject': '按项目',
+      'cost.todaySessions': '今日会话花费',
+      'cost.trend': '近 7 天',
+      'cost.last7': '含今日',
+      'cost.empty': '没有可展示的用量。',
+      'cost.note': '按价目表 {ref} 估算，不是平台账单。',
+      'cost.notEstimable': '不可估算',
+      'cost.unpricedRow': '缺价目',
+      'cost.open': '查看消耗归因',
     }
 
     const en = {
@@ -215,6 +234,25 @@ window.__ModuleLoader__.load({
       'tabs.overview': 'Overview',
       'tabs.attention': 'Alerts',
       'tabs.capability': 'Status',
+
+      'detail.back': 'Back to overview',
+      'cost.title': 'Cost attribution',
+      'cost.subtitle': '{date} · CNY · estimate',
+      'cost.today': 'Estimated spend today',
+      'cost.tokens': 'Tokens today',
+      'cost.sessions': '{count} sessions',
+      'cost.unpriced': 'Unpriced tokens',
+      'cost.unpricedHint': 'These tokens have no price entry; coverage is lower',
+      'cost.allPriced': 'Every token is priced',
+      'cost.byProject': 'By project',
+      'cost.todaySessions': "Today's sessions",
+      'cost.trend': 'Last 7 days',
+      'cost.last7': 'includes today',
+      'cost.empty': 'No usage to show.',
+      'cost.note': 'Estimated with price table {ref}; not a platform bill.',
+      'cost.notEstimable': 'Not estimable',
+      'cost.unpricedRow': 'no price',
+      'cost.open': 'Cost attribution',
     }
 
 
@@ -289,6 +327,17 @@ window.__ModuleLoader__.load({
       if (!Number.isFinite(value)) return `${RMB}0.00`
       if (value > 0 && value < 0.01) return `<${RMB}0.01`
       return `${RMB}${value.toLocaleString(language, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    }
+
+    /** Sum of the four exclusive token buckets (a value the Host may send as an object). */
+    function sumTokens(buckets) {
+      if (buckets === null || typeof buckets !== 'object') return Number(buckets) || 0
+      return (
+        (Number(buckets.uncachedInput) || 0) +
+        (Number(buckets.cacheReadInput) || 0) +
+        (Number(buckets.cacheWriteInput) || 0) +
+        (Number(buckets.output) || 0)
+      )
     }
 
     /** Compact token counts: `1.2M`, `96k`, `138`. */
@@ -819,6 +868,28 @@ window.__ModuleLoader__.load({
     .wb-caps-list li[data-tone=warn]{color:var(--wb-warn)}
     .wb-caps-value{margin-left:auto;font-family:var(--wb-mono);font-size:11px;color:var(--dsw-alias-label-tertiary)}
     .wb-empty{padding:20px 4px;color:var(--dsw-alias-label-tertiary);font-size:12.5px;text-align:center}
+    /* ---- cost attribution -------------------------------------------------- */
+    .wb-h1-inline{display:inline-block;margin-left:8px;font-size:20px;line-height:28px}
+    .wb-metrics-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .wb-cost-projects{list-style:none;margin:0;padding:0}
+    .wb-cost-project{padding:9px 0;border-bottom:.5px solid var(--dsw-alias-border-l1)}
+    .wb-cost-project:last-child{border-bottom:0}
+    .wb-cost-project-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+    .wb-cost-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .wb-cost-amount{font-family:var(--wb-mono);font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .wb-bar{height:5px;margin:5px 0 4px;border-radius:3px;background:color-mix(in srgb,var(--dsw-alias-label-primary) 8%,transparent);overflow:hidden}
+    .wb-bar>span{display:block;height:100%;border-radius:3px;background:var(--wb-accent)}
+    .wb-cost-meta{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--dsw-alias-label-tertiary);font-size:11px}
+    .wb-cost-coverage{margin-left:auto}
+    .wb-trend{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+    .wb-trend-day{display:grid;grid-template-columns:52px minmax(0,1fr) 72px;align-items:center;gap:8px;font-size:11.5px}
+    .wb-trend-day[data-today=true] .wb-trend-label{color:var(--dsw-alias-label-primary);font-weight:600}
+    .wb-trend-label{color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10.5px;white-space:nowrap}
+    .wb-trend-bar{height:6px;border-radius:3px;background:color-mix(in srgb,var(--dsw-alias-label-primary) 7%,transparent);overflow:hidden}
+    .wb-trend-bar>i{display:block;height:100%;border-radius:3px;background:color-mix(in srgb,var(--wb-accent) 75%,transparent)}
+    .wb-trend-day[data-today=true] .wb-trend-bar>i{background:var(--wb-accent)}
+    .wb-trend-amount{text-align:right;font-family:var(--wb-mono);font-size:10.5px;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--dsw-alias-label-secondary)}
+
     .wb-stub{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;height:100%;padding:40px 20px;color:var(--dsw-alias-label-tertiary);font-size:13px;text-align:center}
     .wb-stub-title{color:var(--dsw-alias-label-primary);font-size:15px;font-weight:600;margin:0}
     .wb-detabar,.wb-detailbar{display:flex;align-items:center;gap:8px;margin-bottom:10px}
@@ -828,7 +899,7 @@ window.__ModuleLoader__.load({
     .wb-detail-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
     .wb-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;margin-top:16px;color:var(--dsw-alias-label-tertiary);font-size:11px}
     @media (width<=1199px){.wb-grid{grid-template-columns:minmax(0,1fr)}}
-    @media (width<=767px){.wb-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.wb-content{padding:20px 14px 16px}.wb-h1{font-size:22px;line-height:30px}}
+    @media (width<=767px){.wb-metrics,.wb-metrics-3{grid-template-columns:repeat(2,minmax(0,1fr))}.wb-content{padding:20px 14px 16px}.wb-h1{font-size:22px;line-height:30px}}
     @media (width<=419px){.wb-metric{padding:10px 12px}.wb-metric-value{font-size:19px;line-height:26px}}
     /* Without motion the running state still reads as running: a solid dot row and a
        solid leading bar, never a blank or blinking placeholder. */
@@ -860,6 +931,7 @@ window.__ModuleLoader__.load({
         const tz = tzOffsetSeconds()
         const [state, refresh] = useSnapshot(React, readSnapshot, tz)
         const now = useNow(React)
+        // `undefined` is the overview; `{ kind: 'alert', key }` or `{ kind: 'cost' }` otherwise.
         const [detail, setDetail] = React.useState(undefined)
         const [marks, setMarks] = React.useState({})
         const data = state.data
@@ -896,14 +968,32 @@ window.__ModuleLoader__.load({
         }
 
         if (detail !== undefined) {
-          const item = alerts.find((entry) => entry.key === detail)
+          const back = () => setDetail(undefined)
           return h(
             'section',
             { className: 'wb-page', 'aria-label': t('title') },
             h('style', null, CSS),
-            item === undefined
-              ? h(Empty, { text: t('attention.empty') })
-              : h(AlertDetail, { t, item, now, onBack: () => setDetail(undefined), onAction: act, openSession }),
+            h(
+              'div',
+              { className: 'wb-scroll' },
+              h(
+                'div',
+                { className: 'wb-content' },
+                detail.kind === 'cost'
+                  ? h(CostPage, { t, data, now, back, openSession })
+                  : h(
+                      React.Fragment,
+                      null,
+                      h('div', { className: 'wb-detailbar' }, h('button', { type: 'button', className: 'wb-mini', onClick: back }, `← ${t('detail.back')}`)),
+                      (() => {
+                        const item = alerts.find((entry) => entry.key === detail.key)
+                        return item === undefined
+                          ? h(Empty, { text: t('attention.empty') })
+                          : h(AlertDetail, { t, item, now, onBack: back, onAction: act, openSession })
+                      })(),
+                    ),
+              ),
+            ),
           )
         }
 
@@ -945,7 +1035,7 @@ window.__ModuleLoader__.load({
               h(
                 'div',
                 { className: 'wb-metrics' },
-                h(Metric, { label: t('today.cost'), value: moneyOf(overview.amount), detail: zeroReason ?? `${coverage} · ${t('today.tokens', { tokens: tokensOf(overview.tokens) })}` }),
+                h(Metric, { label: t('today.cost'), value: moneyOf(overview.amount), detail: zeroReason ?? `${coverage} · ${t('today.tokens', { tokens: tokensOf(overview.tokens) })}`, onClick: () => setDetail({ kind: 'cost' }) }),
                 h(Metric, { label: t('today.running'), value: String(overview.running ?? 0), detail: t('today.runningDetail', { waiting: overview.waiting ?? 0 }) }),
                 h(Metric, { label: t('today.attention'), value: String(pending.length), tone: pending.length > 0 ? 'alert' : 'default', detail: t('today.attentionDetail', { failed: overview.failed ?? 0, waiting: overview.waiting ?? 0 }), onClick: undefined }),
                 h(Metric, {
@@ -1019,6 +1109,162 @@ window.__ModuleLoader__.load({
               h('span', { className: 'wb-caps-value' }, value === 'unavailable' ? t('cap.missing') : String(value)),
             ),
           ),
+        ),
+      )
+    }
+
+    // ==== cost page ==========================================================
+
+    /**
+     * Cost attribution: where today's estimate came from.
+     *
+     * Three readings of the same ledger, each answering a different question:
+     * the day's total and its pricing coverage, the projects that spent it, and the
+     * seven-day shape that says whether today is usual. Every amount is an estimate
+     * from the configured price table — the footer says so, and no figure is presented
+     * as a bill.
+     */
+    function CostPage({ t, data, now, back, openSession }) {
+      const ledger = data.ledger ?? {}
+      const today = ledger.today ?? {}
+      const projects = Array.isArray(ledger.projects) ? ledger.projects : []
+      const trend = Array.isArray(ledger.trend) ? ledger.trend : []
+      const sessions = Array.isArray(today.sessions) ? today.sessions : []
+      const maxProject = Math.max(0, ...projects.map((project) => Number(project.amount) || 0))
+      const maxDay = Math.max(0, ...trend.map((point) => Number(point.amount) || 0))
+      const coverage = today.coverage === undefined || today.coverage === null
+        ? t('today.noSample')
+        : t('today.coverage', { percent: Math.round(Number(today.coverage) * 100) })
+
+      return h(
+        React.Fragment,
+        null,
+        h(
+          'div',
+          { className: 'wb-detailbar' },
+          h('button', { type: 'button', className: 'wb-mini', onClick: back }, `← ${t('detail.back')}`),
+          h('h1', { className: 'wb-h1 wb-h1-inline' }, t('cost.title')),
+          h('span', { className: 'wb-hint' }, t('cost.subtitle', { date: data.overview?.dayKey ?? '' })),
+        ),
+        h(
+          'div',
+          { className: 'wb-metrics wb-metrics-3' },
+          h(Metric, { label: t('cost.today'), value: moneyOf(today.amount), detail: coverage }),
+          // `today.sessions` is the day's rows, not a count: the tally is its length.
+          h(Metric, { label: t('cost.tokens'), value: tokensOf(sumTokens(today.tokens)), detail: t('cost.sessions', { count: String(sessions.length) }) }),
+          h(Metric, {
+            label: t('cost.unpriced'),
+            value: tokensOf(today.unpricedTokens),
+            detail: today.unpricedTokens > 0 ? t('cost.unpricedHint') : t('cost.allPriced'),
+            tone: today.unpricedTokens > 0 ? 'alert' : 'default',
+          }),
+        ),
+        h(
+          'div',
+          { className: 'wb-grid' },
+          h(
+            'div',
+            { className: 'wb-main' },
+            h(
+              Panel,
+              { title: t('cost.byProject'), count: String(projects.length) },
+              projects.length === 0
+                ? h(Empty, { text: t('cost.empty') })
+                : h(
+                    'ul',
+                    { className: 'wb-cost-projects' },
+                    ...projects.map((project) =>
+                      h(
+                        'li',
+                        { key: project.projectId, className: 'wb-cost-project' },
+                        h(
+                          'div',
+                          { className: 'wb-cost-project-head' },
+                          h('span', { className: 'wb-cost-name' }, project.name || project.projectId),
+                          h('span', { className: 'wb-cost-amount' }, moneyOf(project.amount)),
+                        ),
+                        h(
+                          'div',
+                          { className: 'wb-bar', role: 'presentation' },
+                          h('span', {
+                            style: { width: `${maxProject > 0 ? Math.max(2, (Number(project.amount) / maxProject) * 100) : 0}%` },
+                          }),
+                        ),
+                        h(
+                          'div',
+                          { className: 'wb-cost-meta' },
+                          h('span', null, t('cost.sessions', { count: String(project.sessions ?? 0) })),
+                          h('span', null, tokensOf(sumTokens(project.tokens))),
+                          h('span', { className: 'wb-cost-coverage' }, project.coverage === undefined || project.coverage === null
+                            ? t('today.noSample')
+                            : t('today.coverage', { percent: Math.round(Number(project.coverage) * 100) })),
+                        ),
+                      ),
+                    ),
+                  ),
+            ),
+            h(
+              Panel,
+              { title: t('cost.todaySessions'), count: String(sessions.length) },
+              sessions.length === 0
+                ? h(Empty, { text: t('cost.empty') })
+                : h('ul', { className: 'wb-rows' }, ...sessions.map((entry) => h(CostSessionRow, { key: entry.sessionId, t, entry, onOpen: openSession }))),
+            ),
+          ),
+          h(
+            'aside',
+            { className: 'wb-aside' },
+            h(
+              Panel,
+              { title: t('cost.trend'), count: undefined, action: h('span', { className: 'wb-hint' }, t('cost.last7')) },
+              maxDay === 0
+                ? h(Empty, { text: t('cost.empty') })
+                : h(
+                    'ul',
+                    { className: 'wb-trend', role: 'list' },
+                    ...trend.map((point) =>
+                      h(
+                        'li',
+                        { key: point.day, className: 'wb-trend-day', 'data-today': point.day === data.overview?.todayStart ? 'true' : undefined },
+                        h('span', { className: 'wb-trend-label' }, dateLabel(point.day)),
+                        h(
+                          'span',
+                          { className: 'wb-trend-bar' },
+                          h('i', { style: { width: `${maxDay > 0 ? Math.max(point.amount > 0 ? 3 : 0, (Number(point.amount) / maxDay) * 100) : 0}%` } }),
+                        ),
+                        h('span', { className: 'wb-trend-amount' }, moneyOf(point.amount)),
+                      ),
+                    ),
+                  ),
+            ),
+            h(
+              Panel,
+              { title: t('cap.title') },
+              h('p', { className: 'wb-hint' }, t('cost.note', { ref: String(data.capabilities?.prices?.ref ?? '—') })),
+            ),
+          ),
+        ),
+      )
+    }
+
+    /** One Session of today's spend, as a row that opens it. */
+    function CostSessionRow({ t, entry, onOpen }) {
+      const title = entry.title === undefined || entry.title === '' ? t('field.untitled') : entry.title
+      return h(
+        'li',
+        { className: 'wb-row' },
+        h(
+          'button',
+          { type: 'button', className: 'wb-row-main', onClick: () => onOpen(entry.sessionId), 'aria-label': `${title} · ${moneyOf(entry.amount)}` },
+          h(
+            'span',
+            { className: 'wb-row-body' },
+            h('span', { className: 'wb-row-title' }, title),
+            h('span', { className: 'wb-row-project' }, entry.name ?? ''),
+            h('span', { className: 'wb-row-detail' }, `${tokensOf(sumTokens(entry.tokens))} tok${entry.quality === 'unpriced' ? ' · ' + t('cost.unpricedRow') : ''}`),
+          ),
+          h('span', { className: 'wb-row-amount' }, entry.amount > 0 ? moneyOf(entry.amount) : t('cost.notEstimable')),
+          h('span', { className: 'wb-row-open', 'aria-hidden': 'true' }, h(Glyph, { name: 'open', size: 12 })),
         ),
       )
     }

@@ -124,9 +124,12 @@ export function projectionsOf(ctx, id) {
   const registry = serviceOf(ctx, 'sessionProjections')
   if (typeof registry?.snapshot !== 'function') return undefined
   const session = liveSession(ctx, id)
-  if (session === undefined) return undefined
+  // `snapshot` takes a live Session object; a finished or not-yet-resumed one has no
+  // entry in `ctx.sessions`, so asking for it is not a failure — a projection registry
+  // that can answer by id is used instead, and an absent answer is `{}` (unknown).
+  const subject = session ?? ((typeof registry.get === 'function' ? registry.get(id) : undefined) ?? { id })
   try {
-    const values = registry.snapshot(session)?.values
+    const values = registry.snapshot(subject)?.values
     return values === null || values === undefined ? {} : values
   } catch {
     return undefined

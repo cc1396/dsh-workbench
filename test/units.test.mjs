@@ -106,3 +106,20 @@ test('token totals from a log match a projection that could not be read', () => 
   assert.equal(totalTokens(totals), 40)
   assert.equal(totalTokens(byDay.get(localDayStart(TODAY + 1000, 28_800))), 40)
 })
+
+test('a cost page row carries its title and its token buckets', async () => {
+  const { host, session, turn, projections, isolateHome, snapshot, TODAY } = await import('./fixtures.mjs')
+  isolateHome()
+  const { routes } = host([
+    session({ id: 's1', cwd: '/w/alpha', events: turn({ start: TODAY + 3_600_000, input: 1_000_000 }), values: projections({ title: '有名字' }) }),
+  ], { prices: { default: { input: 2, output: 8 } } })
+  const body = await snapshot(routes)
+  const entry = body.ledger.today.sessions[0]
+  assert.equal(entry.title, '有名字', 'a finished Session still exposes its projected title')
+  // 1M input × ¥2/M plus the fixture turn's 100 output tokens × ¥8/M.
+  assert.ok(Math.abs(entry.amount - 2.0008) < 1e-9, String(entry.amount))
+  // The wire carries buckets, not a leaked price row.
+  assert.deepEqual(Object.keys(entry.tokens).sort(), ['cacheReadInput', 'cacheWriteInput', 'output', 'uncachedInput'])
+  assert.equal('price' in entry, false)
+  assert.equal(entry.quality, 'priced')
+})

@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-workbench",
-  "version": "3.0.3",
+  "version": "3.1.0",
   "private": true,
   "description": "Developer workbench: today’s estimated spend in RMB with pricing coverage, running and waiting sessions, and attention items",
   "type": "module",

@@ -93,3 +93,16 @@ test('an executing row has a motion indicator with a static reduced-motion fallb
   assert.match(client, /prefers-reduced-motion:reduce/u)
   assert.match(client, /\.wb-pulse i\{opacity:1;transform:none\}/u)
 })
+
+test('the cost page renders project, trend and session spend, and sums token buckets', () => {
+  assert.match(client, /function CostPage\(/u)
+  assert.match(client, /t\('cost\.byProject'\)/u)
+  assert.match(client, /t\('cost\.trend'\)/u)
+  assert.match(client, /t\('cost\.todaySessions'\)/u)
+  // A bucket set is an object: it must be summed before formatting, never coerced.
+  assert.match(client, /function sumTokens\(buckets\)/u)
+  assert.equal(/tokensOf\(entry\.tokens\)/u.test(client), false)
+  assert.match(client, /tokensOf\(sumTokens\(entry\.tokens\)\)/u)
+  // The overview's cost metric is the way in.
+  assert.match(client, /onClick: \(\) => setDetail\(\{ kind: 'cost' \}\)/u)
+})

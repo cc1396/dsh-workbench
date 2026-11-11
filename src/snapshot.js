@@ -223,7 +223,7 @@ function publicRowOf(cut, ledger, children) {
     children,
     today: spend === undefined
       ? { amount: 0, quality: 'empty' }
-      : { amount: spend.amount, quality: spend.price?.quality ?? 'empty', coverage: spend.price?.coverage },
+      : { amount: spend.amount, quality: spend.quality ?? 'empty', coverage: spend.coverage },
   }
 }
 

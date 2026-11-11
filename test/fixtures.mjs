@@ -77,6 +77,7 @@ export function host(sessions, config = {}) {
         }
       }
       if (name === 'sessionProjections') {
+        // The registry keys by session id, so a cold Session (no live object) still answers.
         return { snapshot: (session) => ({ asOfSeq: 0, values: byId.get(session?.id)?.values ?? {} }) }
       }
       if (name === 'sessions') {

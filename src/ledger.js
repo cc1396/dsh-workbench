@@ -160,7 +160,18 @@ export function rollup({ rows, days, currency }) {
     projects.set(row.project, project)
 
     if (row.day === days[0]) {
-      const entry = sessionsToday.get(row.sessionId) ?? { sessionId: row.sessionId, project: row.project, name: row.name, title: row.title, model: row.model, amount: 0, tokens: { uncachedInput: 0, cacheReadInput: 0, cacheWriteInput: 0, output: 0 }, price: row.price }
+      const entry = sessionsToday.get(row.sessionId) ?? {
+        sessionId: row.sessionId,
+        project: row.project,
+        name: row.name,
+        title: row.title,
+        model: row.model,
+        amount: 0,
+        tokens: { uncachedInput: 0, cacheReadInput: 0, cacheWriteInput: 0, output: 0 },
+        // The row needs the verdict, not the price table it came from.
+        quality: row.price.quality,
+        coverage: row.price.coverage,
+      }
       entry.amount += row.price.amount
       entry.tokens = addTokens(entry.tokens, row.tokens)
       sessionsToday.set(row.sessionId, entry)

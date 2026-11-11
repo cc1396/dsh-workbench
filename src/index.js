@@ -1,23 +1,22 @@
 /**
  * The Workbench Host entry point.
  *
- * One snapshot route answers the panel; the remaining routes are explicit actions
- * (attention acknowledgement, local tasks, the daily report, request detail). Every
- * Host service is reached through `host.js`, every number is produced by `snapshot.js`,
- * and nothing here reads a log directly.
+ * One snapshot route answers the panel and one action route records an attention
+ * acknowledgement. Every Host service is reached through `host.js`, every number is
+ * produced by `snapshot.js`, and nothing here reads a log directly.
  */
 
 import { pricingOf } from './pricing.js'
 import { buildSnapshot, SCHEMA_VERSION } from './snapshot.js'
-import { registerActions } from './actions.js'
 import { json } from './json.js'
+import { openAttention, registerActions } from './actions.js'
 
 export const ROUTE_PATH = '/api/workbench/status'
 export const SCHEMA = SCHEMA_VERSION
 
 /**
  * Only the authenticated Fetch transport is required. The Session catalog is resolved
- * per call, so a Host that lacks one service still mounts the others.
+ * per call, so a Host that lacks one service still mounts the rest.
  */
 export const inject = ['connection']
 
@@ -29,7 +28,7 @@ export const inject = ['connection']
  */
 export function apply(ctx, config) {
   const settings = resolveSettings(config)
-  const cache = { snapshots: new Map(), lastAt: 0 }
+  const attention = createAttention()
 
   ctx.effect(
     () =>
@@ -37,12 +36,31 @@ export function apply(ctx, config) {
         path: ROUTE_PATH,
         methods: ['GET'],
         requestBody: 'buffered',
-        fetch: (request) => status(ctx, settings, cache, request),
+        fetch: (request) => status(ctx, settings, attention, request),
       }),
     'dsh-workbench: snapshot',
   )
 
-  registerActions(ctx, settings)
+  registerActions(ctx, attention)
+}
+
+/**
+ * The attention store, exposed as one mutable object the snapshot reads and the
+ * action route writes; `save()` persists it without blocking either.
+ */
+function createAttention() {
+  const store = openAttention()
+  const attention = { entries: {}, ready: store.read().then((state) => {
+    for (const [key, value] of Object.entries(state.entries ?? {})) {
+      if (value !== null && typeof value === 'object') attention.entries[key] = value
+    }
+    return attention.entries
+  }) }
+  attention.save = () =>
+    store.update((state) => {
+      state.entries = { ...attention.entries }
+    })
+  return attention
 }
 
 /** The bundle configuration, resolved once. */
@@ -61,28 +79,35 @@ function resolveSettings(config) {
 }
 
 /** `GET /api/workbench/status` — the snapshot. */
-async function status(ctx, settings, cache, request) {
+async function status(ctx, settings, attention, request) {
   const url = new URL(request.url)
   const raw = Number(url.searchParams.get('tzOffset'))
   const tzOffsetSeconds = Number.isFinite(raw) ? Math.min(86_400, Math.max(-86_400, Math.round(raw))) : 0
   const now = Date.now()
   try {
-    const body = await buildSnapshot(ctx, settings, { now, tzOffsetSeconds, signal: request.signal })
+    await attention.ready
+    const body = await buildSnapshot(ctx, settings, { now, tzOffsetSeconds, signal: request.signal }, attention)
     return json(200, body)
   } catch (error) {
     // A failed read still answers a well-formed, empty snapshot the client understands.
-    return json(200, {
-      schema: SCHEMA_VERSION,
-      generatedAt: now,
-      tzOffset: tzOffsetSeconds,
-      currency: settings.pricing.currency,
-      capabilities: { catalog: 'unavailable', log: 'unavailable', projections: 'unavailable', agents: 'unavailable', error: messageOf(error) },
-      overview: { todayStart: now, dayKey: '', amount: 0, coverage: undefined, unpricedTokens: 0, tokens: 0, sessions: 0, running: 0, waiting: 0, failed: 0 },
-      running: [],
-      recent: [],
-      ledger: { currency: settings.pricing.currency, today: { amount: 0, tokens: 0, sessions: [] }, projects: [], trend: [], days: [] },
-      search: { rows: [] },
-    })
+    return json(200, empty(now, tzOffsetSeconds, settings, error))
+  }
+}
+
+/** The snapshot the client renders when the Host cannot read anything. */
+function empty(now, tzOffsetSeconds, settings, error) {
+  return {
+    schema: SCHEMA_VERSION,
+    generatedAt: now,
+    tzOffset: tzOffsetSeconds,
+    currency: settings.pricing.currency,
+    capabilities: { catalog: 'unavailable', log: 'unavailable', projections: 'unavailable', agents: 'unavailable', error: messageOf(error) },
+    overview: { todayStart: now, dayKey: '', amount: 0, coverage: undefined, unpricedTokens: 0, tokens: 0, sessions: 0, running: 0, waiting: 0, failed: 0, attention: 0 },
+    running: [],
+    recent: [],
+    alerts: [],
+    ledger: { currency: settings.pricing.currency, today: { amount: 0, tokens: 0, sessions: [] }, projects: [], trend: [], days: [] },
+    search: { rows: [] },
   }
 }
 

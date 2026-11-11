@@ -96,7 +96,7 @@ export function factsOf(record, values, live, now) {
   const running = live?.running === true || open
   const lastTurn = Number(boundary?.lastTurn ?? stats?.lastTurn) || undefined
   const lastStepAt = Number(stats?.lastStepEndAt ?? stats?.updatedAt ?? values?.sessionListMetadata?.lastPromptAt) || undefined
-  const state = waiting ? 'waiting' : running ? (stalled(boundary, now) ? 'stuck' : 'running') : closedState(values, stats)
+  const state = waiting ? 'waiting' : running ? (stalled(boundary, now) ? 'stuck' : 'running') : 'ended'
   return {
     id: record.id,
     project: record.cwd,
@@ -133,12 +133,6 @@ function stalled(boundary, now) {
   return Number(now) - since > 10 * 60_000
 }
 
-/** A Session the Host does not run: its last turn closed, or it never opened one. */
-function closedState(values, stats) {
-  const failed = Number(stats?.failedTurns) > 0 && stats?.lastTurnFailed === true
-  return failed ? 'failed' : 'ended'
-}
-
 /**
  * Sum a log's billed usage per local day.
  *
@@ -165,6 +159,30 @@ export function tokensFromEvents(events, tzOffsetSeconds) {
     byDay.set(day, addTokens(byDay.get(day) ?? { uncachedInput: 0, cacheReadInput: 0, cacheWriteInput: 0, output: 0 }, tokens))
   }
   return { totals, byDay }
+}
+
+/**
+ * The outcome of the Session's last closed turn, read from the log.
+ *
+ * The projection says whether a turn is open, not how it closed; only the log's
+ * `turn/end` carries the reason. `failed` is an explicit error — a user cancel is its
+ * own state, because "the reader stopped it" is not a fault (PRD F02).
+ *
+ * @returns `{ state: 'failed' | 'cancelled' | undefined, message?: string, at?: number }`
+ */
+export function closingTurnOf(events) {
+  for (let index = (Array.isArray(events) ? events.length : 0) - 1; index >= 0; index -= 1) {
+    const event = events[index]
+    if (event?.type !== 'turn/end') continue
+    const kind = String(event?.data?.reason?.kind ?? '')
+    const at = Number(event?.time)
+    const message = typeof event?.data?.reason?.error?.message === 'string' ? event.data.reason.error.message : undefined
+    const cancelled = ['cancelled', 'aborted', 'stopped', 'interrupted'].includes(kind) || (kind === 'error' && event?.data?.reason?.reason?.kind === 'user')
+    if (cancelled) return { state: 'cancelled', at }
+    if (['error', 'failed', 'failure'].includes(kind) || event?.data?.reason?.error !== undefined) return { state: 'failed', message, at }
+    return { state: undefined, at }
+  }
+  return { state: undefined }
 }
 
 /** Generation speed from the stats projection, when the Host measured it. */

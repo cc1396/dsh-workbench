@@ -1,8 +1,8 @@
 {
   "name": "@local/dsh-workbench",
-  "version": "2.0.6",
+  "version": "3.0.0",
   "private": true,
-  "description": "Developer workbench: session states and attention items, project-to-request cost attribution, metadata search, project progress and an editable evidence daily report",
+  "description": "Developer workbench: today’s estimated spend in RMB with pricing coverage, running and waiting sessions, and attention items",
   "type": "module",
   "exports": {
     ".": "./index.js",
@@ -13,11 +13,7 @@
   "files": [
     "index.js",
     "client.js",
-    "sessions.js",
-    "ledger.js",
-    "search.js",
-    "progress.js",
-    "store.js",
+    "src/*.js",
     "cordis.patch.yml",
     "README.md",
     "locale/*.json",

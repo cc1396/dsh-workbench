@@ -1,6 +1,6 @@
 {
   "name": "cc1396-dsh-workbench",
-  "version": "2.0.6",
+  "version": "3.0.0",
   "description": "Developer workbench: session states and attention items, project-to-request cost attribution, metadata search, project progress and an editable evidence daily report",
   "type": "module",
   "license": "MIT",
@@ -31,11 +31,7 @@
   "files": [
     "index.js",
     "client.js",
-    "sessions.js",
-    "ledger.js",
-    "search.js",
-    "progress.js",
-    "store.js",
+    "src/*.js",
     "cordis.patch.yml",
     "README.md",
     "locale/*.json",

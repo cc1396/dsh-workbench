@@ -45,13 +45,17 @@ if (!/^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0
 if (name === LIVE_NAME) fail(`choose a public name; ${LIVE_NAME} is the local link and cannot be published`)
 
 const out = resolve(options.get('out') ?? join(here, 'dist'))
-const files = ['index.js', 'client.js', 'sessions.js', 'ledger.js', 'search.js', 'progress.js', 'store.js', 'cordis.patch.yml', 'README.md', 'icon.svg']
+const files = ['index.js', 'client.js', 'cordis.patch.yml', 'README.md', 'icon.svg']
 for (const file of files) if (!existsSync(join(source, file))) fail(`missing ${file} in ${source}`)
 
 rmSync(out, { recursive: true, force: true })
 mkdirSync(out, { recursive: true })
 for (const file of files) cpSync(join(source, file), join(out, file))
 cpSync(join(source, 'locale'), join(out, 'locale'), { recursive: true })
+// Every Host module under src/ ships beside the entry that re-exports it, and the
+// browser half ships with its own module graph under client/.
+cpSync(join(source, 'src'), join(out, 'src'), { recursive: true })
+cpSync(join(source, 'client'), join(out, 'client'), { recursive: true })
 
 overwrite('client.js', LIVE_NAME, name)
 overwrite('cordis.patch.yml', `'${LIVE_NAME}'`, `'${name}'`)

@@ -1,0 +1,195 @@
+{
+ "schema": 3,
+ "generatedAt": 1794382944536,
+ "tzOffset": 28800,
+ "currency": "CNY",
+ "capabilities": {
+  "catalog": "sessionQuery",
+  "log": "sessionQuery",
+  "projections": "ready",
+  "agents": "ready",
+  "prices": {
+   "ref": "configured",
+   "models": 3
+  },
+  "scanned": 12,
+  "total": 12
+ },
+ "overview": {
+  "todayStart": 1794382944536,
+  "dayKey": "2026-11-11",
+  "amount": 113.18,
+  "coverage": 0.96,
+  "unpricedTokens": 0,
+  "tokens": 4140000,
+  "sessions": 12,
+  "running": 3,
+  "waiting": 1,
+  "failed": 1,
+  "attention": 2,
+  "speed": {
+   "p50": 74,
+   "samples": 138
+  }
+ },
+ "running": [
+  {
+   "sessionId": "s_7c2f",
+   "title": "修复登录回调重试",
+   "project": "/work/api-gateway",
+   "projectName": "api-gateway",
+   "model": "deepseek-v4-flash",
+   "state": "waiting",
+   "running": true,
+   "waiting": {
+    "kind": "approval",
+    "count": 1
+   },
+   "turns": 3,
+   "tokens": {
+    "uncachedInput": 412000,
+    "cacheReadInput": 1204000,
+    "cacheWriteInput": 0,
+    "output": 84000
+   },
+   "lastAt": 1793949969000,
+   "endedAt": 0,
+   "today": {
+    "amount": 1.84,
+    "quality": "priced"
+   }
+  },
+  {
+   "sessionId": "s_17f0",
+   "title": "整理发布流程脚本",
+   "project": "/work/devtools",
+   "projectName": "devtools",
+   "model": "deepseek-v4-flash",
+   "state": "running",
+   "running": true,
+   "turns": 2,
+   "tokens": {
+    "uncachedInput": 180000,
+    "cacheReadInput": 900000,
+    "cacheWriteInput": 0,
+    "output": 41000
+   },
+   "lastAt": 1793950047000,
+   "endedAt": 0,
+   "today": {
+    "amount": 0.92,
+    "quality": "priced"
+   }
+  },
+  {
+   "sessionId": "s_55a1",
+   "title": "补齐订单筛选测试",
+   "project": "/work/storefront",
+   "projectName": "storefront",
+   "model": "deepseek-v4-flash",
+   "state": "running",
+   "running": true,
+   "turns": 1,
+   "tokens": {
+    "uncachedInput": 1000,
+    "cacheReadInput": 2000,
+    "cacheWriteInput": 0,
+    "output": 500
+   },
+   "lastAt": 1793950071000,
+   "endedAt": 0,
+   "today": {
+    "amount": 0.61,
+    "quality": "priced"
+   }
+  }
+ ],
+ "recent": [
+  {
+   "sessionId": "s_2b90",
+   "title": "重建预览环境镜像",
+   "project": "/work/devtools",
+   "projectName": "devtools",
+   "model": "deepseek-v4-flash",
+   "state": "failed",
+   "running": false,
+   "turns": 3,
+   "tokens": {
+    "uncachedInput": 1000,
+    "cacheReadInput": 2000,
+    "cacheWriteInput": 0,
+    "output": 500
+   },
+   "lastAt": 1793949849000,
+   "endedAt": 1793949849000,
+   "today": {
+    "amount": 0.3,
+    "quality": "priced"
+   }
+  },
+  {
+   "sessionId": "s_91cd",
+   "title": "验证订单筛选条件",
+   "project": "/work/storefront",
+   "projectName": "storefront",
+   "model": "deepseek-v4-flash",
+   "state": "ended",
+   "running": false,
+   "turns": 3,
+   "tokens": {
+    "uncachedInput": 1000,
+    "cacheReadInput": 2000,
+    "cacheWriteInput": 0,
+    "output": 500
+   },
+   "lastAt": 1793947329000,
+   "endedAt": 1793947329000,
+   "today": {
+    "amount": 0.44,
+    "quality": "priced"
+   }
+  }
+ ],
+ "alerts": [
+  {
+   "key": "local|s_2b90|failure|1:1793949849000",
+   "type": "failure",
+   "severity": "high",
+   "sessionId": "s_2b90",
+   "title": "重建预览环境镜像",
+   "project": "/work/devtools",
+   "projectName": "devtools",
+   "state": "open",
+   "reason": "镜像构建退出码 1",
+   "triggeredAt": 1793949849000,
+   "currentState": "failed"
+  },
+  {
+   "key": "local|s_7c2f|waiting|1793949969000",
+   "type": "waiting",
+   "severity": "medium",
+   "sessionId": "s_7c2f",
+   "title": "修复登录回调重试",
+   "project": "/work/api-gateway",
+   "projectName": "api-gateway",
+   "state": "open",
+   "reason": "bash",
+   "triggeredAt": 1793949969000,
+   "currentState": "waiting"
+  }
+ ],
+ "ledger": {
+  "currency": "CNY",
+  "today": {
+   "amount": 113.18,
+   "tokens": 4140000,
+   "sessions": []
+  },
+  "projects": [],
+  "trend": [],
+  "days": []
+ },
+ "search": {
+  "rows": []
+ }
+}

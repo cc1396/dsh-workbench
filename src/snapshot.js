@@ -11,9 +11,10 @@
  */
 
 import { capabilitiesOf, listSessions, liveAgents, projectionsOf, readEvents, serviceOf } from './host.js'
-import { factsOf, localDayStart, STATE_ORDER, tokensFromEvents, totalTokens } from './facts.js'
+import { closingTurnOf, factsOf, localDayStart, STATE_ORDER, tokensFromEvents, totalTokens } from './facts.js'
 import { rollup, splitByDay, MAX_DAYS } from './ledger.js'
 import { priceSessionDay } from './pricing.js'
+import { alertsOf, attentionOf, pendingCount } from './alerts.js'
 
 export const SCHEMA_VERSION = 3
 
@@ -29,7 +30,7 @@ const MAX_SCAN = 120
  * @param input - `{ now, tzOffsetSeconds, signal }`.
  * @returns the snapshot body; see the client for the consuming shape.
  */
-export async function buildSnapshot(ctx, settings, input) {
+export async function buildSnapshot(ctx, settings, input, attentionStore) {
   const now = Number(input.now) || Date.now()
   const tz = Number(input.tzOffsetSeconds) || 0
   const capabilities = capabilitiesOf(ctx)
@@ -55,17 +56,30 @@ export async function buildSnapshot(ctx, settings, input) {
   for (const record of records) {
     if (record.parentId !== undefined) childrenByParent.set(record.parentId, (childrenByParent.get(record.parentId) ?? 0) + 1)
   }
+  // A child is not a Session of its own for this panel: its turns belong to its parent's
+  // work, and PRD F02 keeps a child's errors from deciding the root's state.
   const primary = cuts.filter((cut) => cut.facts.parentId === undefined)
 
   const priced = primary.flatMap((cut) => cut.pricedRows)
   const ledger = rollup({ rows: priced, days, currency: settings.pricing.currency })
 
   const rows = primary.map((cut) => publicRowOf(cut, ledger, childrenByParent.get(cut.facts.id) ?? 0))
+  // Attention comes from the same rows, so a badge and its card always agree.
+  const attention = alertsOf(rows, attentionStore, now)
+  const attentionBySession = attentionOf(attention.items)
+  for (const row of rows) {
+    const item = attentionBySession.get(row.sessionId)
+    if (item !== undefined) row.attention = { key: item.key, type: item.type, state: item.state, severity: item.severity }
+  }
   const running = rows
     .filter((row) => row.running)
     .sort((left, right) => STATE_ORDER[left.state] - STATE_ORDER[right.state] || (right.lastAt ?? 0) - (left.lastAt ?? 0) || left.sessionId.localeCompare(right.sessionId))
+  // A Session that is neither running nor known to have ended still exists: it is
+  // listed among the recently active ones by its last observed time, never dropped.
   const recent = rows
-    .filter((row) => row.running !== true && row.endedAt !== undefined)
+    .filter((row) => row.running !== true)
+    .map((row) => (row.endedAt === undefined ? { ...row, endedAt: row.lastAt } : row))
+    .filter((row) => Number(row.endedAt) > 0)
     .sort((left, right) => right.endedAt - left.endedAt || left.sessionId.localeCompare(right.sessionId))
     .slice(0, Number(settings.maxRecentTasks) || 8)
 
@@ -91,10 +105,12 @@ export async function buildSnapshot(ctx, settings, input) {
       running: running.length,
       waiting: running.filter((row) => row.state === 'waiting').length,
       failed: rows.filter((row) => row.state === 'failed').length,
+      attention: pendingCount(attention.items),
       speed: speedSummaryOf(primary),
     },
     running,
     recent,
+    alerts: attention.items,
     ledger: {
       currency: ledger.currency,
       today: ledger.today,
@@ -136,7 +152,10 @@ async function cutOf(ctx, record, agents, now, tz, dayStart, days, settings) {
   const live = agents.get(record.id)
   const facts = factsOf(record, values, live, now)
   const log = await readEvents(ctx, record.id, undefined)
-  const endedAt = endsAtOf(log.events)
+  // A Session the Host does not run is closed: the closing turn says how.
+  const closing = closingTurnOf(log.events)
+  if (facts.running !== true && closing.state !== undefined) facts.state = closing.state
+  const endedAt = closing.at ?? endsAtOf(log.events)
   // The projection totals when the registry is composed; otherwise the same log pass
   // produces them, so a composition without `sessionProjections` is still priced.
   const fromLog = totalTokens(facts.tokens) === 0 ? tokensFromEvents(log.events, tz) : undefined
@@ -161,6 +180,7 @@ async function cutOf(ctx, record, agents, now, tz, dayStart, days, settings) {
       model: facts.route.model,
       projectName: projectNameOf(record.cwd),
       endedAt,
+      failureMessage: closing.message,
       lastAt: facts.lastAt ?? endedAt,
     },
     events: log.source,
@@ -199,6 +219,7 @@ function publicRowOf(cut, ledger, children) {
     speed: facts.speed,
     lastAt: facts.lastAt,
     endedAt: facts.endedAt,
+    failureMessage: facts.failureMessage,
     children,
     today: spend === undefined
       ? { amount: 0, quality: 'empty' }

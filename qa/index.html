@@ -41,65 +41,48 @@
 </head>
 <body>
 <div id="root"></div>
-<script>
-  window.__DSWB_SNAPSHOT__ = __SNAPSHOT__;
-  window.__dswbHome = location.hash.length > 1 ? JSON.parse(decodeURIComponent(location.hash.slice(1))) : undefined;
-  window.fetch = async (input) => {
-    const url = String(input && input.url ? input.url : input);
-    const snap = window.__DSWB_SNAPSHOT__;
-    let body = { ok: true };
-    if (url.startsWith('/api/workbench/status')) body = snap;
-    else if (url.startsWith('/api/workbench/search')) body = window.__dswbSearch(new URL(url, location.href));
-    else if (url.startsWith('/api/workbench/requests')) body = window.__dswbRequests(new URL(url, location.href));
-    else if (url.startsWith('/api/workbench/report')) body = snap.__report;
-    else if (url.startsWith('/api/workbench/tasks') && String(input.method || 'GET') === 'GET') body = { tasks: [] };
-    else if (url.startsWith('/api/workbench/summarize')) body = { projects: [], model: 'demo' };
-    return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
-  };
-  window.__dswbDictionary = {};
-  window.__slots = [];
+<script type="module">
+  /* Boot: fixture, transport shim, module loader, mount. */
+  const { zh } = await import('../client/text.js')
+  window.__DSWB_SNAPSHOT__ = JSON.parse(await (await fetch('./.snapshot.json')).text())
+
+  window.fetch = async (input, init) => {
+    const url = String(input && input.url ? input.url : input)
+    if (url.startsWith('/api/workbench/status')) {
+      return new Response(JSON.stringify(window.__DSWB_SNAPSHOT__), { status: 200, headers: { 'content-type': 'application/json' } })
+    }
+    if (url.startsWith('/api/workbench/alerts')) {
+      return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } })
+    }
+    return new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } })
+  }
+
+  const dictionary = Object.assign({}, zh)
+  window.__slots = []
   window.__ctx = {
-    effect(fn) { fn() },
-    get(name) { return name === 'uiWorkspace' ? { openSession(id) { window.__opened = id; console.log('open ' + id) } } : undefined },
+    effect: (fn) => fn(),
+    get: (name) => (name === 'uiWorkspace' ? { openSession(id) { window.__opened = id } } : undefined),
     locale: {
       getSnapshot: () => ({ active: 'zh', preferred: 'zh' }),
       subscribe: () => () => {},
-      register(namespace, dictionaries) { Object.assign(window.__dswbDictionary, dictionaries.zh) },
+      register(_ns, dictionaries) { Object.assign(dictionary, dictionaries.zh) },
       bind: () => (key, vars) => {
-        let text = window.__dswbDictionary[key] ?? key
+        let text = dictionary[key] ?? key
         if (vars) for (const [name, value] of Object.entries(vars)) text = text.split('{' + name + '}').join(String(value))
         return text
       },
     },
     slots: { inject: (_name, fn) => fn(), register: (definition, component) => window.__slots.push({ ...definition, component }) },
-  };
-</script>
-<script>
-  window.__dswbSearch = (url) => {
-    const snap = window.__DSWB_SNAPSHOT__;
-    const q = (url.searchParams.get('q') || '').trim().toLowerCase();
-    const rows = (snap.search && snap.search.rows) || [];
-    const items = rows
-      .filter((row) => !q || String(row.title || '').toLowerCase().includes(q) || String(row.projectName || '').toLowerCase().includes(q) || String(row.model || '').toLowerCase().includes(q) || String(row.sessionId || '').toLowerCase().includes(q))
-      .map((row, index) => ({ sessionId: row.sessionId, title: row.title, projectId: row.projectId, projectName: row.projectName, model: row.model, provider: row.provider, state: row.state, at: row.endedAt || row.lastAt, running: row.running, rank: q ? 1 : 4, order: index }));
-    return { generatedAt: Date.now(), query: q, total: items.length, items, hasMore: false, index: { kind: 'local-metadata', rows: rows.length, fullText: false }, capabilities: { events: 'id-only', fullText: 'off' } };
-  };
-  window.__dswbRequests = (url) => {
-    const snap = window.__DSWB_SNAPSHOT__;
-    const id = url.searchParams.get('sessionId');
-    const detail = (snap.__requests || {})[id] || { rows: [], prices: [], pricesOf: {} };
-    return Object.assign({ generatedAt: Date.now(), sessionId: id, projectId: snap.running.find((r) => r.sessionId === id)?.projectId || '/work/api-gateway', projectName: 'api-gateway', day: Number(url.searchParams.get('day')) || 0, dayLabel: '2026-11-06', title: snap.running.find((r) => r.sessionId === id)?.title || '', total: 1.84, totalQuality: 'partial', amount: 1.84, coverage: 0.75, currency: 'USD', priceRef: 'demo-usd-1106' }, detail);
-  };
-</script>
-<script>window.__ModuleLoader__ = { load(registration) { window.__dswbRegistration = registration } }</script>
-<script src="../client.js" id="client"></script>
-<script>
-  /* Mount the real panel once the module-loader shim has registered it. */
-  const registration = window.__dswbRegistration
-  const client = registration.factory((name) => (name === 'react' ? window.React : undefined))
-  client.apply(window.__ctx)
+  }
+
+  window.__ModuleLoader__ = { load(registration) { window.__dswbRegistration = registration } }
+  await import('../client.js')
+  const client = window.__dswbRegistration.factory((name) => (name === 'react' ? window.React : undefined))
+  await client.apply(window.__ctx)
   const page = window.__slots.find((slot) => slot.name === 'main').component
-  window.ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(page, { t: window.__ctx.locale.bind('dsh.workbench'), openSession() {} }))
+  window.ReactDOM.createRoot(document.getElementById('root')).render(
+    window.React.createElement(page, { t: window.__ctx.locale.bind('dsh.workbench'), openSession() {} }),
+  )
 </script>
 </body>
 </html>

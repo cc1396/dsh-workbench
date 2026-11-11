@@ -2,25 +2,22 @@
     - id: dsh-workbench
       name: '@local/dsh-workbench'
       config:
-        # 每个任务列表渲染的行数。
-        maxRunningTasks: 8
+        # 每次快照最多读取的 Session 数，以及读取的时间预算（毫秒）。
+        # 超出预算的 Session 留到下一定时刷新，面板始终可交互。
+        maxScanSessions: 120
+        scanBudgetMs: 2500
+        # 概览「最近结束」显示的行数。
         maxRecentTasks: 8
-        # Session 日志扫描上限：折算结果按 Session 缓存，超出预算的部分
-        # 由下一次轮询接着处理。
-        maxScanSessions: 60
-        scanBudgetMs: 4000
-        # 钱包查询频率上限（毫秒）。
-        balanceTtlMs: 60000
-        # 本地估算用的币种（元）与价目版本。金额是估算，不是平台账单。
-        currency: CNY
+        # 金额一律按人民币估算：元 / 每百万 Token。
+        # 未单独列出的模型使用 default 这一行，请按实际账单调整；
+        # 改价后建议同步修改 ref，它会显示在请求明细里。
         prices:
           ref: configured
-          # 元 / 每百万 Token。未单独列出的模型都按这张默认表估算，
-          # 请按你实际使用的模型定价修改；改了单价请同时更新 ref。
           default:
             input: 2
             output: 8
             cacheRead: 0.5
+            cacheWrite: 2
           models:
             deepseek-chat:
               input: 2
@@ -42,10 +39,3 @@
               input: 0.5
               output: 2
               cacheRead: 0.1
-        # P1 推断类关注项：可能卡住 / 工具连续失败默认开；
-        # 费用阈值与费用突增默认关，待基线数据验证后开启。
-        rules:
-          stuck: true
-          toolFailures: true
-          costThreshold: false
-          costSpike: false

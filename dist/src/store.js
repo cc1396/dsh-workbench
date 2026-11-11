@@ -1,11 +1,9 @@
 /**
- * The Workbench's small JSON stores under `$DSH_HOME/workbench/`.
+ * Small JSON stores under `$DSH_HOME/workbench/`.
  *
- * Every store is an object with a `version`, a list of entries and an `updatedAt`
- * stamp; a read tolerates a missing, unparsable or older file by starting empty, so
- * a downgrade or a partial write can cost a cache, never a crash. Writes are
- * serialized per file and atomic (write a sibling, then rename), and a cleanup can
- * drop every entry that mentions a Session the Host no longer has.
+ * A store tolerates a missing, unparsable or older file by starting empty, so a
+ * downgrade or a partial write costs a cache and never a crash. Writes are serialized
+ * per file and atomic (write a sibling, then rename); nothing here throws into a route.
  */
 
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
@@ -14,7 +12,7 @@ import { join } from 'node:path'
 
 const VERSION = 1
 
-/** The Workbench's private directory. */
+/** The plugin's private directory. */
 export function workbenchDir(home = process.env.DSH_HOME) {
   return join(typeof home === 'string' && home !== '' ? home : join(homedir(), '.dsh'), 'workbench')
 }
@@ -22,13 +20,12 @@ export function workbenchDir(home = process.env.DSH_HOME) {
 /**
  * Open one JSON store.
  *
- * @param name - the file name inside the Workbench directory.
- * @param empty - the value a missing or unreadable store starts from.
- * @returns `{ read(), update(fn) }`; `update` mutates the store under a queue and saves.
+ * @param name - file name inside the workbench directory.
+ * @param empty - the value a missing or unreadable file starts from.
+ * @returns `{ read(), update(fn), path() }`.
  */
 export function openStore(name, empty) {
   let loaded
-  /** Serializes writes; a resolved promise costs no extra turn on the first write. */
   let queue = Promise.resolve()
   const path = () => join(workbenchDir(), name)
   const read = async () => {
@@ -43,33 +40,37 @@ export function openStore(name, empty) {
     return loaded
   }
   const update = (mutate) => {
-    queue = queue.then(async () => {
-      const store = await read()
-      const result = await mutate(store)
-      store.updatedAt = Date.now()
-      await save(path(), store)
+    const job = queue.then(async () => {
+      const state = await read()
+      const result = await mutate(state)
+      state.updatedAt = Date.now()
+      await save(path(), state)
       return result
     })
-    return queue
+    queue = job.catch(() => {})
+    return job
   }
   return { read, update, path }
 }
 
-async function save(path, store) {
+async function save(path, state) {
   try {
     await mkdir(join(path, '..'), { recursive: true })
     const temporary = `${path}.${process.pid}.tmp`
-    await writeFile(temporary, `${JSON.stringify(store, null, 2)}\n`, 'utf8')
+    await writeFile(temporary, `${JSON.stringify(state, null, 2)}\n`, 'utf8')
     await rename(temporary, path)
   } catch {
     // A read-only home must not break the panel: the in-memory value still answers.
   }
 }
 
-/** Empty shapes of the two stores the Workbench adds for search and progress. */
-export const TASKS_VERSION = VERSION
+/** Empty shapes of the stores this plugin keeps. */
 export function emptyTasks() {
   return { version: VERSION, updatedAt: 0, tasks: [] }
+}
+
+export function emptyAlerts() {
+  return { version: VERSION, updatedAt: 0, entries: {} }
 }
 
 export function emptyProgress() {

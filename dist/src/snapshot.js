@@ -154,6 +154,10 @@ async function cutOf(ctx, record, agents, now, tz, dayStart, days, settings) {
   const log = await readEvents(ctx, record.id, undefined)
   // A Session the Host does not run is closed: the closing turn says how.
   const closing = closingTurnOf(log.events)
+  // The projections do not carry timestamps; the log does. A running Session's turn
+  // start and its last committed activity both come from there.
+  if (facts.turnStartedAt === undefined) facts.turnStartedAt = openTurnStartOf(log.events)
+  if (facts.lastAt === undefined || facts.lastAt < lastEventAtOf(log.events)) facts.lastAt = lastEventAtOf(log.events)
   if (facts.running !== true && closing.state !== undefined) facts.state = closing.state
   const endedAt = closing.at ?? endsAtOf(log.events)
   // The projection totals when the registry is composed; otherwise the same log pass
@@ -188,6 +192,30 @@ async function cutOf(ctx, record, agents, now, tz, dayStart, days, settings) {
   }
 }
 
+/** The newest committed event time, which is what "last activity" means. */
+function lastEventAtOf(events) {
+  let last = 0
+  for (const event of Array.isArray(events) ? events : []) {
+    const at = Number(event?.time)
+    if (Number.isFinite(at) && at > last) last = at
+  }
+  return last || undefined
+}
+
+/** When the Session's currently open turn started, if the log still holds it. */
+function openTurnStartOf(events) {
+  const list = Array.isArray(events) ? events : []
+  for (let index = list.length - 1; index >= 0; index -= 1) {
+    const event = list[index]
+    if (event?.type === 'turn/end') return undefined
+    if (event?.type === 'turn/start') {
+      const at = Number(event.time)
+      return Number.isFinite(at) && at > 0 ? at : undefined
+    }
+  }
+  return undefined
+}
+
 /** The last `turn/end` in a log: when the Session stopped, whatever its state. */
 function endsAtOf(events) {
   for (let index = (Array.isArray(events) ? events.length : 0) - 1; index >= 0; index -= 1) {
@@ -215,6 +243,9 @@ function publicRowOf(cut, ledger, children) {
     waiting: facts.waiting,
     turn: facts.turn,
     turns: facts.turns,
+    phase: facts.phase,
+    prompt: facts.prompt,
+    turnStartedAt: facts.turnStartedAt,
     tokens: facts.tokens,
     speed: facts.speed,
     lastAt: facts.lastAt,

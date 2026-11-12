@@ -59,9 +59,23 @@ test('every key the components translate exists in the dictionary', () => {
   const used = new Set()
   for (const match of client.matchAll(/\bt\(\s*'([\w.-]+)'/gu)) used.add(match[1])
   for (const state of ['waiting', 'running', 'stuck', 'failed', 'ended', 'cancelled', 'unknown']) used.add(`state.${state}`)
+  // Only the dictionary literal declares keys; a bare `title:`/`panel:` entry is a key,
+  // and CSS declarations elsewhere in the file are not.
+  const literal = (() => {
+    const start = client.indexOf('const zh = {')
+    let depth = 0
+    for (let index = start; index < client.length; index += 1) {
+      if (client[index] === '{') depth += 1
+      else if (client[index] === '}') {
+        depth -= 1
+        if (depth === 0) return client.slice(start, index + 1)
+      }
+    }
+    return ''
+  })()
   const declared = new Set([
-    ...[...client.matchAll(/^\s*'([\w.-]+)':/gmu)].map((match) => match[1]),
-    ...[...client.matchAll(/^\s*([a-zA-Z][\w]*):/gmu)].map((match) => match[1]),
+    ...[...literal.matchAll(/^\s*'([\w.-]+)':/gmu)].map((match) => match[1]),
+    ...[...literal.matchAll(/^\s{6}([a-zA-Z][\w]*):/gmu)].map((match) => match[1]),
   ])
   const missing = [...used].filter((key) => !declared.has(key))
   assert.deepEqual(missing, [])
@@ -123,22 +137,42 @@ test('the cost page renders project, trend and session spend, and sums token buc
   assert.match(client, /function sumTokens\(buckets\)/u)
   assert.equal(/tokensOf\(entry\.tokens\)/u.test(client), false)
   assert.match(client, /tokensOf\(sumTokens\(entry\.tokens\)\)/u)
-  // The overview's cost metric is the way in.
-  assert.match(client, /onClick: \(\) => setDetail\(\{ kind: 'cost' \}\)/u)
 })
 
-test('every page is reachable from the top navigation', () => {
-  assert.match(client, /function NavBar\(/u)
-  // The three destinations the panel has, each with its own label.
-  for (const key of ['nav.overview', 'nav.cost', 'nav.attention']) {
+test('the panel is laid out as the design: sidebar, top bar, page head', () => {
+  // Sidebar with the design's three labelled groups.
+  assert.match(client, /function Sidebar\(/u)
+  for (const key of ['side.group.workbench', 'side.group.analysis', 'side.group.preferences']) {
     assert.ok(client.includes(`'${key}'`), `${key} must be defined`)
   }
-  // The bar is rendered on the overview and on every detail page.
-  // Rendered as its own child on the detail pages and inside the overview's content.
-  const renders = [/'wb-content' \}, nav, page\)/u, /^\s+nav,$/mu].filter((pattern) => pattern.test(client)).length
-  assert.equal(renders, 2, 'nav must render on both the overview and detail pages')
+  // The design's pages, each reachable from it.
+  for (const key of ['side.overview', 'side.sessions', 'side.attention', 'side.projects', 'side.cost', 'side.performance', 'side.records', 'side.settings']) {
+    assert.ok(client.includes(`'${key}'`), `${key} must be defined`)
+  }
+  // A page this version does not build is listed and marked, never silently dropped.
+  assert.match(client, /'data-soon': page\.soon === true/u)
+  assert.match(client, /'side\.soonShort'/u)
+  // Top bar with breadcrumb, search entry and refresh.
+  assert.match(client, /function TopBar\(/u)
+  assert.match(client, /className: 'wb-crumbs'/u)
+  // Page header with the eyebrow the design shows.
+  assert.match(client, /function PageHead\(/u)
+  assert.match(client, /'LOCAL \/ '/u)
   // The current page is marked for assistive tech.
   assert.match(client, /'aria-current': current === page\.kind \? 'page'/u)
-  // It is a real navigation landmark with a name.
-  assert.match(client, /className: 'wb-nav', 'aria-label': t\('tabs\.label'\)/u)
+})
+
+test('the overview keeps the design\'s five sections', () => {
+  assert.match(client, /function OverviewPage\(/u)
+  for (const section of ['RunningTable', 'AttentionCard', 'ProjectsCard', 'CostBarsCard', 'SpeedCard', 'RecentCard', 'WorkLogCard']) {
+    assert.ok(client.includes(`function ${section}(`), `${section} must exist`)
+  }
+  // The running table carries the design's columns.
+  for (const key of ['field.session', 'field.state', 'field.action', 'field.duration', 'field.todayCost']) {
+    assert.ok(client.includes(`'${key}'`), `${key} must be defined`)
+  }
+  // Four metrics with the design's labels.
+  for (const key of ['today.cost', 'today.running', 'today.attention', 'today.speed']) {
+    assert.ok(client.includes(`'${key}'`), `${key} must be defined`)
+  }
 })

@@ -38,7 +38,7 @@ window.__ModuleLoader__.load({
       'fresh.cached': '正在同步…',
 
       'today.title': '今日概览',
-      'today.subtitle': '{date} · {zone} · 已于 {time} 同步',
+      'today.subtitle': '{scope} · {zone} · 已于 {time} 同步',
       'today.cost': '今日估算费用',
       'today.coverage': '计价覆盖 {percent}%',
       'today.noSample': '暂无样本',
@@ -48,6 +48,7 @@ window.__ModuleLoader__.load({
       'today.attention': '待处理',
       'today.attentionDetail': '{failed} 失败 · {waiting} 等待',
       'today.speed': '生成速度',
+      'today.speedP50': '生成速度 P50',
       'today.speedValue': '{rate} tok/s',
       'today.speedNone': '暂无样本',
       'today.speedDetail': '{count} 个样本',
@@ -120,6 +121,55 @@ window.__ModuleLoader__.load({
       'tabs.capability': '状态',
 
       'detail.back': '返回概览',
+      'side.group.workbench': '工作台',
+      'side.group.analysis': '分析与记录',
+      'side.group.preferences': '偏好设置',
+      'side.overview': '今日概览',
+      'side.sessions': 'Session',
+      'side.attention': '需要关注',
+      'side.projects': '项目',
+      'side.cost': '消耗归因',
+      'side.performance': '模型性能',
+      'side.records': '工作记录',
+      'side.settings': '设置',
+      'side.workspace': '本地工作区',
+      'side.profile': '个人配置 · local',
+      'side.profileValue': '当前 profile · local',
+      'side.data': '本地数据',
+      'side.soon': '{name}：本版本暂未提供',
+      'side.soonShort': '待上线',
+      'top.search': '搜索 Session',
+      'top.searchHint': '搜索在后续版本提供',
+      'today.scope': '所有项目',
+      'today.date': '{date} · 今天',
+      'field.action': '最后动作',
+      'field.duration': '本轮耗时',
+      'field.todayCost': '今日估算',
+      'field.open': '打开',
+      'action.tool': '运行工具中',
+      'action.generating': '模型正在生成',
+      'action.failed': '轮次已终止',
+      'action.prompt': '{text}',
+      'running.open': '打开 {title}',
+      'alert.failure': '执行异常',
+      'alert.waiting': '等待确认',
+      'projects.title': '项目工作进展',
+      'projects.all': '查看项目',
+      'projects.sessions': '{count} 个 Session 有活动',
+      'projects.empty': '今天还没有项目活动。',
+      'cost.all': '查看明细',
+      'cost.foot': '今日已知估算 · {amount}',
+      'speed.title': '模型性能',
+      'speed.week': '近 7 天',
+      'speed.empty': '近 7 天没有成功的生成样本。',
+      'speed.detail': '{count} 个有效样本',
+      'recent.hint': '查看历史',
+      'worklog.title': '工作记录与账户',
+      'worklog.open': '打开日报',
+      'worklog.summary': '今日摘要 · {count} 个会话有花费',
+      'worklog.priced': '计价 {percent}%',
+      'worklog.tokens': '{tokens} tok',
+      'worklog.account': '账户余额 · 不可获取',
       'nav.overview': '概览',
       'nav.cost': '消耗归因',
       'nav.attention': '需要关注',
@@ -157,7 +207,7 @@ window.__ModuleLoader__.load({
       'fresh.cached': 'Syncing…',
 
       'today.title': "Today's overview",
-      'today.subtitle': '{date} · {zone} · synced {time}',
+      'today.subtitle': '{scope} · {zone} · synced {time}',
       'today.cost': 'Estimated spend today',
       'today.coverage': 'Priced {percent}%',
       'today.noSample': 'No sample',
@@ -167,6 +217,7 @@ window.__ModuleLoader__.load({
       'today.attention': 'To handle',
       'today.attentionDetail': '{failed} failed · {waiting} waiting',
       'today.speed': 'Generation speed',
+      'today.speedP50': 'Speed P50',
       'today.speedValue': '{rate} tok/s',
       'today.speedNone': 'No sample',
       'today.speedDetail': '{count} samples',
@@ -239,6 +290,55 @@ window.__ModuleLoader__.load({
       'tabs.capability': 'Status',
 
       'detail.back': 'Back to overview',
+      'side.group.workbench': 'Workbench',
+      'side.group.analysis': 'Analysis',
+      'side.group.preferences': 'Preferences',
+      'side.overview': "Today's overview",
+      'side.sessions': 'Sessions',
+      'side.attention': 'Needs attention',
+      'side.projects': 'Projects',
+      'side.cost': 'Cost attribution',
+      'side.performance': 'Model performance',
+      'side.records': 'Work log',
+      'side.settings': 'Settings',
+      'side.workspace': 'Local workspace',
+      'side.profile': 'Personal config · local',
+      'side.profileValue': 'profile · local',
+      'side.data': 'Local data',
+      'side.soon': '{name}: not in this version yet',
+      'side.soonShort': 'soon',
+      'top.search': 'Search sessions',
+      'top.searchHint': 'Search arrives in a later version',
+      'today.scope': 'All projects',
+      'today.date': '{date} · today',
+      'field.action': 'Last action',
+      'field.duration': 'Turn time',
+      'field.todayCost': 'Today est.',
+      'field.open': 'Open',
+      'action.tool': 'Running a tool',
+      'action.generating': 'Model is generating',
+      'action.failed': 'Turn failed',
+      'action.prompt': '{text}',
+      'running.open': 'Open {title}',
+      'alert.failure': 'Failed',
+      'alert.waiting': 'Waiting',
+      'projects.title': 'Project progress',
+      'projects.all': 'See projects',
+      'projects.sessions': '{count} sessions active',
+      'projects.empty': 'No project activity today.',
+      'cost.all': 'See detail',
+      'cost.foot': "Today's known estimate · {amount}",
+      'speed.title': 'Model performance',
+      'speed.week': 'Last 7 days',
+      'speed.empty': "No successful generation in the last 7 days.",
+      'speed.detail': '{count} valid samples',
+      'recent.hint': 'See history',
+      'worklog.title': 'Work log and account',
+      'worklog.open': 'Open report',
+      'worklog.summary': "Today's summary · {count} sessions with spend",
+      'worklog.priced': 'Priced {percent}%',
+      'worklog.tokens': '{tokens} tok',
+      'worklog.account': 'Account balance · unavailable',
       'nav.overview': 'Overview',
       'nav.cost': 'Cost',
       'nav.attention': 'Attention',
@@ -802,119 +902,192 @@ window.__ModuleLoader__.load({
      * state fills, which is what made a "0% coverage" badge look like a solid button.
      */
     const CSS = `
-    .wb-page{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;width:100%;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:14px;line-height:1.6;--wb-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;--wb-ok:var(--dsw-alias-state-success-primary);--wb-warn:var(--dsw-alias-state-warning-primary);--wb-err:var(--dsw-alias-state-error-primary);--wb-accent:var(--dsw-alias-brand-primary)}
+    /* ---- shell: sidebar + body --------------------------------------------- */
+    .wb-shell{display:flex;height:100%;min-height:0;width:100%;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:14px;line-height:1.55;--wb-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;--wb-ok:var(--dsw-alias-state-success-primary);--wb-warn:var(--dsw-alias-state-warning-primary);--wb-err:var(--dsw-alias-state-error-primary);--wb-accent:var(--dsw-alias-brand-primary);--wb-soft:color-mix(in srgb,var(--dsw-alias-label-primary) 5%,transparent);--wb-line:var(--dsw-alias-border-l1)}
+    .wb-side{flex:0 0 211px;display:flex;flex-direction:column;gap:2px;min-height:0;padding:14px 10px 10px;overflow-y:auto;background:color-mix(in srgb,var(--dsw-alias-label-primary) 2.5%,var(--dsw-alias-bg-base));border-right:.5px solid var(--wb-line)}
+    .wb-brand{display:flex;align-items:center;gap:8px;padding:2px 8px 12px}
+    .wb-logo{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-base)}
+    .wb-brand-name{font-size:13px;font-weight:600}
+    .wb-workspace{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px;border-radius:9px;border:.5px solid var(--wb-line);background:var(--dsw-alias-bg-layer-1)}
+    .wb-workspace-badge{display:grid;place-items:center;width:22px;height:22px;flex:none;border-radius:6px;background:color-mix(in srgb,var(--wb-accent) 18%,transparent);color:var(--wb-accent);font-size:11px;font-weight:600}
+    .wb-workspace-text{display:flex;flex-direction:column;min-width:0}
+    .wb-workspace-name{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .wb-workspace-sub{font-size:10.5px;color:var(--dsw-alias-label-tertiary)}
+    .wb-side-group{display:flex;flex-direction:column;gap:1px;margin-bottom:10px}
+    .wb-side-label{padding:0 8px 6px;color:var(--dsw-alias-label-tertiary);font-size:10.5px;letter-spacing:.02em}
+    .wb-side-item{display:flex;align-items:center;gap:8px;width:100%;min-height:30px;padding:5px 8px;border:0;border-radius:7px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12.5px;text-align:left;cursor:pointer}
+    .wb-side-item:hover:not([data-soon=true]){background:var(--wb-soft);color:var(--dsw-alias-label-primary)}
+    .wb-side-item[aria-current=page]{background:color-mix(in srgb,var(--wb-accent) 14%,transparent);color:var(--wb-accent);font-weight:600}
+    [data-soon=true].wb-side-item{color:var(--dsw-alias-label-quaternary,var(--dsw-alias-label-tertiary));cursor:default}
+    .wb-side-item-label{flex:1;min-width:0}
+    .wb-side-badge{min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--wb-err);color:var(--dsw-alias-brand-primary-invert);font-family:var(--wb-mono);font-size:10px;line-height:16px;font-style:normal;text-align:center}
+    .wb-side-soon{font-size:9.5px;padding:1px 4px;border-radius:4px;background:var(--wb-soft);color:var(--dsw-alias-label-tertiary);font-style:normal;white-space:nowrap}
+    .wb-side-foot{margin-top:auto;padding:10px 8px 2px;border-top:.5px solid var(--wb-line)}
+    .wb-side-profile{display:block;color:var(--dsw-alias-label-tertiary);font-size:10.5px}
+    /* ---- body ------------------------------------------------------------- */
+    .wb-body{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
+    .wb-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:10px 24px;border-bottom:.5px solid var(--wb-line)}
+    .wb-crumbs{display:flex;align-items:center;gap:6px;color:var(--dsw-alias-label-tertiary);font-size:12px}
+    .wb-crumb-sep{margin-right:6px;color:var(--dsw-alias-label-quaternary,var(--dsw-alias-label-tertiary))}
+    .wb-crumb-current{color:var(--dsw-alias-label-primary)}
+    .wb-top-side{display:flex;align-items:center;gap:8px}
+    .wb-search{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 10px;border-radius:15px;border:.5px solid var(--wb-line);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-tertiary);font:inherit;font-size:12px;cursor:pointer}
+    .wb-search:disabled{cursor:default;opacity:.75}
+    .wb-kbd{padding:1px 5px;border-radius:4px;border:.5px solid var(--wb-line);font-family:var(--wb-mono);font-size:10px}
     .wb-scroll{flex:1;min-height:0;overflow:auto}
-    .wb-content{padding:28px 24px 24px;max-width:1240px;margin:0 auto}
-    .wb-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:18px}
-    .wb-eyebrow{color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase}
+    .wb-content{padding:22px 24px 24px;max-width:1240px;margin:0 auto}
+    /* ---- page head -------------------------------------------------------- */
+    .wb-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px}
+    .wb-eyebrow{color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10px;line-height:14px;letter-spacing:.14em;text-transform:uppercase}
     .wb-h1{margin:2px 0 0;font-size:26px;font-weight:600;line-height:34px;letter-spacing:-.02em}
     .wb-sub{margin:2px 0 0;color:var(--dsw-alias-label-tertiary);font-size:12px}
     .wb-head-side{display:flex;align-items:center;gap:8px}
-    .wb-fresh{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:12px;font-size:11.5px;background:color-mix(in srgb,var(--dsw-alias-label-primary) 6%,transparent);color:var(--dsw-alias-label-secondary)}
-    .wb-fresh[data-state=ready] i{background:var(--wb-ok)}
-    .wb-fresh[data-state=stale] i{background:var(--wb-warn)}
-    .wb-fresh[data-state=cached] i{background:var(--wb-accent)}
-    .wb-dot{width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-label-tertiary)}
-    .wb-icon{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:15px;border:.5px solid var(--dsw-alias-border-l1);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}
-    .wb-icon:hover{color:var(--dsw-alias-label-primary);background:color-mix(in srgb,var(--dsw-alias-label-primary) 6%,transparent)}
-    .wb-nav{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;padding:3px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}
-    .wb-nav-item{position:relative;display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:4px 12px;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12.5px;cursor:pointer}
-    .wb-nav-item:hover{background:color-mix(in srgb,var(--dsw-alias-label-primary) 6%,transparent);color:var(--dsw-alias-label-primary)}
-    .wb-nav-item[aria-current=page]{background:color-mix(in srgb,var(--wb-accent) 15%,transparent);box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--wb-accent) 32%,transparent);color:var(--wb-accent);font-weight:600}
-    .wb-nav-item:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--wb-accent));outline-offset:-2px}
-    .wb-nav-badge{min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--wb-err);color:var(--dsw-alias-brand-primary-invert);font-family:var(--wb-mono);font-size:10px;line-height:16px;font-style:normal;text-align:center}
-    .wb-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
-    .wb-metric{display:flex;flex-direction:column;gap:2px;min-width:0;padding:14px 16px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);color:inherit;font:inherit;text-align:left}
+    .wb-date{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:8px;border:.5px solid var(--wb-line);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;cursor:pointer}
+    /* ---- metrics ---------------------------------------------------------- */
+    .wb-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
+    .wb-metric{display:flex;flex-direction:column;gap:2px;min-width:0;padding:12px 14px;border-radius:10px;border:.5px solid var(--wb-line);background:var(--dsw-alias-bg-layer-1);color:inherit;font:inherit;text-align:left}
     button.wb-metric{cursor:pointer}
-    button.wb-metric:hover{border-color:color-mix(in srgb,var(--dsw-alias-label-primary) 22%,transparent)}
-    .wb-metric-label{color:var(--dsw-alias-label-tertiary);font-size:12px}
-    .wb-metric-value{font-family:var(--wb-mono);font-size:24px;font-weight:600;line-height:32px;font-variant-numeric:tabular-nums}
+    button.wb-metric:hover{border-color:color-mix(in srgb,var(--wb-accent) 40%,transparent)}
+    .wb-metric-top{display:flex;align-items:center;justify-content:space-between;gap:6px}
+    .wb-metric-label{color:var(--dsw-alias-label-tertiary);font-size:11.5px}
+    .wb-metric-glyph{color:var(--dsw-alias-label-quaternary,var(--dsw-alias-label-tertiary))}
+    .wb-metric-value{font-family:var(--wb-mono);font-size:23px;font-weight:600;line-height:31px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
     .wb-metric-value[data-tone=alert]{color:var(--wb-err)}
-    .wb-metric-value[data-tone=default]{color:var(--dsw-alias-label-primary)}
-    .wb-metric-detail{color:var(--dsw-alias-label-tertiary);font-size:11.5px;line-height:17px}
-    .wb-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(300px,1fr);gap:12px;align-items:start}
-    .wb-main,.wb-aside{display:flex;flex-direction:column;gap:12px;min-width:0}
-    .wb-panel{min-width:0;padding:14px 16px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}
-    .wb-panel-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-    .wb-panel-title{margin:0;font-size:14px;font-weight:600;line-height:22px}
-    .wb-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 7px;border-radius:10px;background:color-mix(in srgb,var(--dsw-alias-label-primary) 8%,transparent);color:var(--dsw-alias-label-secondary);font-family:var(--wb-mono);font-size:11px}
+    .wb-metric-detail{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px}
+    /* ---- card grid -------------------------------------------------------- */
+    .wb-row-2{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(280px,1fr);gap:12px;margin-bottom:12px;align-items:start}
+    .wb-row-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:12px;align-items:start}
+    .wb-panel{min-width:0;padding:13px 15px;border-radius:10px;border:.5px solid var(--wb-line);background:var(--dsw-alias-bg-layer-1)}
+    .wb-panel-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+    .wb-panel-title{margin:0;font-size:13.5px;font-weight:600;line-height:21px}
+    .wb-count{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 6px;border-radius:10px;background:var(--wb-soft);color:var(--dsw-alias-label-secondary);font-family:var(--wb-mono);font-size:11px}
     .wb-fill{flex:1}
-    .wb-hint{color:var(--dsw-alias-label-tertiary);font-size:11px}
-    .wb-rows,.wb-alerts{list-style:none;margin:0;padding:0}
-    .wb-row{border-bottom:.5px solid var(--dsw-alias-border-l1)}
-    .wb-row:last-child{border-bottom:0}
-    /* A quiet static marker on the leading edge: no motion here. */
-    .wb-row[data-state=running]{position:relative}
-    .wb-row[data-state=running]::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:2px;background:var(--wb-ok);opacity:.6}
-    .wb-row-main{display:flex;align-items:center;gap:10px;width:100%;padding:10px 4px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
-    .wb-row-main:hover{background:color-mix(in srgb,var(--dsw-alias-label-primary) 4%,transparent)}
-    .wb-row-body{display:flex;flex-direction:column;flex:1;min-width:0;gap:1px}
-    .wb-row-title{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .wb-row-project{color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10.5px}
-    .wb-row-detail{color:var(--dsw-alias-label-secondary);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .wb-row-amount{font-family:var(--wb-mono);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
-    .wb-row-open{color:var(--dsw-alias-label-tertiary)}
-    .wb-badge{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px;border-radius:5px;font-size:11px;white-space:nowrap;background:color-mix(in srgb,var(--dsw-alias-label-primary) 7%,transparent);color:var(--dsw-alias-label-secondary)}
+    .wb-hint{color:var(--dsw-alias-label-tertiary);font-size:11px;margin:6px 0 0}
+    .wb-link{border:0;background:transparent;color:var(--dsw-alias-label-tertiary);font:inherit;font-size:11.5px;cursor:pointer;padding:2px 4px;border-radius:5px}
+    .wb-link:hover{color:var(--wb-accent)}
+    /* ---- running table ---------------------------------------------------- */
+    .wb-table{width:100%;border-collapse:collapse;table-layout:fixed}
+    .wb-table th{padding:0 8px 6px 0;border-bottom:.5px solid var(--wb-line);color:var(--dsw-alias-label-tertiary);font-size:10.5px;font-weight:400;text-align:left}
+    .wb-table th:nth-child(1){width:31%}
+    .wb-table th:nth-child(2){width:15%}
+    .wb-table th:nth-child(3){width:auto}
+    .wb-table th:nth-child(4),.wb-table th:nth-child(5){width:78px}
+    .wb-table th.wb-col-icon{width:28px}
+    .wb-col-num{text-align:right}
+    .wb-table th.wb-col-num{text-align:right}
+    .wb-table td{padding:8px 8px 8px 0;border-bottom:.5px solid var(--wb-line);vertical-align:middle;font-size:12px}
+    .wb-table tr:last-child td{border-bottom:0}
+    .wb-table tr[data-tone=warn] td{background:color-mix(in srgb,var(--wb-warn) 7%,transparent)}
+    .wb-table tr[data-tone=error] td{background:color-mix(in srgb,var(--wb-err) 7%,transparent)}
+    .wb-cell-link{display:flex;flex-direction:column;gap:1px;min-width:0;max-width:100%;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+    .wb-cell-title{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .wb-cell-project{color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .wb-cell-detail{color:var(--dsw-alias-label-secondary);font-size:11.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .wb-col-action{max-width:0}
+    .wb-mono{font-family:var(--wb-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+    .wb-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-tertiary);cursor:pointer}
+    .wb-icon-btn:hover{background:var(--wb-soft);color:var(--dsw-alias-label-primary)}
+    .wb-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+    /* ---- state badge ------------------------------------------------------ */
+    .wb-badge{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px;border-radius:5px;font-size:11px;white-space:nowrap;background:var(--wb-soft);color:var(--dsw-alias-label-secondary)}
     .wb-badge[data-tone=ok]{background:color-mix(in srgb,var(--wb-ok) 13%,transparent);color:var(--wb-ok)}
     .wb-badge[data-tone=warn]{background:color-mix(in srgb,var(--wb-warn) 14%,transparent);color:var(--wb-warn)}
     .wb-badge[data-tone=error]{background:color-mix(in srgb,var(--wb-err) 13%,transparent);color:var(--wb-err)}
-    .wb-pulse{display:inline-flex;align-items:center;justify-content:center;gap:2px;width:14px;height:12px;flex:none}
+    .wb-pulse{display:inline-flex;align-items:center;gap:2px;width:14px;height:12px;flex:none}
     .wb-pulse i{display:block;width:3px;height:3px;border-radius:50%;background:currentColor;animation:wb-pulse 1.15s ease-in-out infinite}
     .wb-pulse i:nth-child(2){animation-delay:.16s}
     .wb-pulse i:nth-child(3){animation-delay:.32s}
     @keyframes wb-pulse{0%,55%,100%{opacity:.32;transform:scale(.8)}28%{opacity:1;transform:scale(1.4)}}
-    .wb-badge[data-state=running]{animation:wb-breathe 2.6s ease-in-out infinite}
-    @keyframes wb-breathe{0%,100%{box-shadow:inset 0 0 0 0 color-mix(in srgb,var(--wb-ok) 0%,transparent)}50%{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--wb-ok) 26%,transparent)}}
-    .wb-alert{display:flex;flex-direction:column;gap:6px;padding:9px 10px;margin-bottom:6px;border-radius:8px;border:.5px solid var(--dsw-alias-border-l1);background:color-mix(in srgb,var(--wb-warn) 6%,transparent)}
+    /* ---- attention -------------------------------------------------------- */
+    .wb-alerts,.wb-recents,.wb-projects,.wb-bars{list-style:none;margin:0;padding:0}
+    .wb-alert{display:flex;flex-direction:column;gap:6px;padding:9px 10px;margin-bottom:7px;border-radius:8px;border:.5px solid var(--wb-line);background:color-mix(in srgb,var(--wb-warn) 6%,transparent)}
+    .wb-alert:last-child{margin-bottom:0}
     .wb-alert[data-tone=error]{background:color-mix(in srgb,var(--wb-err) 6%,transparent)}
-    .wb-alert-body{display:flex;flex-direction:column;gap:1px;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;padding:0}
+    .wb-alert-body{display:flex;flex-direction:column;gap:1px;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
     .wb-alert-title{font-size:12.5px;font-weight:600}
     .wb-alert-meta{color:var(--dsw-alias-label-tertiary);font-size:11px}
     .wb-alert-actions{display:flex;flex-wrap:wrap;gap:4px}
-    .wb-mini{height:26px;padding:0 9px;border-radius:6px;border:.5px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11.5px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+    .wb-mini{height:25px;padding:0 9px;border-radius:6px;border:.5px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:11.5px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
     .wb-mini:hover{border-color:var(--dsw-alias-label-tertiary);color:var(--dsw-alias-label-primary)}
     .wb-mini-primary{border-color:color-mix(in srgb,var(--wb-accent) 55%,transparent);color:var(--wb-accent)}
-    .wb-caps{padding-bottom:12px}
-    .wb-caps-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
-    .wb-caps-list li{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--dsw-alias-label-secondary)}
-    .wb-caps-list li[data-tone=warn]{color:var(--wb-warn)}
-    .wb-caps-value{margin-left:auto;font-family:var(--wb-mono);font-size:11px;color:var(--dsw-alias-label-tertiary)}
-    .wb-empty{padding:20px 4px;color:var(--dsw-alias-label-tertiary);font-size:12.5px;text-align:center}
-    /* ---- cost attribution -------------------------------------------------- */
-    .wb-h1-inline{display:inline-block;margin-left:8px;font-size:20px;line-height:28px}
-    .wb-metrics-3{grid-template-columns:repeat(3,minmax(0,1fr))}
-    .wb-cost-projects{list-style:none;margin:0;padding:0}
-    .wb-cost-project{padding:9px 0;border-bottom:.5px solid var(--dsw-alias-border-l1)}
-    .wb-cost-project:last-child{border-bottom:0}
-    .wb-cost-project-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-    .wb-cost-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .wb-cost-amount{font-family:var(--wb-mono);font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
-    .wb-bar{height:5px;margin:5px 0 4px;border-radius:3px;background:color-mix(in srgb,var(--dsw-alias-label-primary) 8%,transparent);overflow:hidden}
-    .wb-bar>span{display:block;height:100%;border-radius:3px;background:var(--wb-accent)}
-    .wb-cost-meta{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--dsw-alias-label-tertiary);font-size:11px}
-    .wb-cost-coverage{margin-left:auto}
-    .wb-trend{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
-    .wb-trend-day{display:grid;grid-template-columns:52px minmax(0,1fr) 72px;align-items:center;gap:8px;font-size:11.5px}
-    .wb-trend-day[data-today=true] .wb-trend-label{color:var(--dsw-alias-label-primary);font-weight:600}
-    .wb-trend-label{color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10.5px;white-space:nowrap}
-    .wb-trend-bar{height:6px;border-radius:3px;background:color-mix(in srgb,var(--dsw-alias-label-primary) 7%,transparent);overflow:hidden}
-    .wb-trend-bar>i{display:block;height:100%;border-radius:3px;background:color-mix(in srgb,var(--wb-accent) 75%,transparent)}
-    .wb-trend-day[data-today=true] .wb-trend-bar>i{background:var(--wb-accent)}
-    .wb-trend-amount{text-align:right;font-family:var(--wb-mono);font-size:10.5px;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--dsw-alias-label-secondary)}
-
+    /* ---- projects / bars / speed ------------------------------------------ */
+    .wb-project{display:flex;align-items:baseline;gap:8px;padding:7px 0;border-bottom:.5px solid var(--wb-line);font-size:12px}
+    .wb-project:last-child{border-bottom:0}
+    .wb-project-name{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .wb-project-meta{color:var(--dsw-alias-label-tertiary);font-size:11px;white-space:nowrap}
+    .wb-project-amount{font-family:var(--wb-mono);font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .wb-bar-row{display:grid;grid-template-columns:minmax(0,1fr) 78px;align-items:center;gap:4px 8px;padding:6px 0}
+    .wb-bar-name{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .wb-bar-track{grid-column:1;height:6px;border-radius:3px;background:var(--wb-soft);overflow:hidden}
+    .wb-bar-track>i{display:block;height:100%;border-radius:3px;background:var(--wb-accent)}
+    .wb-bar-amount{grid-column:2;grid-row:1/3;text-align:right;font-size:11.5px}
+    .wb-speed{display:flex;align-items:baseline;gap:4px;padding:4px 0 2px}
+    .wb-speed-value{font-family:var(--wb-mono);font-size:26px;font-weight:600;line-height:32px}
+    .wb-speed-unit{color:var(--dsw-alias-label-tertiary);font-size:11.5px}
+    /* ---- recent / work log ------------------------------------------------ */
+    .wb-recent{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:.5px solid var(--wb-line)}
+    .wb-recent:last-child{border-bottom:0}
+    .wb-recent-main{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+    .wb-tags{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 0}
+    .wb-tag{padding:1px 7px;border-radius:11px;font-size:11px;background:var(--wb-soft);color:var(--dsw-alias-label-secondary)}
+    .wb-tag[data-tone=ok]{background:color-mix(in srgb,var(--wb-ok) 13%,transparent);color:var(--wb-ok)}
+    /* ---- misc ------------------------------------------------------------- */
+    .wb-icon{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:14px;border:.5px solid var(--wb-line);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}
+    .wb-icon:hover{color:var(--dsw-alias-label-primary);background:var(--wb-soft)}
+    .wb-fresh{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:11px;font-size:11px;background:var(--wb-soft);color:var(--dsw-alias-label-secondary)}
+    .wb-fresh[data-state=ready] i{background:var(--wb-ok)}
+    .wb-fresh[data-state=stale] i{background:var(--wb-warn)}
+    .wb-fresh[data-state=cached] i{background:var(--wb-accent)}
+    .wb-dot{width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-label-tertiary)}
+    .wb-empty{padding:18px 4px;color:var(--dsw-alias-label-tertiary);font-size:12px;text-align:center}
     .wb-stub{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;height:100%;padding:40px 20px;color:var(--dsw-alias-label-tertiary);font-size:13px;text-align:center}
-    .wb-stub-title{color:var(--dsw-alias-label-primary);font-size:15px;font-weight:600;margin:0}
-    .wb-detabar,.wb-detailbar{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+    .wb-stub-title{margin:0;color:var(--dsw-alias-label-primary);font-size:15px;font-weight:600}
+    .wb-detailbar{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+    .wb-h1-inline{display:inline-block;font-size:20px;line-height:28px}
     .wb-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px 16px;margin:10px 0}
     .wb-fact dt{color:var(--dsw-alias-label-tertiary);font-size:11px}
     .wb-fact dd{margin:0;font-size:12.5px;font-family:var(--wb-mono);overflow-wrap:anywhere}
     .wb-detail-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-    .wb-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;margin-top:16px;color:var(--dsw-alias-label-tertiary);font-size:11px}
-    @media (width<=1199px){.wb-grid{grid-template-columns:minmax(0,1fr)}}
-    @media (width<=767px){.wb-nav{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.wb-nav-item{white-space:nowrap;min-height:36px}.wb-metrics,.wb-metrics-3{grid-template-columns:repeat(2,minmax(0,1fr))}.wb-content{padding:20px 14px 16px}.wb-h1{font-size:22px;line-height:30px}}
-    @media (width<=419px){.wb-metric{padding:10px 12px}.wb-metric-value{font-size:19px;line-height:26px}}
-    /* Without motion the running state still reads as running: a solid dot row and a
-       solid leading bar, never a blank or blinking placeholder. */
+    .wb-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;padding:8px 24px;border-top:.5px solid var(--wb-line);color:var(--dsw-alias-label-tertiary);font-size:10.5px}
+    /* ---- cost page -------------------------------------------------------- */
+    .wb-metrics-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .wb-cost-projects{list-style:none;margin:0;padding:0}
+    .wb-cost-project{padding:8px 0;border-bottom:.5px solid var(--wb-line)}
+    .wb-cost-project:last-child{border-bottom:0}
+    .wb-cost-project-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+    .wb-cost-name{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .wb-cost-amount{font-family:var(--wb-mono);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .wb-bar{height:5px;margin:5px 0 4px;border-radius:3px;background:var(--wb-soft);overflow:hidden}
+    .wb-bar>span{display:block;height:100%;border-radius:3px;background:var(--wb-accent)}
+    .wb-cost-meta{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--dsw-alias-label-tertiary);font-size:11px}
+    .wb-cost-coverage{margin-left:auto}
+    .wb-trend{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+    .wb-trend-day{display:grid;grid-template-columns:52px minmax(0,1fr) 68px;align-items:center;gap:8px;font-size:11.5px}
+    .wb-trend-day[data-today=true] .wb-trend-label{color:var(--dsw-alias-label-primary);font-weight:600}
+    .wb-trend-label{color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10.5px;white-space:nowrap}
+    .wb-trend-bar{height:6px;border-radius:3px;background:var(--wb-soft);overflow:hidden}
+    .wb-trend-bar>i{display:block;height:100%;border-radius:3px;background:color-mix(in srgb,var(--wb-accent) 70%,transparent)}
+    .wb-trend-day[data-today=true] .wb-trend-bar>i{background:var(--wb-accent)}
+    .wb-trend-amount{text-align:right;font-family:var(--wb-mono);font-size:10.5px;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--dsw-alias-label-secondary)}
+    .wb-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(300px,1fr);gap:12px;align-items:start}
+    .wb-main,.wb-aside{display:flex;flex-direction:column;gap:12px;min-width:0}
+    .wb-row{border-bottom:.5px solid var(--wb-line)}
+    .wb-row:last-child{border-bottom:0}
+    .wb-row[data-state=running]{position:relative}
+    .wb-row[data-state=running]::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:2px;background:var(--wb-ok);opacity:.6}
+    .wb-row-main{display:flex;align-items:center;gap:10px;width:100%;padding:10px 4px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+    .wb-row-main:hover{background:var(--wb-soft)}
+    .wb-row-body{display:flex;flex-direction:column;flex:1;min-width:0;gap:1px}
+    .wb-row-title{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .wb-row-project{color:var(--dsw-alias-label-tertiary);font-family:var(--wb-mono);font-size:10px}
+    .wb-row-detail{color:var(--dsw-alias-label-secondary);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .wb-row-amount{font-family:var(--wb-mono);font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .wb-row-open{color:var(--dsw-alias-label-tertiary)}
+    /* ---- responsive: the design's 768 / 420 rules ------------------------- */
+    @media (width<=1199px){.wb-row-2{grid-template-columns:minmax(0,1fr)}.wb-row-3{grid-template-columns:minmax(0,1fr)}.wb-grid{grid-template-columns:minmax(0,1fr)}}
+    @media (width<=899px){.wb-side{flex-basis:64px;padding:12px 6px}.wb-brand-name,.wb-workspace-text,.wb-side-label,.wb-side-item-label,.wb-side-soon,.wb-side-profile{display:none}.wb-side-item{justify-content:center}.wb-side-badge{position:absolute;margin:-16px 0 0 18px}}
+    @media (width<=767px){.wb-metrics,.wb-metrics-3{grid-template-columns:repeat(2,minmax(0,1fr))}.wb-top,.wb-content,.wb-foot{padding-left:14px;padding-right:14px}.wb-h1{font-size:22px;line-height:30px}.wb-table th:nth-child(3){display:none}.wb-table td:nth-child(3){display:none}}
+    @media (width<=520px){.wb-side{display:none}.wb-search span,.wb-kbd{display:none}.wb-metrics,.wb-metrics-3{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.wb-metric{padding:10px 12px}.wb-metric-value{font-size:19px;line-height:26px}}
     @media (prefers-reduced-motion:reduce){
       *{animation:none!important;transition:none!important}
       .wb-pulse i{opacity:1;transform:none}
@@ -924,236 +1097,528 @@ window.__ModuleLoader__.load({
 
 
     // ==== panel.js ===============================================================
+    // ==== layout shell ======================================================
+
     /**
-     * The top navigation: every page of the panel, with the current one marked.
+     * The left sidebar: the panel's navigation, laid out as the design draws it.
      *
-     * It is the only way between pages besides the metric cards, so a page can never be
-     * reachable only by a gesture a reader would not think to try.
+     * Three labelled groups — workbench, analysis, preferences — plus the workspace chip
+     * at the top and the local profile at the bottom. A page this version does not build
+     * yet is still listed and marked 待上线, so the structure stays legible instead of
+     * the panel silently having fewer pages than it was designed with.
      */
-    function NavBar({ t, detail, go, count }) {
-      const pages = [
-        { kind: 'overview', label: t('nav.overview'), glyph: 'calendar' },
-        { kind: 'cost', label: t('nav.cost'), glyph: 'folder' },
-        { kind: 'attention', label: t('nav.attention'), glyph: 'stuck', badge: count },
+    function Sidebar({ t, detail, go, counts, profile }) {
+      const groups = [
+        {
+          label: t('side.group.workbench'),
+          pages: [
+            { kind: 'overview', label: t('side.overview'), glyph: 'calendar' },
+            { kind: 'sessions', label: t('side.sessions'), glyph: 'terminal', badge: counts.sessions },
+            { kind: 'attention', label: t('side.attention'), glyph: 'stuck', badge: counts.attention },
+            { kind: 'projects', label: t('side.projects'), glyph: 'folder', soon: true },
+          ],
+        },
+        {
+          label: t('side.group.analysis'),
+          pages: [
+            { kind: 'cost', label: t('side.cost'), glyph: 'chart' },
+            { kind: 'performance', label: t('side.performance'), glyph: 'gauge', soon: true },
+            { kind: 'records', label: t('side.records'), glyph: 'document', soon: true },
+          ],
+        },
+        {
+          label: t('side.group.preferences'),
+          pages: [{ kind: 'settings', label: t('side.settings'), glyph: 'sliders', soon: true }],
+        },
       ]
       const current = detail === undefined ? 'overview' : detail.kind === 'alert' ? 'attention' : detail.kind
       return h(
-        'nav',
-        { className: 'wb-nav', 'aria-label': t('tabs.label') },
-        ...pages.map((page) =>
+        'aside',
+        { className: 'wb-side', 'aria-label': t('title') },
+        h(
+          'div',
+          { className: 'wb-brand' },
+          h('span', { className: 'wb-logo', 'aria-hidden': 'true' }, h(Glyph, { name: 'pulse', size: 15 })),
+          h('span', { className: 'wb-brand-name' }, t('panel')),
+        ),
+        h(
+          'div',
+          { className: 'wb-workspace' },
+          h('span', { className: 'wb-workspace-badge', 'aria-hidden': 'true' }, 'L'),
+          h(
+            'span',
+            { className: 'wb-workspace-text' },
+            h('span', { className: 'wb-workspace-name' }, t('side.workspace')),
+            h('span', { className: 'wb-workspace-sub' }, t('side.profile')),
+          ),
+        ),
+        ...groups.map((group) =>
+          h(
+            'nav',
+            { key: group.label, className: 'wb-side-group', 'aria-label': group.label },
+            h('span', { className: 'wb-side-label' }, group.label),
+            ...group.pages.map((page) =>
+              h(
+                'button',
+                {
+                  type: 'button',
+                  key: page.kind,
+                  className: 'wb-side-item',
+                  'aria-current': current === page.kind ? 'page' : undefined,
+                  'data-soon': page.soon === true ? 'true' : undefined,
+                  title: page.soon === true ? t('side.soon', { name: page.label }) : undefined,
+                  onClick: () => go(page.kind),
+                },
+                h(Glyph, { name: page.glyph, size: 14 }),
+                h('span', { className: 'wb-side-item-label' }, page.label),
+                page.badge > 0 ? h('i', { className: 'wb-side-badge' }, page.badge > 99 ? '99+' : String(page.badge)) : null,
+                page.soon === true ? h('i', { className: 'wb-side-soon' }, t('side.soonShort')) : null,
+              ),
+            ),
+          ),
+        ),
+        h(
+          'div',
+          { className: 'wb-side-foot' },
+          h('span', { className: 'wb-side-label' }, t('side.data')),
+          h('span', { className: 'wb-side-profile' }, profile),
+        ),
+      )
+    }
+
+    /** The top bar: breadcrumb, search entry, freshness and refresh. */
+    function TopBar({ t, trail, onSearch, onRefresh, status }) {
+      return h(
+        'header',
+        { className: 'wb-top' },
+        h(
+          'nav',
+          { className: 'wb-crumbs', 'aria-label': t('tabs.label') },
+          h('span', null, t('panel')),
+          ...trail.map((label) =>
+            h('span', { key: label }, h('span', { className: 'wb-crumb-sep', 'aria-hidden': 'true' }, '›'), h('span', { className: 'wb-crumb-current' }, label)),
+          ),
+        ),
+        h(
+          'div',
+          { className: 'wb-top-side' },
           h(
             'button',
-            {
-              type: 'button',
-              key: page.kind,
-              className: 'wb-nav-item',
-              'aria-current': current === page.kind ? 'page' : undefined,
-              onClick: () => go(page.kind),
-            },
-            h(Glyph, { name: page.glyph, size: 13 }),
-            h('span', null, page.label),
-            page.badge > 0 ? h('i', { className: 'wb-nav-badge', 'aria-hidden': 'true' }, page.badge > 99 ? '99+' : String(page.badge)) : null,
+            { type: 'button', className: 'wb-search', onClick: onSearch, disabled: onSearch === undefined, title: onSearch === undefined ? t('side.soon', { name: t('top.search') }) : undefined },
+            h(Glyph, { name: 'search', size: 13 }),
+            h('span', null, t('top.search')),
+            h('kbd', { className: 'wb-kbd' }, '⌘K'),
           ),
+          h('span', { className: 'wb-fresh', 'data-state': status }, h('i', { className: 'wb-dot', 'aria-hidden': 'true' }), t(status === 'ready' ? 'fresh.live' : status === 'cached' ? 'fresh.cached' : 'fresh.stale')),
+          h('button', { type: 'button', className: 'wb-icon', onClick: onRefresh, 'aria-label': t('refresh') }, h(Glyph, { name: 'refresh', size: 14 })),
+        ),
+      )
+    }
+
+    /** The page header the design repeats on every page: eyebrow, title, subtitle, date. */
+    function PageHead({ t, title, subtitle, dayLabel, children }) {
+      return h(
+        'header',
+        { className: 'wb-head' },
+        h(
+          'div',
+          null,
+          h('span', { className: 'wb-eyebrow' }, 'LOCAL / ', dayLabel.replace(/-/g, '.')),
+          h('h1', { className: 'wb-h1' }, title),
+          subtitle === undefined ? null : h('p', { className: 'wb-sub' }, subtitle),
+        ),
+        h('div', { className: 'wb-head-side' }, children),
+      )
+    }
+
+    /** A metric card: label, value, one line of meaning, and its glyph in the corner. */
+    function Metric({ label, value, detail, tone, glyph, onClick }) {
+      const body = [
+        h('span', { className: 'wb-metric-top', key: 't' }, h('span', { className: 'wb-metric-label' }, label), glyph === undefined ? null : h('span', { className: 'wb-metric-glyph', 'aria-hidden': 'true' }, h(Glyph, { name: glyph, size: 14 }))),
+        h('span', { className: 'wb-metric-value', key: 'v', 'data-tone': tone ?? 'default' }, value),
+        detail === undefined ? null : h('span', { className: 'wb-metric-detail', key: 'd' }, detail),
+      ]
+      return onClick === undefined
+        ? h('article', { className: 'wb-metric' }, ...body)
+        : h('button', { type: 'button', className: 'wb-metric', onClick, 'aria-label': `${label}: ${value}` }, ...body)
+    }
+
+    /**
+     * The overview, laid out as the design does:
+     *
+     *   header → four metrics → [running table | attention] →
+     *   [projects | cost bars | model speed] → [recently ended | work log]
+     *
+     * Every section reads the same snapshot, so a badge and its card can never
+     * disagree, and each degrades on its own when the Host cannot answer.
+     */
+    function OverviewPage({ t, data, now, state, refresh, openSession, go, setDetail, alerts, act }) {
+      const overview = data.overview ?? {}
+      const ledger = data.ledger ?? {}
+      const projects = Array.isArray(ledger.projects) ? ledger.projects : []
+      const running = Array.isArray(data.running) ? data.running : []
+      const recent = Array.isArray(data.recent) ? data.recent : []
+
+      const coverage = overview.coverage === undefined || overview.coverage === null
+        ? t('today.noSample')
+        : t('today.coverage', { percent: Math.round(Number(overview.coverage) * 100) })
+      const speed = overview.speed
+
+      return h(
+        React.Fragment,
+        null,
+        h(PageHead, {
+          t,
+          title: t('today.title'),
+          subtitle: t('today.subtitle', {
+            scope: t('today.scope'),
+            zone: utcOffsetLabel(),
+            time: new Date(data.generatedAt).toLocaleTimeString(),
+          }),
+          dayLabel: overview.dayKey ?? '',
+        }, h(
+          'button',
+          { type: 'button', className: 'wb-date', onClick: refresh },
+          h(Glyph, { name: 'calendar', size: 13 }),
+          h('span', null, t('today.date', { date: dateLabel(data.generatedAt) })),
+        )),
+
+        h(
+          'div',
+          { className: 'wb-metrics' },
+          h(Metric, { label: t('today.cost'), value: moneyOf(overview.amount), detail: coverage, glyph: 'wallet', onClick: () => go('cost') }),
+          h(Metric, { label: t('today.running'), value: String(overview.running ?? 0), detail: t('today.runningDetail', { waiting: overview.waiting ?? 0 }), glyph: 'pulse' }),
+          h(Metric, { label: t('today.attention'), value: String(alerts.length), tone: alerts.length > 0 ? 'alert' : 'default', detail: t('today.attentionDetail', { failed: overview.failed ?? 0, waiting: overview.waiting ?? 0 }), glyph: 'stuck', onClick: () => go('attention') }),
+          h(Metric, { label: t('today.speedP50'), value: speed === undefined ? t('today.speedNone') : t('today.speedValue', { rate: rateOf(speed.p50) }), detail: speed === undefined ? t('today.speedDetail', { count: 0 }) : t('today.speedDetail', { count: speed.samples }), glyph: 'gauge' }),
+        ),
+
+        h(
+          'div',
+          { className: 'wb-row-2' },
+          h(RunningTable, { t, rows: running, now, openSession }),
+          h(AttentionCard, { t, items: alerts, now, onAction: act, onOpen: openSession, onDetail: (item) => setDetail({ kind: 'alert', key: item.key }) }),
+        ),
+        h(
+          'div',
+          { className: 'wb-row-3' },
+          h(ProjectsCard, { t, projects, go }),
+          h(CostBarsCard, { t, projects, currency: ledger.currency, total: ledger.today?.amount ?? 0, go }),
+          h(SpeedCard, { t, speed }),
+        ),
+        h(
+          'div',
+          { className: 'wb-row-2' },
+          h(RecentCard, { t, rows: recent, now, openSession }),
+          h(WorkLogCard, { t, ledger, go }),
         ),
       )
     }
 
     /**
-     * The workbench panel: today's numbers first, then what needs a decision, then what is
-     * running, then what ended.
+     * The running table: the design's five columns plus the way in.
      *
-     * One snapshot drives every section, so a badge and its card can never disagree. Each
-     * section degrades on its own: an unreadable catalog leaves the numbers at zero and
-     * says so in the capability strip rather than hiding the panel.
+     * A row's "last action" is what the Host can prove — the phase of the current turn
+     * and, when it has one, the prompt that opened it — never an invented tool call.
      */
+    function RunningTable({ t, rows, now, openSession }) {
+      return h(
+        Panel,
+        { title: t('running.title'), count: String(rows.length), action: h('span', { className: 'wb-hint' }, t('running.hint')) },
+        rows.length === 0
+          ? h(Empty, { text: t('running.empty') })
+          : h(
+              'table',
+              { className: 'wb-table' },
+              h(
+                'thead',
+                null,
+                h(
+                  'tr',
+                  null,
+                  h('th', { scope: 'col' }, t('field.session')),
+                  h('th', { scope: 'col' }, t('field.state')),
+                  h('th', { scope: 'col' }, t('field.action')),
+                  h('th', { scope: 'col', className: 'wb-col-num' }, t('field.duration')),
+                  h('th', { scope: 'col', className: 'wb-col-num' }, t('field.todayCost')),
+                  h('th', { scope: 'col', className: 'wb-col-icon' }, h('span', { className: 'wb-sr' }, t('field.open'))),
+                ),
+              ),
+              h(
+                'tbody',
+                null,
+                ...rows.map((row) =>
+                  h(
+                    'tr',
+                    { key: row.sessionId, 'data-tone': toneOf(stateOf(row)) },
+                    h(
+                      'td',
+                      null,
+                      h(
+                        'button',
+                        { type: 'button', className: 'wb-cell-link', onClick: () => openSession(row.sessionId) },
+                        h('span', { className: 'wb-cell-title' }, row.title || t('field.untitled')),
+                        h('span', { className: 'wb-cell-project' }, row.projectName || t('field.none')),
+                      ),
+                    ),
+                    h('td', null, h(StateBadge, { t, state: stateOf(row) })),
+                    h('td', { className: 'wb-col-action' }, h('span', { className: 'wb-cell-detail' }, actionLine(t, row, now))),
+                    h('td', { className: 'wb-col-num wb-mono' }, turnLength(t, row, now)),
+                    h('td', { className: 'wb-col-num wb-mono' }, row.today?.amount > 0 ? moneyOf(row.today.amount) : t('cost.notEstimable')),
+                    h('td', { className: 'wb-col-icon' }, h('button', { type: 'button', className: 'wb-icon-btn', onClick: () => openSession(row.sessionId), 'aria-label': t('running.open', { title: row.title || t('field.untitled') }) }, h(Glyph, { name: 'open', size: 12 }))),
+                  ),
+                ),
+              ),
+            ),
+      )
+    }
 
+    /** What the row is doing, in the design's "last action + relative time" form. */
+    function actionLine(t, row, now) {
+      const when = relativeTime(t, row.lastAt, now)
+      if (row.state === 'waiting') return `${t(row.waiting?.kind === 'question' ? 'wait.question' : 'wait.approval')} · ${when}`
+      if (row.state === 'failed') return `${t('action.failed')} · ${when}`
+      if (row.phase === 'tool') return `${t('action.tool')} · ${when}`
+      if (row.phase === 'generation') return `${t('action.generating')} · ${when}`
+      return when
+    }
+
+    /** This turn's wall time, start → now; a Session without one reads an em dash. */
+    function turnLength(t, row, now) {
+      const start = Number(row.turnStartedAt)
+      if (!Number.isFinite(start) || start <= 0) return t('field.none')
+      const end = row.running === true ? now : Number(row.lastAt) || now
+      return end > start ? durationOf(end - start) : t('field.none')
+    }
+
+    /** Attention items, failures first, each with the reader's three decisions. */
+    function AttentionCard({ t, items, now, onAction, onOpen, onDetail }) {
+      return h(
+        Panel,
+        { title: t('attention.title'), count: String(items.length), action: items.length > 2 ? h('button', { type: 'button', className: 'wb-link', onClick: () => onDetail(items[0]) }, t('attention.all')) : null },
+        items.length === 0
+          ? h(Empty, { text: t('attention.empty') })
+          : h(
+              'ul',
+              { className: 'wb-alerts' },
+              ...items.slice(0, 3).map((item) =>
+                h(
+                  'li',
+                  { key: item.key, className: 'wb-alert', 'data-tone': item.type === 'failure' ? 'error' : 'warn' },
+                  h(
+                    'button',
+                    { type: 'button', className: 'wb-alert-body', onClick: () => onDetail(item) },
+                    h('span', { className: 'wb-alert-title' }, `${t(item.type === 'failure' ? 'alert.failure' : 'alert.waiting')} · ${item.title ?? t('field.untitled')}`),
+                    h('span', { className: 'wb-alert-meta' }, `${item.projectName ?? ''} · ${relativeTime(t, item.triggeredAt, now)}`),
+                  ),
+                  h(
+                    'div',
+                    { className: 'wb-alert-actions' },
+                    h('button', { type: 'button', className: 'wb-mini', onClick: () => onAction(item, 'ack') }, t('attention.ack')),
+                    h('button', { type: 'button', className: 'wb-mini', onClick: () => onAction(item, 'snooze') }, t('attention.snooze')),
+                    h('button', { type: 'button', className: 'wb-mini', onClick: () => onAction(item, 'dismiss'), 'aria-label': t('attention.dismissAria') }, t('attention.dismiss')),
+                    h('button', { type: 'button', className: 'wb-mini wb-mini-primary', onClick: () => onOpen(item.sessionId) }, t('attention.open')),
+                  ),
+                ),
+              ),
+            ),
+        h('p', { className: 'wb-hint' }, t('attention.foot')),
+      )
+    }
+
+    /** Projects with activity today, and how many of their items are unfinished. */
+    function ProjectsCard({ t, projects, go }) {
+      return h(
+        Panel,
+        { title: t('projects.title'), action: h('button', { type: 'button', className: 'wb-link', onClick: () => go('projects') }, t('projects.all')) },
+        projects.length === 0
+          ? h(Empty, { text: t('projects.empty') })
+          : h(
+              'ul',
+              { className: 'wb-projects' },
+              ...projects.slice(0, 4).map((project) =>
+                h(
+                  'li',
+                  { key: project.projectId, className: 'wb-project' },
+                  h('span', { className: 'wb-project-name' }, project.name || project.projectId),
+                  h('span', { className: 'wb-project-meta' }, t('projects.sessions', { count: project.sessions ?? 0 })),
+                  h('span', { className: 'wb-project-amount' }, moneyOf(project.amount)),
+                ),
+              ),
+            ),
+      )
+    }
+
+    /** Where today's spend went, as the design's small bar chart. */
+    function CostBarsCard({ t, projects, currency, total, go }) {
+      const max = Math.max(0, ...projects.map((project) => Number(project.amount) || 0))
+      return h(
+        Panel,
+        { title: t('cost.title'), action: h('button', { type: 'button', className: 'wb-link', onClick: () => go('cost') }, t('cost.all')) },
+        projects.length === 0
+          ? h(Empty, { text: t('cost.empty') })
+          : h(
+              'ul',
+              { className: 'wb-bars' },
+              ...projects.slice(0, 4).map((project) =>
+                h(
+                  'li',
+                  { key: project.projectId, className: 'wb-bar-row' },
+                  h('span', { className: 'wb-bar-name' }, project.name || project.projectId),
+                  h('span', { className: 'wb-bar-track' }, h('i', { style: { width: `${max > 0 ? Math.max(3, ((Number(project.amount) || 0) / max) * 100) : 0}%` } })),
+                  h('span', { className: 'wb-bar-amount wb-mono' }, moneyOf(project.amount)),
+                ),
+              ),
+            ),
+        h('p', { className: 'wb-hint' }, t('cost.foot', { amount: moneyOf(total) })),
+      )
+    }
+
+    /** The model speed reading the design shows: P50 and its sample count. */
+    function SpeedCard({ t, speed }) {
+      return h(
+        Panel,
+        { title: t('speed.title'), action: h('span', { className: 'wb-hint' }, t('speed.week')) },
+        speed === undefined
+          ? h(Empty, { text: t('speed.empty') })
+          : h(
+              React.Fragment,
+              null,
+              h('div', { className: 'wb-speed' }, h('span', { className: 'wb-speed-value' }, rateOf(speed.p50)), h('span', { className: 'wb-speed-unit' }, 'tok/s')),
+              h('p', { className: 'wb-hint' }, t('speed.detail', { count: speed.samples })),
+            ),
+      )
+    }
+
+    /** Sessions that ended, newest first, with the reason they ended. */
+    function RecentCard({ t, rows, now, openSession }) {
+      return h(
+        Panel,
+        { title: t('recent.title'), action: h('span', { className: 'wb-hint' }, t('recent.hint')) },
+        rows.length === 0
+          ? h(Empty, { text: t('recent.empty') })
+          : h(
+              'ul',
+              { className: 'wb-recents' },
+              ...rows.slice(0, 4).map((row) =>
+                h(
+                  'li',
+                  { key: row.sessionId, className: 'wb-recent' },
+                  h(
+                    'button',
+                    { type: 'button', className: 'wb-recent-main', onClick: () => openSession(row.sessionId) },
+                    h('span', { className: 'wb-cell-title' }, row.title || t('field.untitled')),
+                    h('span', { className: 'wb-cell-project' }, `${row.projectName ?? ''} · ${clockOf(row.endedAt ?? row.lastAt)}`),
+                  ),
+                  h(StateBadge, { t, state: stateOf(row) }),
+                ),
+              ),
+            ),
+      )
+    }
+
+    /** The day in one line: what it cost and how much of it is priced. */
+    function WorkLogCard({ t, ledger, go }) {
+      return h(
+        Panel,
+        { title: t('worklog.title'), action: h('button', { type: 'button', className: 'wb-link', onClick: () => go('records') }, t('worklog.open')) },
+        h('p', { className: 'wb-cell-detail' }, t('worklog.summary', { count: ledger.today?.sessions?.length ?? 0 })),
+        h(
+          'div',
+          { className: 'wb-tags' },
+          h('span', { className: 'wb-tag', 'data-tone': 'ok' }, t('worklog.priced', { percent: Math.round(Number(ledger.today?.coverage ?? 0) * 100) })),
+          h('span', { className: 'wb-tag', 'data-tone': 'idle' }, t('worklog.tokens', { tokens: tokensOf(sumTokens(ledger.today?.tokens)) })),
+        ),
+        h('p', { className: 'wb-hint' }, t('worklog.account')),
+      )
+    }
 
     /**
-     * The panel.
+     * The workbench panel: sidebar, top bar, and the current page.
      *
-     * @param props - slot props: `t`, `openSession`.
+     * The panel owns the snapshot, the reader's local marks on attention items and the
+     * current page. Every page receives the same data, which is why a badge and the card
+     * it opens can never disagree.
      */
     function WorkbenchPage({ t, openSession }) {
-        const tz = tzOffsetSeconds()
-        const [state, refresh] = useSnapshot(React, readSnapshot, tz)
-        const now = useNow(React)
-        // `undefined` is the overview; `{ kind: 'alert', key }` or `{ kind: 'cost' }` otherwise.
-        const [detail, setDetail] = React.useState(undefined)
-        const [marks, setMarks] = React.useState({})
-        const data = state.data
-        const loading = state.status === 'loading' && data === undefined
+      const tz = tzOffsetSeconds()
+      const [state, refresh] = useSnapshot(React, readSnapshot, tz)
+      const now = useNow(React)
+      const [detail, setDetail] = React.useState(undefined)
+      const [marks, setMarks] = React.useState({})
+      const data = state.data
+      const loading = state.status === 'loading' && data === undefined
 
-        if (loading) {
-          return h('section', { className: 'wb-page', 'aria-label': t('title') }, h('style', null, CSS), h('p', { className: 'wb-stub', role: 'status' }, t('loading')))
-        }
-        if (state.status === 'error') {
-          const schema = state.error instanceof SchemaError
-          return h(
-            'section',
-            { className: 'wb-page', 'aria-label': t('title') },
-            h('style', null, CSS),
-            h(
-              'div',
-              { className: 'wb-stub', role: 'alert' },
-              h('p', { className: 'wb-stub-title' }, t('error.title')),
-              h('p', null, schema ? t('error.schema', { got: String(state.error.got), want: String(SCHEMA) }) : t('error.body')),
-              h('button', { type: 'button', className: 'wb-mini', onClick: refresh }, t('error.retry')),
-            ),
-          )
-        }
-
-        // Local marks let a click take effect before the Host answers; the next snapshot wins.
-        const alerts = (data.alerts ?? []).map((item) => (marks[item.key] === undefined ? item : { ...item, state: marks[item.key] }))
-        const pending = alerts.filter((item) => item.state === 'open' || item.state === 'acknowledged')
-
-        const act = async (item, action) => {
-          const next = action === 'ack' ? 'acknowledged' : action === 'dismiss' ? 'solved' : 'snoozed'
-          setMarks((previous) => ({ ...previous, [item.key]: next }))
-          await sendAlertAction({ key: item.key, action: action === 'dismiss' ? 'solve' : action, triggeredAt: item.triggeredAt, state: item.currentState, minutes: 30 }).catch(() => {})
-          refresh()
-        }
-
-        const go = (kind) => setDetail(kind === 'overview' ? undefined : { kind })
-        const back = () => setDetail(undefined)
-        const nav = h(NavBar, { t, detail, go, count: pending.length })
-
-        if (detail !== undefined) {
-          const page =
-            detail.kind === 'cost'
-              ? h(CostPage, { t, data, now, back, openSession })
-              : detail.kind === 'attention'
-                ? h(AttentionPage, { t, alerts, now, openSession, onAction: act, onDetail: (item) => setDetail({ kind: 'alert', key: item.key }), back })
-                : (() => {
-                    const item = alerts.find((entry) => entry.key === detail.key)
-                    return item === undefined
-                      ? h(Empty, { text: t('attention.empty') })
-                      : h(AlertDetail, { t, item, now, onBack: back, onAction: act, openSession })
-                  })()
-          return h(
-            'section',
-            { className: 'wb-page', 'aria-label': t('title') },
-            h('style', null, CSS),
-            h(
-              'div',
-              { className: 'wb-scroll' },
-              h('div', { className: 'wb-content' }, nav, page),
-            ),
-          )
-        }
-
-        const overview = data.overview ?? {}
-        const zeroReason = overview.amount === 0 && overview.sessions > 0
-          ? t('today.zero', { count: overview.sessions, reason: overview.unpricedTokens > 0 ? t('today.zero.noPrice') : t('today.zero.noUsage') })
-          : undefined
-        const coverage = overview.coverage === undefined || overview.coverage === null
-          ? t('today.noSample')
-          : t('today.coverage', { percent: Math.round(Number(overview.coverage) * 100) })
-
+      if (loading) {
+        return h('section', { className: 'wb-shell', 'aria-label': t('title') }, h('style', null, CSS), h('p', { className: 'wb-stub', role: 'status' }, t('loading')))
+      }
+      if (state.status === 'error') {
+        const schema = state.error instanceof SchemaError
         return h(
           'section',
-          { className: 'wb-page', 'aria-label': t('title') },
+          { className: 'wb-shell', 'aria-label': t('title') },
           h('style', null, CSS),
           h(
             'div',
-            { className: 'wb-scroll' },
-            h(
-              'div',
-              { className: 'wb-content' },
-              nav,
-              h(
-                'header',
-                { className: 'wb-head' },
-                h(
-                  'div',
-                  null,
-                  h('span', { className: 'wb-eyebrow' }, 'LOCAL / ', data.overview?.dayKey ?? ''),
-                  h('h1', { className: 'wb-h1' }, t('today.title')),
-                  h('p', { className: 'wb-sub' }, t('today.subtitle', { date: dateLabel(data.generatedAt), zone: utcOffsetLabel(), time: new Date(data.generatedAt).toLocaleTimeString() })),
-                ),
-                h(
-                  'div',
-                  { className: 'wb-head-side' },
-                  h('span', { className: 'wb-fresh', 'data-state': state.status }, h('i', { className: 'wb-dot', 'aria-hidden': 'true' }), t(state.status === 'ready' ? 'fresh.live' : state.status === 'cached' ? 'fresh.cached' : 'fresh.stale')),
-                  h('button', { type: 'button', className: 'wb-icon', onClick: refresh, 'aria-label': t('refresh') }, h(Glyph, { name: 'refresh', size: 14 })),
-                ),
-              ),
-              h(
-                'div',
-                { className: 'wb-metrics' },
-                h(Metric, { label: t('today.cost'), value: moneyOf(overview.amount), detail: zeroReason ?? `${coverage} · ${t('today.tokens', { tokens: tokensOf(overview.tokens) })}`, onClick: () => setDetail({ kind: 'cost' }) }),
-                h(Metric, { label: t('today.running'), value: String(overview.running ?? 0), detail: t('today.runningDetail', { waiting: overview.waiting ?? 0 }) }),
-                h(Metric, { label: t('today.attention'), value: String(pending.length), tone: pending.length > 0 ? 'alert' : 'default', detail: t('today.attentionDetail', { failed: overview.failed ?? 0, waiting: overview.waiting ?? 0 }), onClick: undefined }),
-                h(Metric, {
-                  h,
-                  label: t('today.speed'),
-                  value: overview.speed === undefined ? t('today.speedNone') : t('today.speedValue', { rate: rateOf(overview.speed.p50) }),
-                  detail: overview.speed === undefined ? '—' : t('today.speedDetail', { count: overview.speed.samples }),
-                }),
-              ),
-              h(
-                'div',
-                { className: 'wb-grid' },
-                h(
-                  'div',
-                  { className: 'wb-main' },
-                  h(
-                    Panel,
-                    { h, title: t('running.title'), count: String((data.running ?? []).length) },
-                    (data.running ?? []).length === 0
-                      ? h(Empty, { text: t('running.empty') })
-                      : h('ul', { className: 'wb-rows' }, ...data.running.map((row) => h(SessionRow, { key: row.sessionId, t, row, now, onOpen: openSession }))),
-                  ),
-                  h(
-                    Panel,
-                    { h, title: t('recent.title'), count: undefined, action: h('span', { className: 'wb-hint' }, t('recent.hint')) },
-                    (data.recent ?? []).length === 0
-                      ? h(Empty, { text: t('recent.empty') })
-                      : h('ul', { className: 'wb-rows' }, ...data.recent.map((row) => h(SessionRow, { key: row.sessionId, t, row, now, onOpen: openSession }))),
-                  ),
-                ),
-                h(
-                  'aside',
-                  { className: 'wb-aside' },
-                  h(
-                    Panel,
-                    { h, title: t('attention.title'), count: String(pending.length), action: pending.length > 3 ? h('span', { className: 'wb-hint' }, t('attention.more', { count: pending.length - 3 })) : null },
-                    pending.length === 0
-                      ? h(Empty, { text: t('attention.empty') })
-                      : h('ul', { className: 'wb-alerts' }, ...pending.slice(0, 3).map((item) => h(AlertItem, { key: item.key, t, item, now, onOpen: () => openSession(item.sessionId), onAction: act, onDetail: () => setDetail(item.key) }))),
-                  ),
-                  h(Capabilities, { t, capabilities: data.capabilities ?? {} }),
-                ),
-              ),
-              h('footer', { className: 'wb-foot' }, h('span', null, t('foot')), h('span', null, t('foot.synced', { time: new Date(data.generatedAt).toLocaleTimeString() }))),
-            ),
+            { className: 'wb-stub', role: 'alert' },
+            h('p', { className: 'wb-stub-title' }, t('error.title')),
+            h('p', null, schema ? t('error.schema', { got: String(state.error.got), want: String(SCHEMA) }) : t('error.body')),
+            h('button', { type: 'button', className: 'wb-mini', onClick: refresh }, t('error.retry')),
           ),
         )
       }
 
-    /** What the Host could and could not answer: a silent zero is worse than a reason. */
-    function Capabilities({ t, capabilities }) {
-      const rows = [
-        ['cap.catalog', capabilities.catalog],
-        ['cap.log', capabilities.log],
-        ['cap.projections', capabilities.projections],
-        ['cap.agents', capabilities.agents],
-      ]
+      // A click marks an item before the Host answers; the next snapshot is authoritative.
+      const alerts = (data.alerts ?? [])
+        .map((item) => (marks[item.key] === undefined ? item : { ...item, state: marks[item.key] }))
+        .filter((item) => item.state === 'open' || item.state === 'acknowledged')
+      const act = async (item, action) => {
+        const next = action === 'ack' ? 'acknowledged' : action === 'dismiss' ? 'solved' : 'snoozed'
+        setMarks((previous) => ({ ...previous, [item.key]: next }))
+        await sendAlertAction({ key: item.key, action: action === 'dismiss' ? 'solve' : action, triggeredAt: item.triggeredAt, state: item.currentState, minutes: 30 }).catch(() => {})
+        refresh()
+      }
+
+      const go = (kind) => {
+        // A page this version does not build yet stays visible but does nothing.
+        if (['projects', 'performance', 'records', 'settings', 'sessions'].includes(kind)) return
+        setDetail(kind === 'overview' ? undefined : { kind })
+      }
+      const back = () => setDetail(undefined)
+
+      const page = detail === undefined
+        ? { key: 'overview', label: t('side.overview'), node: h(OverviewPage, { t, data, now, state, refresh, openSession, go, setDetail, alerts, act }) }
+        : detail.kind === 'cost'
+          ? { key: 'cost', label: t('side.cost'), node: h(CostPage, { t, data, now, back, openSession }) }
+          : detail.kind === 'attention'
+            ? { key: 'attention', label: t('side.attention'), node: h(AttentionPage, { t, alerts, now, openSession, onAction: act, onDetail: (item) => setDetail({ kind: 'alert', key: item.key }), back }) }
+            : {
+                key: 'attention',
+                label: t('side.attention'),
+                node: (() => {
+                  const item = alerts.find((entry) => entry.key === detail.key)
+                  return item === undefined ? h(Empty, { text: t('attention.empty') }) : h(AlertDetail, { t, item, now, onBack: back, onAction: act, openSession })
+                })(),
+              }
+
       return h(
         'section',
-        { className: 'wb-panel wb-caps' },
-        h('h2', { className: 'wb-panel-title' }, t('cap.title')),
+        { className: 'wb-shell', 'aria-label': t('title') },
+        h('style', null, CSS),
+        h(Sidebar, {
+          t,
+          detail,
+          go: (kind) => {
+            go(kind)
+          },
+          counts: { attention: alerts.length, sessions: (data.running ?? []).length },
+          profile: t('side.profileValue'),
+        }),
         h(
-          'ul',
-          { className: 'wb-caps-list' },
-          ...rows.map(([key, value]) =>
-            h(
-              'li',
-              { key, 'data-tone': value === 'unavailable' ? 'warn' : 'ok' },
-              h(Glyph, { name: value === 'unavailable' ? 'stuck' : 'check', size: 12 }),
-              h('span', null, t(key)),
-              h('span', { className: 'wb-caps-value' }, value === 'unavailable' ? t('cap.missing') : String(value)),
-            ),
-          ),
+          'div',
+          { className: 'wb-body' },
+          h(TopBar, { t, trail: [page.label], status: state.status, onRefresh: refresh }),
+          h('div', { className: 'wb-scroll' }, h('div', { className: 'wb-content' }, page.node)),
+          h('footer', { className: 'wb-foot' }, h('span', null, t('foot')), h('span', null, t('foot.synced', { time: new Date(data.generatedAt).toLocaleTimeString() }))),
         ),
       )
     }

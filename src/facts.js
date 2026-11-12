@@ -89,14 +89,22 @@ export function factsOf(record, values, live, now) {
   const stats = values?.sessionStats
   const boundary = values?.turnBoundary
   const usage = values?.tokenUsage
+  // What the Session is doing: the last step boundary says tool versus generation, and
+  // the latest outline entry names the prompt that started this turn.
+  const outline = Array.isArray(values?.turnOutline?.turns) ? values.turnOutline.turns : []
+  const latestTurn = outline.length === 0 ? undefined : outline[outline.length - 1]
+  const open = boundary?.openTurnStartSeq !== undefined && boundary?.openTurnStartSeq !== null
+  const phase = boundary?.lastStepBoundary?.kind === 'tool' ? 'tool' : open ? 'generation' : undefined
   const questions = values?.userQuestions?.questions
   const pending = Array.isArray(questions?.active) ? questions.active : []
   const waiting = pending.length > 0 || typeof live?.pendingInteraction === 'string'
-  const open = boundary?.openTurnStartSeq !== undefined && boundary?.openTurnStartSeq !== null
   const running = live?.running === true || open
   const lastTurn = Number(boundary?.lastTurn ?? stats?.lastTurn) || undefined
   const lastStepAt = Number(stats?.lastStepEndAt ?? stats?.updatedAt ?? values?.sessionListMetadata?.lastPromptAt) || undefined
-  const state = waiting ? 'waiting' : running ? (stalled(boundary, now) ? 'stuck' : 'running') : 'ended'
+  // `stalled()` needs a wall clock. `openTurnStartSeq` is an event seq, not a time, so the
+  // idle window is measured from the last committed event instead.
+  const recentAt = lastStepAt ?? Number(values?.sessionListMetadata?.lastPromptAt) ?? 0
+  const state = waiting ? 'waiting' : running ? (stalled(recentAt, now) ? 'stuck' : 'running') : 'ended'
   return {
     id: record.id,
     project: record.cwd,
@@ -121,16 +129,26 @@ export function factsOf(record, values, live, now) {
     lastTokens: usage?.last?.buckets === undefined ? undefined : tokensOf(usage.last.buckets),
     lastAt: lastStepAt,
     speed: speedOf(stats),
+    // `phase` classifies the current action; `prompt` is the request that opened the turn.
+    phase,
+    prompt: typeof latestTurn?.prompt === 'string' && latestTurn.prompt !== '' ? shortPrompt(latestTurn.prompt) : undefined,
+    // Turn duration runs start → now (waiting included), which is what the row shows.
+    turnStartedAt: Number(stats?.turnStartedAt) || undefined,
     activeSince: Number(boundary?.openTurnStartSeq) || undefined,
     now,
   }
 }
 
 /** A silent open turn past the stall threshold is a stall candidate (PRD F03). */
-function stalled(boundary, now) {
-  const since = Number(boundary?.openTurnStartSeq)
-  if (!Number.isFinite(since) || since <= 0) return false
-  return Number(now) - since > 10 * 60_000
+/**
+ * A running Session is a stall candidate only when nothing has happened for the
+ * threshold. `since` must be a wall-clock time; an event seq here would compare
+ * sequence numbers with milliseconds and call every running Session stuck.
+ */
+function stalled(since, now) {
+  const at = Number(since)
+  if (!Number.isFinite(at) || at <= 0) return false
+  return Number(now) - at > 10 * 60_000
 }
 
 /**
@@ -183,6 +201,12 @@ export function closingTurnOf(events) {
     return { state: undefined, at }
   }
   return { state: undefined }
+}
+
+/** The opening line of a prompt, short enough for one row. */
+function shortPrompt(text) {
+  const value = String(text).replace(/\s+/gu, ' ').trim()
+  return value.length > 60 ? `${value.slice(0, 60)}…` : value
 }
 
 /** Generation speed from the stats projection, when the Host measured it. */

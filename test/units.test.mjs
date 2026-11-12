@@ -123,3 +123,39 @@ test('a cost page row carries its title and its token buckets', async () => {
   assert.equal('price' in entry, false)
   assert.equal(entry.quality, 'priced')
 })
+
+test('a running Session with recent activity is never a stall, whatever its turn seq', () => {
+  // The defect this guards: `openTurnStartSeq` is an event sequence number, and comparing
+  // it with `Date.now()` made every running Session read as stuck.
+  const start = TODAY + 3_600_000
+  const now = start + 60_000
+  const facts = factsOf(
+    { id: 'a', cwd: '/w', origin: 'user', createdAt: start },
+    {
+      title: 'T',
+      turnBoundary: { openTurnStartSeq: 3146, lastTurn: 5 },
+      sessionStats: { turns: 5, lastTurn: 5 },
+      userQuestions: { questions: { active: [] } },
+    },
+    { running: true },
+    now,
+  )
+  assert.equal(facts.state, 'running', 'recent activity is not a stall')
+})
+
+test('a running Session silent past the threshold is a stall candidate', () => {
+  const start = TODAY + 3_600_000
+  const facts = factsOf(
+    { id: 'a', cwd: '/w', origin: 'user', createdAt: start },
+    {
+      title: 'T',
+      turnBoundary: { openTurnStartSeq: 9, lastTurn: 1 },
+      // The last prompt was far more than ten minutes before the cut.
+      sessionListMetadata: { lastPromptAt: start },
+      userQuestions: { questions: { active: [] } },
+    },
+    { running: true },
+    start + 11 * 60_000,
+  )
+  assert.equal(facts.state, 'stuck')
+})

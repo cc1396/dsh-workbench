@@ -120,6 +120,9 @@ window.__ModuleLoader__.load({
       'tabs.capability': '状态',
 
       'detail.back': '返回概览',
+      'nav.overview': '概览',
+      'nav.cost': '消耗归因',
+      'nav.attention': '需要关注',
       'cost.title': '消耗归因',
       'cost.subtitle': '{date} · 人民币 · 估算',
       'cost.today': '今日估算费用',
@@ -236,6 +239,9 @@ window.__ModuleLoader__.load({
       'tabs.capability': 'Status',
 
       'detail.back': 'Back to overview',
+      'nav.overview': 'Overview',
+      'nav.cost': 'Cost',
+      'nav.attention': 'Attention',
       'cost.title': 'Cost attribution',
       'cost.subtitle': '{date} · CNY · estimate',
       'cost.today': 'Estimated spend today',
@@ -811,6 +817,12 @@ window.__ModuleLoader__.load({
     .wb-dot{width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-label-tertiary)}
     .wb-icon{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:15px;border:.5px solid var(--dsw-alias-border-l1);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}
     .wb-icon:hover{color:var(--dsw-alias-label-primary);background:color-mix(in srgb,var(--dsw-alias-label-primary) 6%,transparent)}
+    .wb-nav{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;padding:3px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}
+    .wb-nav-item{position:relative;display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:4px 12px;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12.5px;cursor:pointer}
+    .wb-nav-item:hover{background:color-mix(in srgb,var(--dsw-alias-label-primary) 6%,transparent);color:var(--dsw-alias-label-primary)}
+    .wb-nav-item[aria-current=page]{background:color-mix(in srgb,var(--wb-accent) 15%,transparent);box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--wb-accent) 32%,transparent);color:var(--wb-accent);font-weight:600}
+    .wb-nav-item:focus-visible{outline:2px solid var(--dsw-focus-ring-color,var(--wb-accent));outline-offset:-2px}
+    .wb-nav-badge{min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--wb-err);color:var(--dsw-alias-brand-primary-invert);font-family:var(--wb-mono);font-size:10px;line-height:16px;font-style:normal;text-align:center}
     .wb-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
     .wb-metric{display:flex;flex-direction:column;gap:2px;min-width:0;padding:14px 16px;border-radius:10px;border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);color:inherit;font:inherit;text-align:left}
     button.wb-metric{cursor:pointer}
@@ -899,7 +911,7 @@ window.__ModuleLoader__.load({
     .wb-detail-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
     .wb-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;margin-top:16px;color:var(--dsw-alias-label-tertiary);font-size:11px}
     @media (width<=1199px){.wb-grid{grid-template-columns:minmax(0,1fr)}}
-    @media (width<=767px){.wb-metrics,.wb-metrics-3{grid-template-columns:repeat(2,minmax(0,1fr))}.wb-content{padding:20px 14px 16px}.wb-h1{font-size:22px;line-height:30px}}
+    @media (width<=767px){.wb-nav{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.wb-nav-item{white-space:nowrap;min-height:36px}.wb-metrics,.wb-metrics-3{grid-template-columns:repeat(2,minmax(0,1fr))}.wb-content{padding:20px 14px 16px}.wb-h1{font-size:22px;line-height:30px}}
     @media (width<=419px){.wb-metric{padding:10px 12px}.wb-metric-value{font-size:19px;line-height:26px}}
     /* Without motion the running state still reads as running: a solid dot row and a
        solid leading bar, never a blank or blinking placeholder. */
@@ -912,6 +924,40 @@ window.__ModuleLoader__.load({
 
 
     // ==== panel.js ===============================================================
+    /**
+     * The top navigation: every page of the panel, with the current one marked.
+     *
+     * It is the only way between pages besides the metric cards, so a page can never be
+     * reachable only by a gesture a reader would not think to try.
+     */
+    function NavBar({ t, detail, go, count }) {
+      const pages = [
+        { kind: 'overview', label: t('nav.overview'), glyph: 'calendar' },
+        { kind: 'cost', label: t('nav.cost'), glyph: 'folder' },
+        { kind: 'attention', label: t('nav.attention'), glyph: 'stuck', badge: count },
+      ]
+      const current = detail === undefined ? 'overview' : detail.kind === 'alert' ? 'attention' : detail.kind
+      return h(
+        'nav',
+        { className: 'wb-nav', 'aria-label': t('tabs.label') },
+        ...pages.map((page) =>
+          h(
+            'button',
+            {
+              type: 'button',
+              key: page.kind,
+              className: 'wb-nav-item',
+              'aria-current': current === page.kind ? 'page' : undefined,
+              onClick: () => go(page.kind),
+            },
+            h(Glyph, { name: page.glyph, size: 13 }),
+            h('span', null, page.label),
+            page.badge > 0 ? h('i', { className: 'wb-nav-badge', 'aria-hidden': 'true' }, page.badge > 99 ? '99+' : String(page.badge)) : null,
+          ),
+        ),
+      )
+    }
+
     /**
      * The workbench panel: today's numbers first, then what needs a decision, then what is
      * running, then what ended.
@@ -967,8 +1013,22 @@ window.__ModuleLoader__.load({
           refresh()
         }
 
+        const go = (kind) => setDetail(kind === 'overview' ? undefined : { kind })
+        const back = () => setDetail(undefined)
+        const nav = h(NavBar, { t, detail, go, count: pending.length })
+
         if (detail !== undefined) {
-          const back = () => setDetail(undefined)
+          const page =
+            detail.kind === 'cost'
+              ? h(CostPage, { t, data, now, back, openSession })
+              : detail.kind === 'attention'
+                ? h(AttentionPage, { t, alerts, now, openSession, onAction: act, onDetail: (item) => setDetail({ kind: 'alert', key: item.key }), back })
+                : (() => {
+                    const item = alerts.find((entry) => entry.key === detail.key)
+                    return item === undefined
+                      ? h(Empty, { text: t('attention.empty') })
+                      : h(AlertDetail, { t, item, now, onBack: back, onAction: act, openSession })
+                  })()
           return h(
             'section',
             { className: 'wb-page', 'aria-label': t('title') },
@@ -976,23 +1036,7 @@ window.__ModuleLoader__.load({
             h(
               'div',
               { className: 'wb-scroll' },
-              h(
-                'div',
-                { className: 'wb-content' },
-                detail.kind === 'cost'
-                  ? h(CostPage, { t, data, now, back, openSession })
-                  : h(
-                      React.Fragment,
-                      null,
-                      h('div', { className: 'wb-detailbar' }, h('button', { type: 'button', className: 'wb-mini', onClick: back }, `← ${t('detail.back')}`)),
-                      (() => {
-                        const item = alerts.find((entry) => entry.key === detail.key)
-                        return item === undefined
-                          ? h(Empty, { text: t('attention.empty') })
-                          : h(AlertDetail, { t, item, now, onBack: back, onAction: act, openSession })
-                      })(),
-                    ),
-              ),
+              h('div', { className: 'wb-content' }, nav, page),
             ),
           )
         }
@@ -1015,6 +1059,7 @@ window.__ModuleLoader__.load({
             h(
               'div',
               { className: 'wb-content' },
+              nav,
               h(
                 'header',
                 { className: 'wb-head' },
@@ -1109,6 +1154,42 @@ window.__ModuleLoader__.load({
               h('span', { className: 'wb-caps-value' }, value === 'unavailable' ? t('cap.missing') : String(value)),
             ),
           ),
+        ),
+      )
+    }
+
+    // ==== attention page ====================================================
+
+    /**
+     * Every unresolved attention item, in the same order the overview shows the first
+     * three: failures before waits, newest first. The overview answers "is anything
+     * wrong"; this page answers "what, exactly".
+     */
+    function AttentionPage({ t, alerts, now, openSession, onAction, onDetail, back }) {
+      const items = alerts.filter((item) => item.state === 'open' || item.state === 'acknowledged')
+      return h(
+        React.Fragment,
+        null,
+        h(
+          'div',
+          { className: 'wb-detailbar' },
+          h('h1', { className: 'wb-h1 wb-h1-inline' }, t('attention.title')),
+          h('span', { className: 'wb-count' }, String(items.length)),
+          h('span', { className: 'wb-fill' }),
+          h('span', { className: 'wb-hint' }, t('attention.foot')),
+        ),
+        h(
+          Panel,
+          { title: t('attention.title'), count: String(items.length) },
+          items.length === 0
+            ? h(Empty, { text: t('attention.empty') })
+            : h(
+                'ul',
+                { className: 'wb-alerts' },
+                ...items.map((item) =>
+                  h(AlertItem, { key: item.key, t, item, now, onOpen: () => onDetail(item), onAction }),
+                ),
+              ),
         ),
       )
     }

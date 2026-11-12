@@ -26,9 +26,29 @@ test('both halves agree on the snapshot schema version', () => {
 })
 
 test('the dictionaries define the same keys', () => {
-  const zh = client.slice(client.indexOf('const zh = {'), client.indexOf('const en = {'))
-  const en = client.slice(client.indexOf('const en = {'))
-  const keys = (block) => [...block.matchAll(/^\s*'([\w.-]+)':/gmu)].map((match) => match[1]).sort()
+  // Each dictionary is one object literal; slice to its own closing brace so CSS and
+  // functions that follow cannot be mistaken for entries.
+  const literal = (startMarker) => {
+    const start = client.indexOf(startMarker)
+    let depth = 0
+    for (let index = start; index < client.length; index += 1) {
+      if (client[index] === '{') depth += 1
+      else if (client[index] === '}') {
+        depth -= 1
+        if (depth === 0) return client.slice(start, index + 1)
+      }
+    }
+    return ''
+  }
+  const zh = literal('const zh = {')
+  const en = literal('const en = {')
+  // Only quoted keys: a bare identifier like `panel:` is also a dictionary key, but CSS
+  // inside the same file uses `aria-current:` and friends, which are not.
+  const keys = (block) =>
+    [...block.matchAll(/^\s*'([\w.-]+)':/gmu)]
+      .map((match) => match[1])
+      .concat([...block.matchAll(/^\s{6}([a-zA-Z][\w]*):/gmu)].map((match) => match[1]))
+      .sort()
   const zhKeys = keys(zh)
   const enKeys = keys(en)
   assert.deepEqual(enKeys, zhKeys)
@@ -105,4 +125,20 @@ test('the cost page renders project, trend and session spend, and sums token buc
   assert.match(client, /tokensOf\(sumTokens\(entry\.tokens\)\)/u)
   // The overview's cost metric is the way in.
   assert.match(client, /onClick: \(\) => setDetail\(\{ kind: 'cost' \}\)/u)
+})
+
+test('every page is reachable from the top navigation', () => {
+  assert.match(client, /function NavBar\(/u)
+  // The three destinations the panel has, each with its own label.
+  for (const key of ['nav.overview', 'nav.cost', 'nav.attention']) {
+    assert.ok(client.includes(`'${key}'`), `${key} must be defined`)
+  }
+  // The bar is rendered on the overview and on every detail page.
+  // Rendered as its own child on the detail pages and inside the overview's content.
+  const renders = [/'wb-content' \}, nav, page\)/u, /^\s+nav,$/mu].filter((pattern) => pattern.test(client)).length
+  assert.equal(renders, 2, 'nav must render on both the overview and detail pages')
+  // The current page is marked for assistive tech.
+  assert.match(client, /'aria-current': current === page\.kind \? 'page'/u)
+  // It is a real navigation landmark with a name.
+  assert.match(client, /className: 'wb-nav', 'aria-label': t\('tabs\.label'\)/u)
 })

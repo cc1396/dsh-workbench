@@ -57,6 +57,28 @@ try {
   })()`))
   check('closing removes the item at once', dismissed.after === dismissed.before - 1, dismissed)
 
+  // The top navigation reaches every page, and marks the current one.
+  const nav = JSON.parse(await client.evaluate(`JSON.stringify({
+    tabs: [...document.querySelectorAll('.wb-nav-item')].map((node) => node.textContent.replace(/\\d+$/, '')),
+    current: document.querySelector('.wb-nav-item[aria-current=page]')?.textContent,
+  })`))
+  check('the top navigation lists every page', nav.tabs.length === 3, nav.tabs)
+  check('the current page is marked', nav.current !== undefined, nav.current)
+  const switched = JSON.parse(await client.evaluate(`(async () => {
+    const go = (label) => [...document.querySelectorAll('.wb-nav-item')].find((n) => n.textContent.includes(label))?.click()
+    const read = () => document.querySelector('.wb-nav-item[aria-current=page]')?.textContent
+    go('消耗归因')
+    await new Promise((done) => setTimeout(done, 500))
+    const cost = { current: read(), trend: document.querySelectorAll('.wb-trend-day').length }
+    go('概览')
+    await new Promise((done) => setTimeout(done, 500))
+    return JSON.stringify({ cost, home: read() })
+  })()`))
+  // The default fixture carries an empty trend, so the page shows its empty state; the
+  // fixture with spend data is exercised by qa/shot.mjs.
+  check('消耗归因 opens from the navigation', switched.cost.current?.includes('消耗归因'), switched.cost)
+  check('概览 returns from the navigation', switched.home?.includes('概览'), switched.home)
+
   // Keyboard: every action is a real button, reachable by Tab.
   const keyboard = JSON.parse(await client.evaluate(`JSON.stringify({
     buttons: document.querySelectorAll('button').length,
